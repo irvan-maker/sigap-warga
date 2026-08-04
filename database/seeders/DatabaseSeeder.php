@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
                 DevelopmentRtSeeder::class,
                 PilotCitizenSeeder::class,
                 DevelopmentAdminSeeder::class,
+                DemoDataSeeder::class,
             ]);
         }
     }
