@@ -15,7 +15,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         if ($this->container->environment('local')) {
-            $this->call(DevelopmentAdminSeeder::class);
+            $this->call([
+                PilotRegionSeeder::class,
+                DevelopmentAdminSeeder::class,
+            ]);
         }
     }
 }
