@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\PublicReportTrackingController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RtReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -29,3 +30,13 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
+
+Route::middleware(['auth', 'role.rt'])
+    ->prefix('rt')
+    ->name('rt.')
+    ->group(function (): void {
+        Route::get('/dashboard', [RtReportController::class, 'index'])->name('dashboard');
+        Route::get('/reports/{report}', [RtReportController::class, 'show'])->name('reports.show');
+        Route::patch('/reports/{report}/status', [RtReportController::class, 'updateStatus'])
+            ->name('reports.status.update');
+    });

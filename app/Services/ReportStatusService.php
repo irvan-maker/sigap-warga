@@ -26,6 +26,14 @@ class ReportStatusService
         ReportStatus::REJECTED->value => [],
     ];
 
+    /**
+     * @return list<ReportStatus>
+     */
+    public function allowedTransitions(ReportStatus $status): array
+    {
+        return self::ALLOWED_TRANSITIONS[$status->value];
+    }
+
     public function transition(
         Report $report,
         ReportStatus $newStatus,
@@ -39,7 +47,7 @@ class ReportStatusService
 
             $oldStatus = $lockedReport->status;
 
-            if (! in_array($newStatus, self::ALLOWED_TRANSITIONS[$oldStatus->value], true)) {
+            if (! in_array($newStatus, $this->allowedTransitions($oldStatus), true)) {
                 throw new DomainException(
                     "Report status cannot transition from {$oldStatus->value} to {$newStatus->value}.",
                 );

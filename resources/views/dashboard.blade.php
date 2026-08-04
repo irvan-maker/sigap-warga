@@ -19,7 +19,11 @@
             <div class="card-body p-4">
                 <h1 class="h3">Dashboard</h1>
                 <p class="mb-1">Selamat datang, {{ auth()->user()->name }}.</p>
-                <p class="text-secondary mb-0">Role: {{ auth()->user()->role->value }}</p>
+                <p class="text-secondary">Role: {{ auth()->user()->role->value }}</p>
+
+                @if (auth()->user()->role === \App\Enums\UserRole::RT)
+                    <a href="{{ route('rt.dashboard') }}" class="btn btn-primary">Buka Dashboard RT</a>
+                @endif
             </div>
         </div>
     </main>
