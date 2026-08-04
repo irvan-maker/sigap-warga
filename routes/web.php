@@ -5,6 +5,7 @@ use App\Http\Controllers\PublicReportTrackingController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RtReportController;
 use App\Http\Controllers\RwReportController;
+use App\Http\Controllers\KelurahanReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -48,4 +49,12 @@ Route::middleware(['auth', 'role.rw'])
     ->group(function (): void {
         Route::get('/dashboard', [RwReportController::class, 'index'])->name('dashboard');
         Route::get('/reports/{report}', [RwReportController::class, 'show'])->name('reports.show');
+    });
+
+Route::middleware('role.kelurahan')
+    ->prefix('kelurahan')
+    ->name('kelurahan.')
+    ->group(function (): void {
+        Route::get('/dashboard', [KelurahanReportController::class, 'index'])->name('dashboard');
+        Route::get('/reports/{report}', [KelurahanReportController::class, 'show'])->name('reports.show');
     });

@@ -25,6 +25,8 @@
                     <a href="{{ route('rt.dashboard') }}" class="btn btn-primary">Buka Dashboard RT</a>
                 @elseif (auth()->user()->role === \App\Enums\UserRole::RW)
                     <a href="{{ route('rw.dashboard') }}" class="btn btn-primary">Buka Dashboard RW</a>
+                @elseif (auth()->user()->role === \App\Enums\UserRole::KELURAHAN)
+                    <a href="{{ route('kelurahan.dashboard') }}" class="btn btn-primary">Buka Dashboard Kelurahan</a>
                 @endif
             </div>
         </div>

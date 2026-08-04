@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\EnsureUserIsRt;
 use App\Http\Middleware\EnsureUserIsRw;
+use App\Http\Middleware\EnsureUserIsKelurahan;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role.rt' => EnsureUserIsRt::class,
             'role.rw' => EnsureUserIsRw::class,
+            'role.kelurahan' => EnsureUserIsKelurahan::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

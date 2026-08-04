@@ -33,6 +33,11 @@ class ReportPolicy
                 ->exists();
     }
 
+    public function viewForKelurahan(User $user, Report $report): bool
+    {
+        return $user->is_active && $user->role === UserRole::KELURAHAN;
+    }
+
     private function belongsToUsersRt(User $user, Report $report): bool
     {
         return $user->is_active
