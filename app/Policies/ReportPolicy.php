@@ -23,6 +23,16 @@ class ReportPolicy
         return $this->belongsToUsersRt($user, $report);
     }
 
+    public function viewForRw(User $user, Report $report): bool
+    {
+        return $user->is_active
+            && $user->role === UserRole::RW
+            && $user->rw_id !== null
+            && $report->rt()
+                ->where('rw_id', $user->rw_id)
+                ->exists();
+    }
+
     private function belongsToUsersRt(User $user, Report $report): bool
     {
         return $user->is_active

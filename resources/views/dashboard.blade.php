@@ -23,6 +23,8 @@
 
                 @if (auth()->user()->role === \App\Enums\UserRole::RT)
                     <a href="{{ route('rt.dashboard') }}" class="btn btn-primary">Buka Dashboard RT</a>
+                @elseif (auth()->user()->role === \App\Enums\UserRole::RW)
+                    <a href="{{ route('rw.dashboard') }}" class="btn btn-primary">Buka Dashboard RW</a>
                 @endif
             </div>
         </div>
