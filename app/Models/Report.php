@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use LogicException;
 
 #[Fillable([
@@ -32,6 +33,10 @@ class Report extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (Report $report): void {
+            $report->status = ReportStatus::NEW;
+        });
+
         static::saving(function (Report $report): void {
             $citizenBelongsToRt = Citizen::query()
                 ->whereKey($report->citizen_id)
@@ -41,6 +46,13 @@ class Report extends Model
             if (! $citizenBelongsToRt) {
                 throw new LogicException('The citizen and report must belong to the same RT.');
             }
+        });
+
+        static::created(function (Report $report): void {
+            $report->histories()->create([
+                'old_status' => null,
+                'new_status' => ReportStatus::NEW,
+            ]);
         });
     }
 
@@ -66,5 +78,13 @@ class Report extends Model
     public function rt(): BelongsTo
     {
         return $this->belongsTo(Rt::class);
+    }
+
+    /**
+     * @return HasMany<ReportHistory, $this>
+     */
+    public function histories(): HasMany
+    {
+        return $this->hasMany(ReportHistory::class);
     }
 }
