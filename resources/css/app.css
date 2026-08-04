@@ -145,3 +145,135 @@ body {
         border-radius: 1rem !important;
     }
 }
+
+.admin-dashboard {
+    color: #172033;
+    background-color: #f4f7fb;
+}
+
+.admin-dashboard .admin-brand-mark,
+.admin-dashboard .admin-metric-icon,
+.admin-dashboard .admin-action-icon {
+    display: inline-flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex: 0 0 2.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: .8rem;
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+.admin-dashboard .admin-brand-mark {
+    letter-spacing: .05em;
+    background: linear-gradient(135deg, #0d6efd, #164eaa);
+}
+
+.admin-dashboard .admin-hero {
+    background: linear-gradient(125deg, #102a56 0%, #164eaa 52%, #0d6efd 100%);
+}
+
+.admin-dashboard .admin-hero::after {
+    position: absolute;
+    width: 24rem;
+    height: 24rem;
+    top: -13rem;
+    right: -6rem;
+    content: '';
+    border: 4.5rem solid rgba(255, 255, 255, .06);
+    border-radius: 50%;
+}
+
+.admin-dashboard .admin-text-muted {
+    color: rgba(255, 255, 255, .78);
+}
+
+.admin-dashboard .admin-hero-meta {
+    min-width: min(100%, 19rem);
+    background: rgba(5, 22, 51, .3);
+    border: 1px solid rgba(255, 255, 255, .18);
+    backdrop-filter: blur(8px);
+}
+
+.admin-dashboard .admin-eyebrow {
+    color: #0d6efd;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.admin-dashboard .admin-metric-card,
+.admin-dashboard .admin-status-card,
+.admin-dashboard .admin-panel {
+    border-radius: 1rem;
+}
+
+.admin-dashboard .admin-metric-card,
+.admin-dashboard .admin-status-card {
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.admin-dashboard .admin-metric-card:hover,
+.admin-dashboard .admin-status-card:hover {
+    transform: translateY(-2px);
+}
+
+.admin-dashboard .progress {
+    height: .35rem;
+    background-color: #edf0f4;
+}
+
+.admin-dashboard .admin-quick-action {
+    background-color: #fff;
+    transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
+}
+
+.admin-dashboard .admin-quick-action:hover {
+    border-color: #9ec5fe !important;
+    background-color: #f8fbff;
+    transform: translateX(2px);
+}
+
+.admin-dashboard .admin-activity-dot {
+    width: .6rem;
+    height: .6rem;
+    border-radius: 50%;
+}
+
+.admin-dashboard .min-w-0 {
+    min-width: 0;
+}
+
+.admin-dashboard .admin-empty-state {
+    max-width: 31rem;
+}
+
+.admin-dashboard .admin-empty-icon {
+    display: flex;
+    width: 3rem;
+    height: 3rem;
+    align-items: center;
+    justify-content: center;
+    color: #0d6efd;
+    font-size: .85rem;
+    font-weight: 800;
+    background-color: #e7f1ff;
+    border-radius: 50%;
+}
+
+.admin-dashboard .table > :not(caption) > * > * {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+@media (max-width: 575.98px) {
+    .admin-dashboard .display-6 {
+        font-size: 2rem;
+    }
+
+    .admin-dashboard .admin-hero {
+        border-radius: 1rem !important;
+    }
+}
