@@ -84,7 +84,7 @@ class RwReportController extends Controller
     {
         Gate::authorize('viewForRw', $report);
 
-        $report->load(['citizen:id,name', 'rt:id,code,name']);
+        $report->load(['citizen:id,name', 'rt:id,code,name', 'attachments']);
 
         return view('rw.reports.show', [
             'report' => $report,

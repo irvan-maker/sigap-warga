@@ -35,7 +35,7 @@ class ReportController extends Controller
 
     public function show(Report $report): View
     {
-        $report->load(['citizen', 'rt']);
+        $report->load(['citizen', 'rt', 'attachments']);
 
         return view('reports.show', [
             'report' => $report,

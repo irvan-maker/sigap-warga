@@ -30,6 +30,8 @@
             </div>
         </div>
 
+        @include('reports.partials.attachments', ['attachments' => $report->attachments])
+
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
                 <h2 class="h4">Riwayat status</h2>

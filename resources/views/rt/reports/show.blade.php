@@ -25,6 +25,8 @@
             </dl>
         </div></div>
 
+        @include('reports.partials.attachments', ['attachments' => $report->attachments])
+
         @if ($allowedTransitions !== [])
             <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4">
                 <h2 class="h4">Ubah Status</h2>

@@ -14,7 +14,7 @@
 
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
-                <form method="POST" action="{{ route('reports.store') }}">
+                <form method="POST" action="{{ route('reports.store') }}" enctype="multipart/form-data">
                     @csrf
 
                     <div class="mb-3">
@@ -66,6 +66,21 @@
                         @error('description')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="photos" class="form-label">Foto laporan (opsional)</label>
+                        <input
+                            id="photos"
+                            name="photos[]"
+                            type="file"
+                            class="form-control @error('photos') is-invalid @enderror @error('photos.*') is-invalid @enderror"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                        >
+                        <div class="form-text">Maksimal 3 foto, masing-masing maksimal 5 MB.</div>
+                        @error('photos')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        @error('photos.*')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
 
                     <button type="submit" class="btn btn-primary">Simpan laporan</button>

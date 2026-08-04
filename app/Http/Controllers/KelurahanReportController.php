@@ -105,7 +105,12 @@ class KelurahanReportController extends Controller
     {
         Gate::authorize('viewForKelurahan', $report);
 
-        $report->load(['citizen:id,name', 'rt:id,rw_id,code,name', 'rt.rw:id,code,name']);
+        $report->load([
+            'citizen:id,name',
+            'rt:id,rw_id,code,name',
+            'rt.rw:id,code,name',
+            'attachments',
+        ]);
 
         return view('kelurahan.reports.show', [
             'report' => $report,

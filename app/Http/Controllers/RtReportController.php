@@ -66,7 +66,7 @@ class RtReportController extends Controller
     {
         Gate::authorize('viewForRt', $report);
 
-        $report->load(['citizen:id,name', 'rt:id,code,name']);
+        $report->load(['citizen:id,name', 'rt:id,code,name', 'attachments']);
 
         return view('rt.reports.show', [
             'report' => $report,

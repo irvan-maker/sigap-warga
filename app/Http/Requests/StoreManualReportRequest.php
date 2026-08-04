@@ -31,6 +31,8 @@ class StoreManualReportRequest extends FormRequest
             'phone_normalized' => ['required', 'string', 'regex:/^62\d{8,13}$/'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
+            'photos' => ['nullable', 'array', 'max:3'],
+            'photos.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 

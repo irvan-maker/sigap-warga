@@ -88,6 +88,8 @@
                         <dd class="col-sm-8">{{ $report->reported_at->format('d-m-Y H:i') }}</dd>
                     </dl>
 
+                    @include('reports.partials.attachments', ['attachments' => $report->attachments])
+
                     <h3 class="h5">Riwayat status</h3>
                     <ol class="list-group list-group-numbered">
                         @foreach ($report->histories as $history)

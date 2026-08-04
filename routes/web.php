@@ -6,6 +6,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RtReportController;
 use App\Http\Controllers\RwReportController;
 use App\Http\Controllers\KelurahanReportController;
+use App\Http\Controllers\ReportAttachmentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -19,6 +20,10 @@ Route::get('/tracking', [PublicReportTrackingController::class, 'index'])
 Route::post('/tracking', [PublicReportTrackingController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('tracking.store');
+
+Route::get('/report-attachments/{attachment}', [ReportAttachmentController::class, 'show'])
+    ->middleware('signed')
+    ->name('report-attachments.show');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');

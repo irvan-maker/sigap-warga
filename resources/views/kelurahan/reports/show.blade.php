@@ -14,6 +14,8 @@
             <dt class="col-sm-4">Deskripsi</dt><dd class="col-sm-8">{{ $report->description }}</dd>
             <dt class="col-sm-4">Tanggal laporan</dt><dd class="col-sm-8 mb-0">{{ $report->reported_at->format('d-m-Y H:i') }}</dd>
         </dl></div></div>
+        @include('reports.partials.attachments', ['attachments' => $report->attachments])
+
         <div class="card border-0 shadow-sm"><div class="card-body p-4"><h2 class="h4">Riwayat Status</h2><ol class="list-group list-group-numbered">
             @foreach ($histories as $history)<li class="list-group-item"><strong>{{ $history->new_status->value }}</strong><span class="text-secondary small ms-2">{{ $history->created_at->format('d-m-Y H:i') }}</span>@if ($history->note)<p class="mb-0 mt-2">{{ $history->note }}</p>@endif</li>@endforeach
         </ol></div></div>

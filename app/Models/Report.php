@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use LogicException;
 
 #[Fillable([
@@ -31,6 +32,9 @@ class Report extends Model
         'status' => ReportStatus::NEW->value,
     ];
 
+    /** @var list<string> */
+    private array $attachmentPathsPendingDeletion = [];
+
     protected static function booted(): void
     {
         static::creating(function (Report $report): void {
@@ -53,6 +57,19 @@ class Report extends Model
                 'old_status' => null,
                 'new_status' => ReportStatus::NEW,
             ]);
+        });
+
+        static::deleting(function (Report $report): void {
+            $report->attachmentPathsPendingDeletion = $report->attachments()
+                ->pluck('path')
+                ->all();
+        });
+
+        static::deleted(function (Report $report): void {
+            $disk = Storage::disk('public');
+
+            $disk->delete($report->attachmentPathsPendingDeletion);
+            $disk->deleteDirectory("reports/{$report->getKey()}");
         });
     }
 
@@ -86,5 +103,13 @@ class Report extends Model
     public function histories(): HasMany
     {
         return $this->hasMany(ReportHistory::class);
+    }
+
+    /**
+     * @return HasMany<ReportAttachment, $this>
+     */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ReportAttachment::class);
     }
 }
