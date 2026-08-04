@@ -32,4 +32,12 @@ class Rt extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    /**
+     * @return HasMany<Citizen, $this>
+     */
+    public function citizens(): HasMany
+    {
+        return $this->hasMany(Citizen::class);
+    }
 }

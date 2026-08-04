@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         if ($this->container->environment('local')) {
             $this->call([
                 PilotRegionSeeder::class,
+                PilotCitizenSeeder::class,
                 DevelopmentAdminSeeder::class,
             ]);
         }
