@@ -23,8 +23,6 @@ class Citizen extends Model
     }
 
     /**
-     * Planned relation for the Report domain.
-     *
      * @return HasMany<Report, $this>
      */
     public function reports(): HasMany

@@ -40,4 +40,12 @@ class Rt extends Model
     {
         return $this->hasMany(Citizen::class);
     }
+
+    /**
+     * @return HasMany<Report, $this>
+     */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class);
+    }
 }
