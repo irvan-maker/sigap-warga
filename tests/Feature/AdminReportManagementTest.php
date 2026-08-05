@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ReportStatus;
 use App\Enums\UserRole;
+use App\Enums\VillagePosition;
 use App\Models\Citizen;
 use App\Models\Report;
 use App\Models\Rt;
@@ -123,7 +124,7 @@ class AdminReportManagementTest extends TestCase
             );
     }
 
-    public function test_only_active_administrator_can_open_report_management(): void
+    public function test_report_management_access_follows_the_final_report_policy(): void
     {
         $this->get(route('admin.reports.index'))->assertRedirect(route('login'));
 
@@ -133,15 +134,16 @@ class AdminReportManagementTest extends TestCase
         $unauthorizedUsers = [
             User::factory()->create([
                 'role' => UserRole::RT,
+                'position' => null,
                 'rw_id' => $rtRw->id,
                 'rt_id' => $rt->id,
             ]),
             User::factory()->create([
                 'role' => UserRole::RW,
+                'position' => null,
                 'rw_id' => $rw->id,
                 'rt_id' => null,
             ]),
-            User::factory()->create(['role' => UserRole::KELURAHAN]),
         ];
 
         foreach ($unauthorizedUsers as $user) {
@@ -150,13 +152,41 @@ class AdminReportManagementTest extends TestCase
                 ->assertForbidden();
         }
 
-        $this->actingAs(User::factory()->inactive()->create())
+        $this->actingAs(User::factory()->inactive()->create([
+            'role' => UserRole::ADMIN,
+            'position' => VillagePosition::SYSTEM_ADMIN,
+            'rw_id' => null,
+            'rt_id' => null,
+        ]))
             ->get(route('admin.reports.index'))
             ->assertForbidden();
 
-        $this->actingAs(User::factory()->create())
-            ->get(route('admin.reports.index'))
-            ->assertOk();
+        $authorizedVillageOfficers = [
+            User::factory()->create([
+                'role' => UserRole::ADMIN,
+                'position' => VillagePosition::SYSTEM_ADMIN,
+                'rw_id' => null,
+                'rt_id' => null,
+            ]),
+            User::factory()->create([
+                'role' => UserRole::KELURAHAN,
+                'position' => VillagePosition::VILLAGE_SECRETARY,
+                'rw_id' => null,
+                'rt_id' => null,
+            ]),
+            User::factory()->create([
+                'role' => UserRole::KELURAHAN,
+                'position' => VillagePosition::VILLAGE_HEAD,
+                'rw_id' => null,
+                'rt_id' => null,
+            ]),
+        ];
+
+        foreach ($authorizedVillageOfficers as $user) {
+            $this->actingAs($user)
+                ->get(route('admin.reports.index'))
+                ->assertOk();
+        }
     }
 
     public function test_report_list_uses_eager_loading_for_displayed_relations(): void

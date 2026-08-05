@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\ReportStatus;
 use App\Http\Requests\UpdateRtReportStatusRequest;
+use App\Models\Citizen;
+use App\Models\FamilyCard;
 use App\Models\Report;
 use App\Services\ReportStatusService;
 use DomainException;
@@ -59,6 +61,11 @@ class RtReportController extends Controller
                     $status->value => (int) $counts->get($status->value, 0),
                 ],
             ),
+            'activeCitizenCount' => Citizen::query()->where('rt_id', $rtId)->where('is_active', true)->count(),
+            'activeFamilyCardCount' => FamilyCard::query()->where('rt_id', $rtId)->where('is_active', true)->count(),
+            'familyCardsWithoutHeadCount' => FamilyCard::query()->where('rt_id', $rtId)->whereNull('head_citizen_id')->count(),
+            'citizensWithoutFamilyCardCount' => Citizen::query()->where('rt_id', $rtId)->whereNull('family_card_id')->count(),
+            'citizensWithoutNikCount' => Citizen::query()->where('rt_id', $rtId)->whereNull('nik')->count(),
         ]);
     }
 

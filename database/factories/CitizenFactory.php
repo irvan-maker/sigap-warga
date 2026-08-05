@@ -21,6 +21,7 @@ class CitizenFactory extends Factory
             'name' => fake()->name(),
             'phone' => $phone,
             'phone_normalized' => $phone,
+            'is_active' => true,
         ];
     }
 }

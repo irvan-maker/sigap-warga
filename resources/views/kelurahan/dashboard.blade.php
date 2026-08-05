@@ -54,6 +54,8 @@
                     <h2 id="kpi-heading" class="h4 fw-bold mb-0">Ringkasan Laporan</h2>
                 </div>
                 <div class="row g-3">
+                    <div class="col-6 col-lg"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.citizens.index') }}"><span class="card-body p-3"><span class="text-secondary small d-block">Warga Aktif</span><strong class="fs-3 text-body">{{ number_format($activeCitizenCount) }}</strong></span></a></div>
+                    <div class="col-6 col-lg"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.family-cards.index') }}"><span class="card-body p-3"><span class="text-secondary small d-block">KK Aktif</span><strong class="fs-3 text-body">{{ number_format($activeFamilyCardCount) }}</strong></span></a></div>
                     <div class="col-6 col-lg">
                         <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.reports.index') }}#laporan">
                             <span class="card-body p-3 p-lg-4">

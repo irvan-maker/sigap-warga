@@ -88,6 +88,11 @@ tr[data-row-url] {
     cursor: pointer;
 }
 
+tr[data-row-url]:hover > *,
+tr[data-row-url]:focus-visible > * {
+    background-color: #eef5ff;
+}
+
 tr[data-row-url]:focus-visible {
     outline: 3px solid rgba(13, 110, 253, .45);
     outline-offset: -3px;

@@ -14,7 +14,7 @@
     </nav>
 
     <main class="container py-4">
-        <div class="mb-4"><a class="btn btn-primary" href="{{ route('rw.rts.index') }}">Kelola RT</a></div>
+        <div class="d-flex flex-wrap gap-2 mb-4"><a class="btn btn-primary" href="{{ route('rw.rts.index') }}">Kelola RT</a><a class="btn btn-outline-primary" href="{{ route('rw.citizens.index') }}">Monitoring Warga ({{ $activeCitizenCount }} aktif)</a><a class="btn btn-outline-primary" href="{{ route('rw.family-cards.index') }}">Monitoring KK ({{ $activeFamilyCardCount }} aktif)</a></div>
         <div class="row g-3 mb-4">
             <div class="col-6 col-lg"><div class="card h-100"><div class="card-body"><div class="text-secondary">Total</div><div class="fs-3 fw-semibold">{{ $total }}</div></div></div></div>
             @foreach (\App\Enums\ReportStatus::cases() as $status)

@@ -40,4 +40,14 @@ class Rw extends Model
     {
         return $this->hasManyThrough(Report::class, Rt::class);
     }
+
+    public function citizens(): HasManyThrough
+    {
+        return $this->hasManyThrough(Citizen::class, Rt::class);
+    }
+
+    public function familyCards(): HasManyThrough
+    {
+        return $this->hasManyThrough(FamilyCard::class, Rt::class);
+    }
 }

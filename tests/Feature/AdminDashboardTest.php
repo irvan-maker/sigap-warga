@@ -51,7 +51,7 @@ class AdminDashboardTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Kelola Pengguna')
+            ->assertSee('Kelola Akun Petugas')
             ->assertSee('href="'.route('admin.users.index').'"', false);
     }
 

@@ -41,6 +41,11 @@ class Rt extends Model
         return $this->hasMany(Citizen::class);
     }
 
+    public function familyCards(): HasMany
+    {
+        return $this->hasMany(FamilyCard::class);
+    }
+
     /**
      * @return HasMany<Report, $this>
      */

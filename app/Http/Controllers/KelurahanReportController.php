@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ReportStatus;
 use App\Enums\UserRole;
 use App\Models\Citizen;
+use App\Models\FamilyCard;
 use App\Models\Report;
 use App\Models\ReportHistory;
 use App\Models\Rt;
@@ -147,6 +148,8 @@ class KelurahanReportController extends Controller
                 'active_rts' => $rts->where('is_active', true)->count(),
             ],
             'totalCitizens' => Citizen::query()->count(),
+            'activeCitizenCount' => Citizen::query()->where('is_active', true)->count(),
+            'activeFamilyCardCount' => FamilyCard::query()->where('is_active', true)->count(),
             'attentionSummary' => [
                 'new' => (int) $counts->get(ReportStatus::NEW->value, 0),
                 'stale_processing' => $staleProcessingReports,

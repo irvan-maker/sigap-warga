@@ -61,6 +61,9 @@ class ManualReportCreationTest extends TestCase
             'rt_id' => $rt->id,
             'name' => 'Warga Manual',
             'phone_normalized' => '6281234567890',
+            'family_card_id' => null,
+            'family_relationship' => null,
+            'nik' => null,
         ]);
     }
 

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReportStatus;
+use App\Models\Citizen;
+use App\Models\FamilyCard;
 use App\Models\Report;
 use App\Models\Rt;
 use Illuminate\Database\Eloquent\Builder;
@@ -77,6 +79,8 @@ class RwReportController extends Controller
             'totalsByRt' => $rts->mapWithKeys(
                 fn (Rt $rt): array => [$rt->id => (int) $countsByRt->get($rt->id, 0)],
             ),
+            'activeCitizenCount' => Citizen::query()->whereIn('rt_id', $rtIds)->where('is_active', true)->count(),
+            'activeFamilyCardCount' => FamilyCard::query()->whereIn('rt_id', $rtIds)->where('is_active', true)->count(),
         ]);
     }
 
