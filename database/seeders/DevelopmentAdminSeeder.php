@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
+use App\Enums\VillagePosition;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -16,7 +17,8 @@ class DevelopmentAdminSeeder extends Seeder
             [
                 'name' => 'Development Admin',
                 'password' => Hash::make('password'),
-                'role' => UserRole::ADMIN,
+                'role' => UserRole::KELURAHAN,
+                'position' => VillagePosition::SYSTEM_ADMIN,
                 'is_active' => true,
             ],
         );

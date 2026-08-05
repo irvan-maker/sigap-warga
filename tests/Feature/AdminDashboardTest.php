@@ -46,6 +46,15 @@ class AdminDashboardTest extends TestCase
             ->assertSee('href="'.route('admin.reports.index').'"', false);
     }
 
+    public function test_admin_dashboard_renders_user_management_link(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Kelola Pengguna')
+            ->assertSee('href="'.route('admin.users.index').'"', false);
+    }
+
     public function test_rt_user_is_redirected_without_seeing_admin_dashboard_data(): void
     {
         [$rw, $rt] = $this->createRegion();

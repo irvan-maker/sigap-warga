@@ -10,7 +10,7 @@ class ReportPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->is_active && $user->role === UserRole::ADMIN;
+        return $user->isVillageOffice() && $user->is_active;
     }
 
     public function view(User $user, Report $report): bool
@@ -20,16 +20,16 @@ class ReportPolicy
         }
 
         return match ($user->role) {
-            UserRole::ADMIN => true,
+            UserRole::ADMIN => $user->isVillageOffice(),
             UserRole::RT => $this->belongsToUsersRt($user, $report),
             UserRole::RW => $this->belongsToUsersRw($user, $report),
-            UserRole::KELURAHAN => true,
+            UserRole::KELURAHAN => $user->isVillageOffice(),
         };
     }
 
     public function create(User $user): bool
     {
-        return $user->is_active && $user->role === UserRole::ADMIN;
+        return $user->isSystemAdmin() || $user->isVillageSecretary();
     }
 
     public function viewForRt(User $user, Report $report): bool

@@ -2,13 +2,16 @@
 
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminReportController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\KelurahanReportController;
+use App\Http\Controllers\KelurahanRwController;
 use App\Http\Controllers\PublicReportTrackingController;
 use App\Http\Controllers\ReportAttachmentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RtReportController;
 use App\Http\Controllers\RwReportController;
+use App\Http\Controllers\RwRtController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -36,6 +39,15 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', AdminDashboardController::class)->name('dashboard');
     Route::get('/admin/reports', [AdminReportController::class, 'index'])
         ->name('admin.reports.index');
+    Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users.index');
+    Route::get('/admin/users/create', [AdminUserController::class, 'create'])->name('admin.users.create');
+    Route::post('/admin/users', [AdminUserController::class, 'store'])->name('admin.users.store');
+    Route::get('/admin/users/{user}/edit', [AdminUserController::class, 'edit'])->name('admin.users.edit');
+    Route::put('/admin/users/{user}', [AdminUserController::class, 'update'])->name('admin.users.update');
+    Route::patch('/admin/users/{user}/status', [AdminUserController::class, 'toggleActive'])
+        ->name('admin.users.status.toggle');
+    Route::patch('/admin/users/{user}/password', [AdminUserController::class, 'resetPassword'])
+        ->name('admin.users.password.reset');
     Route::get('/reports/create', [ReportController::class, 'create'])->name('reports.create');
     Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
     Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
@@ -57,6 +69,12 @@ Route::middleware(['auth', 'role.rw'])
     ->name('rw.')
     ->group(function (): void {
         Route::get('/dashboard', [RwReportController::class, 'index'])->name('dashboard');
+        Route::get('/rts', [RwRtController::class, 'index'])->name('rts.index');
+        Route::get('/rts/create', [RwRtController::class, 'create'])->name('rts.create');
+        Route::post('/rts', [RwRtController::class, 'store'])->name('rts.store');
+        Route::get('/rts/{rt}/edit', [RwRtController::class, 'edit'])->name('rts.edit');
+        Route::put('/rts/{rt}', [RwRtController::class, 'update'])->name('rts.update');
+        Route::patch('/rts/{rt}/status', [RwRtController::class, 'toggleActive'])->name('rts.status.toggle');
         Route::get('/reports/{report}', [RwReportController::class, 'show'])->name('reports.show');
     });
 
@@ -65,5 +83,11 @@ Route::middleware(['auth', 'role.kelurahan'])
     ->name('kelurahan.')
     ->group(function (): void {
         Route::get('/dashboard', [KelurahanReportController::class, 'index'])->name('dashboard');
+        Route::get('/rws', [KelurahanRwController::class, 'index'])->name('rws.index');
+        Route::get('/rws/create', [KelurahanRwController::class, 'create'])->name('rws.create');
+        Route::post('/rws', [KelurahanRwController::class, 'store'])->name('rws.store');
+        Route::get('/rws/{rw}/edit', [KelurahanRwController::class, 'edit'])->name('rws.edit');
+        Route::put('/rws/{rw}', [KelurahanRwController::class, 'update'])->name('rws.update');
+        Route::patch('/rws/{rw}/status', [KelurahanRwController::class, 'toggleActive'])->name('rws.status.toggle');
         Route::get('/reports/{report}', [KelurahanReportController::class, 'show'])->name('reports.show');
     });

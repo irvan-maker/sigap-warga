@@ -124,6 +124,14 @@
                             </span>
                         </a>
                     </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <a class="card admin-panel admin-quick-action h-100 border-0 shadow-sm text-decoration-none" href="{{ route('admin.users.index') }}">
+                            <span class="card-body p-4 d-flex align-items-center gap-3">
+                                <span class="admin-action-icon bg-success-subtle text-success" aria-hidden="true">02</span>
+                                <span><strong class="d-block text-body">Kelola Akun Petugas</strong><small class="text-secondary">Atur akun dan hak akses</small></span>
+                            </span>
+                        </a>
+                    </div>
                 </div>
             </section>
 

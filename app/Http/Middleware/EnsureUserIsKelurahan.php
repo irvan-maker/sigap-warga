@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\UserRole;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -10,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserIsKelurahan
 {
     /**
-     * @param Closure(Request): Response $next
+     * @param  Closure(Request): Response  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -19,7 +18,7 @@ class EnsureUserIsKelurahan
         abort_unless(
             $user
                 && $user->is_active
-                && $user->role === UserRole::KELURAHAN,
+                && $user->isVillageOffice(),
             403,
         );
 

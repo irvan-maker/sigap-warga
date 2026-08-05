@@ -4,6 +4,15 @@ body {
     background-color: #f8f9fa;
 }
 
+tr[data-row-url] {
+    cursor: pointer;
+}
+
+tr[data-row-url]:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, .45);
+    outline-offset: -3px;
+}
+
 .rt-dashboard {
     color: #172033;
     background: #f4f7fb;
@@ -259,12 +268,19 @@ body {
     cursor: pointer;
 }
 
+.admin-dashboard .admin-user-row {
+    cursor: pointer;
+}
+
 .admin-dashboard .admin-report-row:hover > *,
-.admin-dashboard .admin-report-row:focus-visible > * {
+.admin-dashboard .admin-report-row:focus-visible > *,
+.admin-dashboard .admin-user-row:hover > *,
+.admin-dashboard .admin-user-row:focus-visible > * {
     background-color: #eaf2ff;
 }
 
-.admin-dashboard .admin-report-row:focus-visible {
+.admin-dashboard .admin-report-row:focus-visible,
+.admin-dashboard .admin-user-row:focus-visible {
     outline: 3px solid rgba(13, 110, 253, .45);
     outline-offset: -3px;
 }

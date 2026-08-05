@@ -11,6 +11,7 @@
     </nav>
 
     <main class="container py-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4"><div><h1 class="h3 mb-1">{{ auth()->user()->name }}</h1><div class="text-secondary">{{ auth()->user()->position?->label() }}</div></div><div class="d-flex gap-2"><a class="btn btn-outline-primary" href="{{ route('admin.reports.index') }}">Laporan</a><a class="btn btn-primary" href="{{ route('kelurahan.rws.index') }}">{{ auth()->user()->isVillageHead() ? 'Lihat RW' : 'Kelola RW' }}</a>@if(auth()->user()->isSystemAdmin() || auth()->user()->isVillageSecretary())<a class="btn btn-success" href="{{ route('admin.users.index') }}">Kelola Akun Petugas</a>@endif</div></div>
         <div class="row g-3 mb-4">
             <div class="col-6 col-lg"><div class="card h-100"><div class="card-body"><div class="text-secondary">Total Laporan</div><div class="fs-3 fw-semibold">{{ $total }}</div></div></div></div>
             @foreach (\App\Enums\ReportStatus::cases() as $status)
