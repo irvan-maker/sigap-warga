@@ -255,6 +255,20 @@ body {
     height: 20rem;
 }
 
+.admin-dashboard .admin-report-row {
+    cursor: pointer;
+}
+
+.admin-dashboard .admin-report-row:hover > *,
+.admin-dashboard .admin-report-row:focus-visible > * {
+    background-color: #eaf2ff;
+}
+
+.admin-dashboard .admin-report-row:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, .45);
+    outline-offset: -3px;
+}
+
 .admin-dashboard .admin-empty-icon {
     display: flex;
     width: 3rem;

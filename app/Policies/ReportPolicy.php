@@ -8,6 +8,11 @@ use App\Models\User;
 
 class ReportPolicy
 {
+    public function viewAny(User $user): bool
+    {
+        return $user->is_active && $user->role === UserRole::ADMIN;
+    }
+
     public function view(User $user, Report $report): bool
     {
         if (! $user->is_active) {

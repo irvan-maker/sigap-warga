@@ -107,6 +107,26 @@
                 </div>
             </section>
 
+            <section class="mb-4" aria-labelledby="admin-actions-heading">
+                <div class="mb-3">
+                    <p class="admin-eyebrow mb-1">Operasional</p>
+                    <h2 id="admin-actions-heading" class="h4 fw-bold mb-0">Aksi Cepat Administrator</h2>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-xl-3">
+                        <a class="card admin-panel admin-quick-action h-100 border-0 shadow-sm text-decoration-none" href="{{ route('admin.reports.index') }}">
+                            <span class="card-body p-4 d-flex align-items-center gap-3">
+                                <span class="admin-action-icon bg-primary-subtle text-primary" aria-hidden="true">01</span>
+                                <span>
+                                    <strong class="d-block text-body">Kelola Laporan</strong>
+                                    <small class="text-secondary">Cari dan tinjau seluruh laporan</small>
+                                </span>
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
             <section class="mb-4" aria-labelledby="analytics-heading">
                 <div class="mb-3">
                     <p class="admin-eyebrow mb-1">Analitik laporan</p>
