@@ -11,6 +11,8 @@ use App\Models\Rt;
 use App\Models\Rw;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AdminDashboardController extends Controller
@@ -34,6 +36,7 @@ class AdminDashboardController extends Controller
             ->pluck('aggregate', 'status');
 
         $totalReports = (int) $counts->sum();
+        $monthlyReportData = $this->monthlyReportData();
 
         return view('dashboard', [
             'totalCitizens' => Citizen::query()->count(),
@@ -45,6 +48,15 @@ class AdminDashboardController extends Controller
                     $status->value => (int) $counts->get($status->value, 0),
                 ],
             ),
+            'reportStatusChart' => [
+                'labels' => collect(ReportStatus::cases())
+                    ->map(fn (ReportStatus $status): string => $status->value)
+                    ->values(),
+                'data' => collect(ReportStatus::cases())
+                    ->map(fn (ReportStatus $status): int => (int) $counts->get($status->value, 0))
+                    ->values(),
+            ],
+            'monthlyReportChart' => $monthlyReportData,
             'latestReports' => Report::query()
                 ->with([
                     'citizen:id,name',
@@ -79,5 +91,37 @@ class AdminDashboardController extends Controller
                 ->limit(8)
                 ->get(),
         ]);
+    }
+
+    /**
+     * @return array{labels: Collection<int, string>, data: Collection<int, int>}
+     */
+    private function monthlyReportData(): array
+    {
+        $months = collect(range(5, 0))
+            ->map(fn (int $monthsAgo) => now()->startOfMonth()->subMonths($monthsAgo));
+
+        $monthExpression = match (DB::connection()->getDriverName()) {
+            'sqlite' => "strftime('%Y-%m', reported_at)",
+            'pgsql' => "to_char(reported_at, 'YYYY-MM')",
+            'sqlsrv' => "FORMAT(reported_at, 'yyyy-MM')",
+            default => "DATE_FORMAT(reported_at, '%Y-%m')",
+        };
+
+        $counts = Report::query()
+            ->where('reported_at', '>=', $months->first())
+            ->where('reported_at', '<', now()->startOfMonth()->addMonth())
+            ->selectRaw("{$monthExpression} as report_month, COUNT(*) as aggregate")
+            ->groupByRaw($monthExpression)
+            ->pluck('aggregate', 'report_month');
+
+        return [
+            'labels' => $months
+                ->map(fn ($month): string => $month->locale('id')->isoFormat('MMM YYYY'))
+                ->values(),
+            'data' => $months
+                ->map(fn ($month): int => (int) $counts->get($month->format('Y-m'), 0))
+                ->values(),
+        ];
     }
 }

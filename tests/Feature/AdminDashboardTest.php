@@ -129,6 +129,41 @@ class AdminDashboardTest extends TestCase
         }
     }
 
+    public function test_dashboard_chart_data_matches_reports_from_the_last_six_months(): void
+    {
+        $this->travelTo(now()->startOfMonth()->addDays(10));
+
+        $admin = User::factory()->create();
+        [, $rt] = $this->createRegion();
+        $citizen = Citizen::factory()->for($rt)->create();
+
+        foreach ([5 => 1, 3 => 2, 0 => 3] as $monthsAgo => $total) {
+            Report::factory()->count($total)->create([
+                'citizen_id' => $citizen->id,
+                'rt_id' => $rt->id,
+                'reported_at' => now()->startOfMonth()->subMonths($monthsAgo)->addDay(),
+            ]);
+        }
+
+        Report::factory()->create([
+            'citizen_id' => $citizen->id,
+            'rt_id' => $rt->id,
+            'reported_at' => now()->startOfMonth()->subMonths(6),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertViewHas('monthlyReportChart', function (array $chart): bool {
+                return $chart['data']->all() === [1, 0, 2, 0, 0, 3]
+                    && $chart['labels']->count() === 6;
+            })
+            ->assertViewHas('reportStatusChart', function (array $chart): bool {
+                return $chart['labels']->all() === ['NEW', 'PROCESSING', 'COMPLETED', 'REJECTED']
+                    && $chart['data']->all() === [7, 0, 0, 0];
+            });
+    }
+
     /** @return array{Rw, Rt} */
     private function createRegion(): array
     {

@@ -107,6 +107,37 @@
                 </div>
             </section>
 
+            <section class="mb-4" aria-labelledby="analytics-heading">
+                <div class="mb-3">
+                    <p class="admin-eyebrow mb-1">Analitik laporan</p>
+                    <h2 id="analytics-heading" class="h4 fw-bold mb-0">Tren dan Distribusi</h2>
+                </div>
+                <div class="row g-4">
+                    <div class="col-xl-8">
+                        <div class="card admin-panel h-100 border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <h3 class="h5 fw-bold mb-1">Laporan per Bulan</h3>
+                                <p class="text-secondary small mb-4">Jumlah laporan dalam 6 bulan terakhir</p>
+                                <div class="admin-chart-container">
+                                    <canvas id="monthlyReportsChart" aria-label="Grafik jumlah laporan per bulan" role="img"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-4">
+                        <div class="card admin-panel h-100 border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <h3 class="h5 fw-bold mb-1">Distribusi Status</h3>
+                                <p class="text-secondary small mb-4">Komposisi seluruh status laporan</p>
+                                <div class="admin-chart-container">
+                                    <canvas id="reportStatusChart" aria-label="Grafik distribusi status laporan" role="img"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <div class="row g-4 mb-4">
                 <div class="col-xl-8">
                     <section id="laporan-terbaru" class="card admin-panel h-100 border-0 shadow-sm" aria-labelledby="latest-reports-heading">
@@ -256,3 +287,76 @@
         </main>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const monthlyCanvas = document.getElementById('monthlyReportsChart');
+            const statusCanvas = document.getElementById('reportStatusChart');
+
+            if (!monthlyCanvas || !statusCanvas || typeof window.Chart === 'undefined') {
+                return;
+            }
+
+            new window.Chart(monthlyCanvas, {
+                type: 'bar',
+                data: {
+                    labels: @json($monthlyReportChart['labels']),
+                    datasets: [{
+                        label: 'Jumlah laporan',
+                        data: @json($monthlyReportChart['data']),
+                        backgroundColor: 'rgba(13, 110, 253, 0.78)',
+                        borderColor: '#0d6efd',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 },
+                            grid: { color: 'rgba(23, 32, 51, 0.08)' },
+                        },
+                        x: {
+                            grid: { display: false },
+                        },
+                    },
+                },
+            });
+
+            new window.Chart(statusCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: @json($reportStatusChart['labels']),
+                    datasets: [{
+                        data: @json($reportStatusChart['data']),
+                        backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545'],
+                        borderColor: '#ffffff',
+                        borderWidth: 3,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '64%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 16,
+                                usePointStyle: true,
+                            },
+                        },
+                    },
+                },
+            });
+        });
+    </script>
+@endpush

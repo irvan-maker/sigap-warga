@@ -250,6 +250,11 @@ body {
     max-width: 31rem;
 }
 
+.admin-dashboard .admin-chart-container {
+    position: relative;
+    height: 20rem;
+}
+
 .admin-dashboard .admin-empty-icon {
     display: flex;
     width: 3rem;
