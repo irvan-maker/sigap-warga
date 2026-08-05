@@ -26,7 +26,7 @@ class KelurahanReportDashboardTest extends TestCase
 
     public function test_guest_cannot_access(): void
     {
-        $this->get(route('kelurahan.dashboard'))->assertForbidden();
+        $this->get(route('kelurahan.dashboard'))->assertRedirect(route('login'));
     }
 
     public function test_rt_cannot_access(): void

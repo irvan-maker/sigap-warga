@@ -129,12 +129,8 @@
                                     <span class="quick-action-icon bg-primary-subtle text-primary" aria-hidden="true">01</span>
                                     <span><strong class="d-block text-body">Kelola laporan</strong><small class="text-secondary">Tinjau laporan warga terbaru</small></span>
                                 </a>
-                                <a class="quick-action d-flex align-items-center gap-3 rounded-3 border p-3 text-decoration-none" href="{{ route('reports.create') }}">
-                                    <span class="quick-action-icon bg-success-subtle text-success" aria-hidden="true">02</span>
-                                    <span><strong class="d-block text-body">Buat laporan</strong><small class="text-secondary">Buka formulir laporan warga</small></span>
-                                </a>
                                 <a class="quick-action d-flex align-items-center gap-3 rounded-3 border p-3 text-decoration-none" href="{{ route('tracking.index') }}">
-                                    <span class="quick-action-icon bg-warning-subtle text-warning-emphasis" aria-hidden="true">03</span>
+                                    <span class="quick-action-icon bg-warning-subtle text-warning-emphasis" aria-hidden="true">02</span>
                                     <span><strong class="d-block text-body">Lacak tiket</strong><small class="text-secondary">Periksa progres berdasarkan tiket</small></span>
                                 </a>
                             </div>
@@ -220,11 +216,9 @@
                                             <div class="empty-table mx-auto py-3">
                                                 <div class="empty-icon mx-auto mb-3" aria-hidden="true">{{ $hasActiveFilters ? '?' : '✓' }}</div>
                                                 <h3 class="h5 fw-bold">{{ $hasActiveFilters ? 'Laporan tidak ditemukan' : 'Belum ada laporan warga' }}</h3>
-                                                <p class="text-secondary mb-3">{{ $hasActiveFilters ? 'Tidak ada data yang cocok. Coba gunakan kata kunci lain atau pilih status berbeda.' : 'Saat laporan pertama dikirim, detail dan status tindak lanjutnya akan tersedia di sini.' }}</p>
+                                                <p class="text-secondary {{ $hasActiveFilters ? 'mb-3' : 'mb-0' }}">{{ $hasActiveFilters ? 'Tidak ada data yang cocok. Coba gunakan kata kunci lain atau pilih status berbeda.' : 'Belum ada laporan warga yang perlu ditindaklanjuti. Laporan baru akan tersedia di sini setelah dicatat oleh Administrator.' }}</p>
                                                 @if ($hasActiveFilters)
                                                     <a class="btn btn-outline-primary btn-sm" href="{{ route('rt.dashboard') }}">Hapus semua filter</a>
-                                                @else
-                                                    <a class="btn btn-primary btn-sm" href="{{ route('reports.create') }}">Buat laporan pertama</a>
                                                 @endif
                                             </div>
                                         </td>

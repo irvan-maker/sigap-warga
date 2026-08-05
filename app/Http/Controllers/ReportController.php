@@ -35,6 +35,8 @@ class ReportController extends Controller
 
     public function show(Report $report): View
     {
+        Gate::authorize('view', $report);
+
         $report->load(['citizen', 'rt', 'attachments']);
 
         return view('reports.show', [

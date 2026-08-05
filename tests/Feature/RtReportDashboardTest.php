@@ -39,6 +39,16 @@ class RtReportDashboardTest extends TestCase
             ->assertSee('Dashboard RT');
     }
 
+    public function test_rt_dashboard_does_not_offer_admin_only_report_creation(): void
+    {
+        [, $user] = $this->createRtUser();
+
+        $this->actingAs($user)
+            ->get(route('rt.dashboard'))
+            ->assertOk()
+            ->assertDontSee(route('reports.create'), false);
+    }
+
     public function test_non_rt_user_receives_forbidden(): void
     {
         $this->actingAs(User::factory()->create())

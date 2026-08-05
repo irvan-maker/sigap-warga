@@ -57,7 +57,7 @@ Route::middleware(['auth', 'role.rw'])
         Route::get('/reports/{report}', [RwReportController::class, 'show'])->name('reports.show');
     });
 
-Route::middleware('role.kelurahan')
+Route::middleware(['auth', 'role.kelurahan'])
     ->prefix('kelurahan')
     ->name('kelurahan.')
     ->group(function (): void {
