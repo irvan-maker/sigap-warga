@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReportStatus;
+use App\Enums\UserRole;
+use App\Models\Citizen;
 use App\Models\Report;
+use App\Models\ReportHistory;
 use App\Models\Rt;
 use App\Models\Rw;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,6 +18,8 @@ class KelurahanReportController extends Controller
 {
     public function index(Request $request): View
     {
+        $today = now();
+        $staleThreshold = now()->subDays(3);
         $rws = Rw::query()->orderBy('code')->get(['id', 'code', 'name', 'is_active']);
         $rts = Rt::query()->orderBy('rw_id')->orderBy('code')->get([
             'id',
@@ -39,6 +44,41 @@ class KelurahanReportController extends Controller
             ->selectRaw('rt_id, COUNT(*) as aggregate')
             ->groupBy('rt_id')
             ->pluck('aggregate', 'rt_id');
+
+        $todayCreatedReports = Report::query()
+            ->whereBetween('reported_at', [$today->copy()->startOfDay(), $today->copy()->endOfDay()])
+            ->count();
+        $todayCompletedReports = ReportHistory::query()
+            ->where('new_status', ReportStatus::COMPLETED)
+            ->whereBetween('created_at', [$today->copy()->startOfDay(), $today->copy()->endOfDay()])
+            ->distinct()
+            ->count('report_id');
+        $staleProcessingReports = Report::query()
+            ->where('status', ReportStatus::PROCESSING)
+            ->whereDoesntHave(
+                'histories',
+                fn (Builder $query): Builder => $query->where('created_at', '>', $staleThreshold),
+            )
+            ->count();
+        $activeRwsWithoutActiveRts = Rw::query()
+            ->where('is_active', true)
+            ->whereDoesntHave('rts', fn (Builder $query): Builder => $query->where('is_active', true))
+            ->count();
+        $activeRtsWithoutActiveOfficers = Rt::query()
+            ->where('is_active', true)
+            ->whereDoesntHave('users', fn (Builder $query): Builder => $query
+                ->where('role', UserRole::RT)
+                ->where('is_active', true))
+            ->count();
+        $regionSummary = Rw::query()
+            ->where('is_active', true)
+            ->withCount([
+                'rts as active_rts_count' => fn (Builder $query): Builder => $query->where('is_active', true),
+                'reports',
+            ])
+            ->orderBy('code')
+            ->limit(5)
+            ->get(['id', 'code', 'name']);
 
         $selectedRwId = (int) $request->query('rw_id');
         $selectedRtId = (int) $request->query('rt_id');
@@ -98,6 +138,22 @@ class KelurahanReportController extends Controller
             'totalsByRt' => $rts->mapWithKeys(
                 fn (Rt $rt): array => [$rt->id => (int) $countsByRt->get($rt->id, 0)],
             ),
+            'todaySummary' => [
+                'created' => $todayCreatedReports,
+                'new' => (int) $counts->get(ReportStatus::NEW->value, 0),
+                'processing' => (int) $counts->get(ReportStatus::PROCESSING->value, 0),
+                'completed' => $todayCompletedReports,
+                'active_rws' => $rws->where('is_active', true)->count(),
+                'active_rts' => $rts->where('is_active', true)->count(),
+            ],
+            'totalCitizens' => Citizen::query()->count(),
+            'attentionSummary' => [
+                'new' => (int) $counts->get(ReportStatus::NEW->value, 0),
+                'stale_processing' => $staleProcessingReports,
+                'rws_without_active_rts' => $activeRwsWithoutActiveRts,
+                'rts_without_active_officers' => $activeRtsWithoutActiveOfficers,
+            ],
+            'regionSummary' => $regionSummary,
         ]);
     }
 

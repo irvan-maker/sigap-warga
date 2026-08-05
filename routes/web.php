@@ -89,5 +89,6 @@ Route::middleware(['auth', 'role.kelurahan'])
         Route::get('/rws/{rw}/edit', [KelurahanRwController::class, 'edit'])->name('rws.edit');
         Route::put('/rws/{rw}', [KelurahanRwController::class, 'update'])->name('rws.update');
         Route::patch('/rws/{rw}/status', [KelurahanRwController::class, 'toggleActive'])->name('rws.status.toggle');
+        Route::get('/reports', [KelurahanReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/{report}', [KelurahanReportController::class, 'show'])->name('reports.show');
     });

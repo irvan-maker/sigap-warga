@@ -4,6 +4,86 @@ body {
     background-color: #f8f9fa;
 }
 
+.kelurahan-dashboard {
+    color: #172033;
+    background-color: #f4f7fb;
+}
+
+.kelurahan-dashboard .kelurahan-hero {
+    background: linear-gradient(125deg, #123b68, #0d6efd);
+}
+
+.kelurahan-dashboard .text-white-75 {
+    color: rgba(255, 255, 255, .78);
+}
+
+.kelurahan-dashboard .hero-meta {
+    background-color: rgba(5, 28, 67, .28);
+    border: 1px solid rgba(255, 255, 255, .18);
+}
+
+.kelurahan-dashboard .section-eyebrow {
+    color: #0d6efd;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.kelurahan-dashboard .dashboard-panel,
+.kelurahan-dashboard .navigation-card {
+    border-radius: 1rem;
+}
+
+.kelurahan-dashboard .navigation-card,
+.kelurahan-dashboard .attention-link {
+    cursor: pointer;
+    transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.kelurahan-dashboard .navigation-card:hover,
+.kelurahan-dashboard .navigation-card:focus-visible {
+    background-color: #f8fbff;
+    box-shadow: 0 .5rem 1rem rgba(13, 110, 253, .12) !important;
+    transform: translateY(-2px);
+}
+
+.kelurahan-dashboard .navigation-card:focus-visible,
+.kelurahan-dashboard .attention-link:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, .45);
+    outline-offset: 2px;
+}
+
+.kelurahan-dashboard .information-tile,
+.kelurahan-dashboard .attention-link {
+    background-color: #f6f8fb;
+}
+
+.kelurahan-dashboard .attention-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.kelurahan-dashboard .attention-link:hover {
+    background-color: #eaf2ff;
+}
+
+.kelurahan-dashboard .interactive-row {
+    cursor: pointer;
+}
+
+.kelurahan-dashboard .interactive-row:hover > *,
+.kelurahan-dashboard .interactive-row:focus-visible > * {
+    background-color: #eaf2ff;
+}
+
+.kelurahan-dashboard .interactive-row:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, .45);
+    outline-offset: -3px;
+}
+
 tr[data-row-url] {
     cursor: pointer;
 }

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 #[Fillable(['code', 'name', 'is_active'])]
 class Rw extends Model
@@ -30,5 +31,13 @@ class Rw extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * @return HasManyThrough<Report, Rt, $this>
+     */
+    public function reports(): HasManyThrough
+    {
+        return $this->hasManyThrough(Report::class, Rt::class);
     }
 }
