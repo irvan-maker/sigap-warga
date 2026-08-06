@@ -37,6 +37,60 @@ class ResidentMasterDataTest extends TestCase
         $this->actingAs($user)->get(route('rt.family-cards.index'))->assertOk()->assertSee($ownCard->family_number)->assertDontSee($otherCard->family_number);
     }
 
+    public function test_rt_citizen_completeness_filters_handle_missing_nik_and_family_card_with_region_scope(): void
+    {
+        [$user, $ownRt, $otherRt] = $this->rtUserAndRegions();
+        $card = FamilyCard::factory()->for($ownRt)->create();
+        $withCard = Citizen::factory()->for($ownRt)->create(['name' => 'Punya KK', 'family_card_id' => $card->id, 'nik' => '3201010101010101']);
+        $withoutCard = Citizen::factory()->for($ownRt)->create(['name' => 'Tanpa KK Sendiri', 'family_card_id' => null, 'nik' => '3201010101010102']);
+        $nullNik = Citizen::factory()->for($ownRt)->create(['name' => 'NIK Null', 'family_card_id' => $card->id, 'nik' => null]);
+        $emptyNik = Citizen::factory()->for($ownRt)->create(['name' => 'NIK Kosong', 'family_card_id' => $card->id, 'nik' => '']);
+        $otherRegion = Citizen::factory()->for($otherRt)->create(['name' => 'Tanpa KK RT Lain', 'family_card_id' => null, 'nik' => null]);
+
+        $this->actingAs($user)->get(route('rt.citizens.index', ['completeness' => 'without_family_card']))
+            ->assertOk()
+            ->assertSee($withoutCard->name)
+            ->assertDontSee($withCard->name)
+            ->assertDontSee($otherRegion->name)
+            ->assertSee('Warga tanpa KK')
+            ->assertSee('Reset filter kelengkapan');
+
+        $this->actingAs($user)->get(route('rt.citizens.index', ['completeness' => 'without_nik']))
+            ->assertOk()
+            ->assertSee($nullNik->name)
+            ->assertSee($emptyNik->name)
+            ->assertDontSee($withCard->name)
+            ->assertDontSee($otherRegion->name)
+            ->assertSee('Warga tanpa NIK');
+    }
+
+    public function test_rt_family_card_completeness_filter_only_lists_cards_without_heads_in_own_region(): void
+    {
+        [$user, $ownRt, $otherRt] = $this->rtUserAndRegions();
+        $withoutHead = FamilyCard::factory()->for($ownRt)->create(['family_number' => '3201010101010101']);
+        $withHead = FamilyCard::factory()->for($ownRt)->create(['family_number' => '3201010101010102']);
+        $head = Citizen::factory()->for($ownRt)->create(['family_card_id' => $withHead->id]);
+        $withHead->update(['head_citizen_id' => $head->id]);
+        $otherRegion = FamilyCard::factory()->for($otherRt)->create(['family_number' => '3201010101010103']);
+
+        $this->actingAs($user)->get(route('rt.family-cards.index', ['completeness' => 'without_head']))
+            ->assertOk()
+            ->assertSee($withoutHead->family_number)
+            ->assertDontSee($withHead->family_number)
+            ->assertDontSee($otherRegion->family_number)
+            ->assertSee('KK tanpa kepala keluarga')
+            ->assertSee('Reset filter kelengkapan')
+            ->assertDontSee('onclick=', false);
+    }
+
+    public function test_completeness_filter_is_whitelisted(): void
+    {
+        [$user] = $this->rtUserAndRegions();
+
+        $this->actingAs($user)->get(route('rt.citizens.index', ['completeness' => 'unsupported']))->assertSessionHasErrors('completeness');
+        $this->actingAs($user)->get(route('rt.family-cards.index', ['completeness' => 'unsupported']))->assertSessionHasErrors('completeness');
+    }
+
     public function test_rt_gets_403_for_other_rt_records_and_request_rt_id_is_ignored(): void
     {
         [$user, $ownRt, $otherRt] = $this->rtUserAndRegions();

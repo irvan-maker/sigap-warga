@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\FamilyRelationship;
 use App\Enums\UserRole;
+use App\Http\Requests\IndexFamilyCardsRequest;
 use App\Http\Requests\SaveCitizenRequest;
 use App\Http\Requests\SaveFamilyCardRequest;
 use App\Models\Citizen;
@@ -18,19 +19,20 @@ use Illuminate\View\View;
 
 class FamilyCardController extends Controller
 {
-    public function index(Request $request): View
+    public function index(IndexFamilyCardsRequest $request): View
     {
         Gate::authorize('viewAny', FamilyCard::class);
         $query = FamilyCard::query()
             ->with(['rt:id,rw_id,code,name', 'rt.rw:id,code,name', 'headCitizen:id,name'])
             ->withCount([
                 'citizens',
-                'citizens as citizens_without_nik_count' => fn (Builder $query) => $query->whereNull('nik'),
+                'citizens as citizens_without_nik_count' => fn (Builder $query) => $query->where(fn (Builder $query) => $query->whereNull('nik')->orWhere('nik', '')),
             ]);
         $this->scope($query, $request);
         $search = trim((string) $request->query('search'));
         $query->when($search, fn (Builder $q) => $q->where(fn (Builder $q) => $q->where('family_number', 'like', "%{$search}%")->orWhereHas('headCitizen', fn (Builder $h) => $h->where('name', 'like', "%{$search}%"))))
             ->when(in_array($request->query('status'), ['active', 'inactive'], true), fn (Builder $q) => $q->where('is_active', $request->query('status') === 'active'))
+            ->when($request->query('completeness') === 'without_head', fn (Builder $q) => $q->whereNull('head_citizen_id'))
             ->when($request->filled('rt_id'), fn (Builder $q) => $q->where('rt_id', (int) $request->query('rt_id')))
             ->when($request->filled('rw_id'), fn (Builder $q) => $q->whereHas('rt', fn (Builder $rt) => $rt->where('rw_id', (int) $request->query('rw_id'))));
 

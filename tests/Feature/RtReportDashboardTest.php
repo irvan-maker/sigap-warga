@@ -139,8 +139,21 @@ class RtReportDashboardTest extends TestCase
             ->assertOk()
             ->assertViewHas('citizensWithoutNikCount', 2)
             ->assertViewHas('citizensWithoutFamilyCardCount', 1)
-            ->assertSee('2 warga tanpa NIK')
-            ->assertSee('1 warga tanpa KK');
+            ->assertSee('Warga tanpa NIK')
+            ->assertSee('Warga tanpa KK');
+    }
+
+    public function test_data_completeness_indicators_link_to_their_filtered_indexes_without_inline_click_handlers(): void
+    {
+        [, $user] = $this->createRtUser();
+
+        $this->actingAs($user)
+            ->get(route('rt.dashboard'))
+            ->assertOk()
+            ->assertSee('href="'.route('rt.citizens.index', ['completeness' => 'without_family_card']).'"', false)
+            ->assertSee('href="'.route('rt.citizens.index', ['completeness' => 'without_nik']).'"', false)
+            ->assertSee('href="'.route('rt.family-cards.index', ['completeness' => 'without_head']).'"', false)
+            ->assertDontSee('onclick=', false);
     }
 
     public function test_status_filter_works(): void

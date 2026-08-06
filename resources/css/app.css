@@ -51,6 +51,20 @@ a { text-underline-offset: .18em; }
 .service-card { transition: transform .2s ease, border-color .2s ease; }
 .service-card:hover { transform: translateY(-3px); border-color: #86b7fe; }
 .public-contact { background: var(--sigap-blue-soft); }
+.completeness-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .65rem .75rem;
+    color: var(--sigap-text);
+    background: #f8fafc;
+    border: 1px solid var(--sigap-border);
+    border-radius: .65rem;
+    text-decoration: none;
+    transition: background-color .2s ease, border-color .2s ease;
+}
+.completeness-link:hover,
+.completeness-link:focus-visible { color: var(--sigap-blue); background: var(--sigap-blue-soft); border-color: #86b7fe; }
 .app-main { padding-block: 1.5rem 3rem; }
 
 .card,
