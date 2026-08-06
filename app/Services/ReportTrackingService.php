@@ -12,8 +12,6 @@ class ReportTrackingService
     {
         return Report::query()
             ->with([
-                'citizen:id,name,phone_normalized',
-                'rt:id,code,name',
                 'attachments',
                 'histories' => function (HasMany $query): void {
                     $query

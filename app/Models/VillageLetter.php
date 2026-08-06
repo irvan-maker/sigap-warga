@@ -8,19 +8,29 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use LogicException;
 
-#[Fillable(['letter_number', 'letter_type', 'citizen_id', 'rt_id', 'submitted_by', 'reviewed_by_rw', 'approved_by_village', 'purpose', 'notes', 'status', 'submitted_at', 'reviewed_at', 'approved_at', 'issued_at', 'is_active'])]
+#[Fillable(['public_tracking_code', 'letter_number', 'letter_type', 'citizen_id', 'rt_id', 'submitted_by', 'reviewed_by_rw', 'approved_by_village', 'purpose', 'notes', 'status', 'submitted_at', 'reviewed_at', 'approved_at', 'issued_at', 'is_active'])]
 class VillageLetter extends Model
 {
     protected $attributes = ['status' => 'DRAFT', 'is_active' => true];
 
     protected static function booted(): void
     {
+        static::creating(function (self $letter): void {
+            $letter->public_tracking_code ??= 'SRT-'.strtoupper(Str::random(12));
+        });
+
         static::saving(function (self $letter): void {
+            if ($letter->exists && $letter->isDirty('public_tracking_code')) {
+                throw new LogicException('Nomor pengajuan publik tidak dapat diubah.');
+            }
             if ($letter->exists && $letter->isDirty(['citizen_id', 'rt_id'])) {
                 throw new LogicException('Warga dan wilayah surat tidak dapat dipindahkan.');
-            } if (! Citizen::query()->whereKey($letter->citizen_id)->where('rt_id', $letter->rt_id)->exists()) {
+            }
+
+            if (! Citizen::query()->whereKey($letter->citizen_id)->where('rt_id', $letter->rt_id)->exists()) {
                 throw new LogicException('Warga dan surat harus berada pada RT yang sama.');
             }
         });

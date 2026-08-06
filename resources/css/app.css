@@ -43,6 +43,14 @@ a { text-underline-offset: .18em; }
 .skip-link:focus { transform: translateY(0); }
 
 .app-shell { min-height: 100vh; }
+.public-header .navbar-brand { max-width: 70vw; white-space: normal; }
+.public-hero { background: linear-gradient(125deg, #092a52 0%, #0b5cab 60%, #2385d7 100%); }
+.public-hero .text-white-75 { color: rgba(255, 255, 255, .82); }
+.public-hero .hero-info { background: rgba(3, 25, 51, .28); border: 1px solid rgba(255, 255, 255, .22); backdrop-filter: blur(8px); }
+.letter-spacing { letter-spacing: .09em; }
+.service-card { transition: transform .2s ease, border-color .2s ease; }
+.service-card:hover { transform: translateY(-3px); border-color: #86b7fe; }
+.public-contact { background: var(--sigap-blue-soft); }
 .app-main { padding-block: 1.5rem 3rem; }
 
 .card,

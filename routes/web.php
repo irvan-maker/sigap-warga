@@ -9,6 +9,8 @@ use App\Http\Controllers\FamilyCardController;
 use App\Http\Controllers\HouseholdCensusController;
 use App\Http\Controllers\KelurahanReportController;
 use App\Http\Controllers\KelurahanRwController;
+use App\Http\Controllers\PublicLetterTrackingController;
+use App\Http\Controllers\PublicPortalController;
 use App\Http\Controllers\PublicReportTrackingController;
 use App\Http\Controllers\ReportAttachmentController;
 use App\Http\Controllers\ReportController;
@@ -18,17 +20,22 @@ use App\Http\Controllers\RwRtController;
 use App\Http\Controllers\VillageLetterController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return auth()->check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
-});
+Route::get('/', PublicPortalController::class)->name('public.home');
 
 Route::get('/tracking', [PublicReportTrackingController::class, 'index'])
     ->name('tracking.index');
 Route::post('/tracking', [PublicReportTrackingController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('tracking.store');
+
+Route::get('/lacak-surat', [PublicLetterTrackingController::class, 'index'])
+    ->name('letter-tracking.index');
+Route::post('/lacak-surat', [PublicLetterTrackingController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('letter-tracking.store');
+Route::get('/lacak-surat/download/{trackingCode}', [PublicLetterTrackingController::class, 'download'])
+    ->middleware('signed')
+    ->name('letter-tracking.download');
 
 Route::get('/report-attachments/{attachment}', [ReportAttachmentController::class, 'show'])
     ->middleware('signed')

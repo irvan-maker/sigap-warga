@@ -39,9 +39,9 @@ class PublicReportTrackingTest extends TestCase
             'phone' => '0812 3456 7890',
         ])->assertOk()
             ->assertSee($report->ticket_number)
-            ->assertSee($citizen->name)
             ->assertSee($report->title)
-            ->assertSee($report->description);
+            ->assertDontSee($citizen->name)
+            ->assertDontSee($report->description);
     }
 
     public function test_wrong_phone_is_rejected(): void
@@ -51,7 +51,7 @@ class PublicReportTrackingTest extends TestCase
         $this->post(route('tracking.store'), [
             'ticket_number' => $report->ticket_number,
             'phone' => '0812 0000 0000',
-        ])->assertOk()->assertSee('Laporan tidak ditemukan.');
+        ])->assertOk()->assertSee('Data belum dapat ditemukan.');
     }
 
     public function test_wrong_ticket_is_rejected(): void
@@ -61,7 +61,7 @@ class PublicReportTrackingTest extends TestCase
         $this->post(route('tracking.store'), [
             'ticket_number' => 'SGW-2026-99999',
             'phone' => '0812 3456 7890',
-        ])->assertOk()->assertSee('Laporan tidak ditemukan.');
+        ])->assertOk()->assertSee('Data belum dapat ditemukan.');
     }
 
     public function test_not_found_response_is_generic(): void
@@ -72,7 +72,7 @@ class PublicReportTrackingTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertSee('Laporan tidak ditemukan.')
+            ->assertSee('Data belum dapat ditemukan.')
             ->assertDontSee('tiket salah')
             ->assertDontSee('nomor telepon salah');
     }
