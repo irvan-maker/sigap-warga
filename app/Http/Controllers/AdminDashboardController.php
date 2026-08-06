@@ -9,6 +9,7 @@ use App\Models\Report;
 use App\Models\ReportHistory;
 use App\Models\Rt;
 use App\Models\Rw;
+use App\Services\VillageAnalyticsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -17,7 +18,7 @@ use Illuminate\View\View;
 
 class AdminDashboardController extends Controller
 {
-    public function __invoke(Request $request): RedirectResponse|View
+    public function __invoke(Request $request, VillageAnalyticsService $analyticsService): RedirectResponse|View
     {
         $redirectRoute = match ($request->user()->role) {
             UserRole::RT => 'rt.dashboard',
@@ -39,6 +40,7 @@ class AdminDashboardController extends Controller
         $monthlyReportData = $this->monthlyReportData();
 
         return view('dashboard', [
+            'analytics' => $analyticsService->village(),
             'totalCitizens' => Citizen::query()->count(),
             'totalActiveRws' => Rw::query()->where('is_active', true)->count(),
             'totalActiveRts' => Rt::query()->where('is_active', true)->count(),

@@ -14,6 +14,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RtReportController;
 use App\Http\Controllers\RwReportController;
 use App\Http\Controllers\RwRtController;
+use App\Http\Controllers\VillageLetterController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -71,6 +72,9 @@ Route::middleware(['auth', 'role.rt'])
         Route::patch('/family-cards/{familyCard}/head/{citizen}', [FamilyCardController::class, 'setHead'])->name('family-cards.head.update');
         Route::resource('family-cards', FamilyCardController::class)->except('destroy')->parameters(['family-cards' => 'familyCard']);
         Route::patch('/family-cards/{familyCard}/status', [FamilyCardController::class, 'toggleActive'])->name('family-cards.status.toggle');
+        Route::resource('letters', VillageLetterController::class)->except('destroy');
+        Route::patch('/letters/{letter}/submit', [VillageLetterController::class, 'submit'])->name('letters.submit');
+        Route::get('/letters/{letter}/pdf', [VillageLetterController::class, 'pdf'])->name('letters.pdf');
     });
 
 Route::middleware(['auth', 'role.rw'])
@@ -89,6 +93,11 @@ Route::middleware(['auth', 'role.rw'])
         Route::get('/citizens/{citizen}', [CitizenController::class, 'show'])->name('citizens.show');
         Route::get('/family-cards', [FamilyCardController::class, 'index'])->name('family-cards.index');
         Route::get('/family-cards/{familyCard}', [FamilyCardController::class, 'show'])->name('family-cards.show');
+        Route::get('/letters', [VillageLetterController::class, 'index'])->name('letters.index');
+        Route::get('/letters/{letter}', [VillageLetterController::class, 'show'])->name('letters.show');
+        Route::patch('/letters/{letter}/review', [VillageLetterController::class, 'review'])->name('letters.review');
+        Route::patch('/letters/{letter}/reject', [VillageLetterController::class, 'reject'])->name('letters.reject');
+        Route::get('/letters/{letter}/pdf', [VillageLetterController::class, 'pdf'])->name('letters.pdf');
     });
 
 Route::middleware(['auth', 'role.kelurahan'])
@@ -111,4 +120,10 @@ Route::middleware(['auth', 'role.kelurahan'])
         Route::patch('/family-cards/{familyCard}/head/{citizen}', [FamilyCardController::class, 'setHead'])->name('family-cards.head.update');
         Route::resource('family-cards', FamilyCardController::class)->except('destroy')->parameters(['family-cards' => 'familyCard']);
         Route::patch('/family-cards/{familyCard}/status', [FamilyCardController::class, 'toggleActive'])->name('family-cards.status.toggle');
+        Route::get('/letters', [VillageLetterController::class, 'index'])->name('letters.index');
+        Route::get('/letters/{letter}', [VillageLetterController::class, 'show'])->name('letters.show');
+        Route::patch('/letters/{letter}/approve', [VillageLetterController::class, 'approve'])->name('letters.approve');
+        Route::patch('/letters/{letter}/reject', [VillageLetterController::class, 'reject'])->name('letters.reject');
+        Route::patch('/letters/{letter}/issue', [VillageLetterController::class, 'issue'])->name('letters.issue');
+        Route::get('/letters/{letter}/pdf', [VillageLetterController::class, 'pdf'])->name('letters.pdf');
     });

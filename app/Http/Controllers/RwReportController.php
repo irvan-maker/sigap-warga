@@ -7,6 +7,8 @@ use App\Models\Citizen;
 use App\Models\FamilyCard;
 use App\Models\Report;
 use App\Models\Rt;
+use App\Models\VillageLetter;
+use App\Services\VillageAnalyticsService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -14,7 +16,7 @@ use Illuminate\View\View;
 
 class RwReportController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, VillageAnalyticsService $analyticsService): View
     {
         $rwId = $request->user()->rw_id;
         $rts = Rt::query()
@@ -67,6 +69,7 @@ class RwReportController extends Controller
             ->withQueryString();
 
         return view('rw.dashboard', [
+            'analytics' => $analyticsService->rw($rwId),
             'rts' => $rts,
             'reports' => $reports,
             'activeRtCount' => $rts->where('is_active', true)->count(),
@@ -81,6 +84,7 @@ class RwReportController extends Controller
             ),
             'activeCitizenCount' => Citizen::query()->whereIn('rt_id', $rtIds)->where('is_active', true)->count(),
             'activeFamilyCardCount' => FamilyCard::query()->whereIn('rt_id', $rtIds)->where('is_active', true)->count(),
+            'letterCount' => VillageLetter::query()->whereIn('rt_id', $rtIds)->count(),
         ]);
     }
 

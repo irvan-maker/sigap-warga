@@ -11,7 +11,8 @@
 
         @stack('styles')
     </head>
-    <body>
+    <body class="app-shell">
+        <a class="skip-link" href="#main-content">Lewati ke konten utama</a>
         @yield('content')
 
         @stack('scripts')

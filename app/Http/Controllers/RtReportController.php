@@ -7,7 +7,9 @@ use App\Http\Requests\UpdateRtReportStatusRequest;
 use App\Models\Citizen;
 use App\Models\FamilyCard;
 use App\Models\Report;
+use App\Models\VillageLetter;
 use App\Services\ReportStatusService;
+use App\Services\VillageAnalyticsService;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +20,7 @@ use Illuminate\View\View;
 
 class RtReportController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, VillageAnalyticsService $analyticsService): View
     {
         $rtId = $request->user()->rt_id;
 
@@ -54,6 +56,7 @@ class RtReportController extends Controller
             ->withQueryString();
 
         return view('rt.dashboard', [
+            'analytics' => $analyticsService->rt($rtId),
             'reports' => $reports,
             'total' => (int) $counts->sum(),
             'totalsByStatus' => collect(ReportStatus::cases())->mapWithKeys(
@@ -66,6 +69,7 @@ class RtReportController extends Controller
             'familyCardsWithoutHeadCount' => FamilyCard::query()->where('rt_id', $rtId)->whereNull('head_citizen_id')->count(),
             'citizensWithoutFamilyCardCount' => Citizen::query()->where('rt_id', $rtId)->whereNull('family_card_id')->count(),
             'citizensWithoutNikCount' => Citizen::query()->where('rt_id', $rtId)->whereNull('nik')->count(),
+            'letterCounts' => VillageLetter::query()->where('rt_id', $rtId)->selectRaw('status, COUNT(*) aggregate')->groupBy('status')->pluck('aggregate', 'status'),
         ]);
     }
 

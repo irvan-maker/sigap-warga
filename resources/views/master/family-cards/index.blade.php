@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Kartu Keluarga')
 @section('content')
-<main class="container py-4">
+<main id="main-content" class="container app-main">
     <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ route($routePrefix.'.dashboard') }}">Dashboard</a></li><li class="breadcrumb-item active">Kartu Keluarga</li></ol></nav>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3"><div><h1 class="h3 mb-1">Kartu Keluarga</h1><p class="text-secondary mb-0">Administrasi keluarga sesuai wilayah akses Anda.</p></div>@can('create', \App\Models\FamilyCard::class)<a class="btn btn-primary" href="{{ route($routePrefix.'.family-cards.create') }}">Tambah Kartu Keluarga</a>@endcan</div>
     @if(session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
@@ -10,4 +10,3 @@
     <div class="mt-3">{{ $familyCards->links('pagination::bootstrap-5') }}</div>
 </main>
 @endsection
-@push('scripts')<script>document.querySelectorAll('[data-row-url]').forEach((row)=>{const open=()=>window.location.assign(row.dataset.rowUrl);row.addEventListener('click',(event)=>{if(event.button===0&&!(event.target instanceof Element&&event.target.closest('a,button,input,select,textarea')))open()});row.addEventListener('keydown',(event)=>{if(event.target===row&&event.key==='Enter'){event.preventDefault();open()}})});</script>@endpush

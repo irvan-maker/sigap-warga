@@ -7,7 +7,7 @@
     $membersWithoutPhone = $familyCard->citizens->whereNull('phone')->count();
     $inactiveMembers = $familyCard->citizens->where('is_active', false)->count();
 @endphp
-<main class="container py-4">
+<main id="main-content" class="container app-main">
     <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ route($routePrefix.'.dashboard') }}">Dashboard</a></li><li class="breadcrumb-item"><a href="{{ route($routePrefix.'.family-cards.index') }}">Kartu Keluarga</a></li><li class="breadcrumb-item active">{{ $familyCard->family_number }}</li></ol></nav>
     @if(session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
     @if($familyCard->headCitizen && !$familyCard->headCitizen->is_active)<div class="alert alert-warning">Kepala keluarga saat ini berstatus nonaktif. Pilih anggota aktif sebagai pengganti bila diperlukan.</div>@endif
@@ -36,4 +36,3 @@
     <section class="card border-0 shadow-sm" aria-labelledby="actions-heading"><div class="card-body p-4"><h2 id="actions-heading" class="h5 mb-3">Aksi Administratif</h2>@can('update', $familyCard)<div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="{{ route($routePrefix.'.family-cards.members.create', $familyCard) }}">Tambah Anggota</a><a class="btn btn-outline-primary" href="{{ route($routePrefix.'.family-cards.edit', $familyCard) }}">Edit KK</a><form method="POST" action="{{ route($routePrefix.'.family-cards.status.toggle', $familyCard) }}">@csrf @method('PATCH')<button class="btn btn-outline-{{ $familyCard->is_active ? 'danger' : 'success' }}">{{ $familyCard->is_active ? 'Nonaktifkan' : 'Aktifkan' }} KK</button></form></div>@else<p class="text-secondary mb-0">Data ditampilkan dalam mode baca saja.</p>@endcan</div></section>
 </main>
 @endsection
-@push('scripts')<script>document.querySelectorAll('[data-row-url]').forEach((row)=>{const open=()=>window.location.assign(row.dataset.rowUrl);row.addEventListener('click',(event)=>{if(event.button===0&&!(event.target instanceof Element&&event.target.closest('a,button,input,select,textarea,form')))open()});row.addEventListener('keydown',(event)=>{if(event.target===row&&event.key==='Enter'){event.preventDefault();open()}})});</script>@endpush

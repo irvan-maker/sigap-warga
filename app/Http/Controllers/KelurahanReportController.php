@@ -10,6 +10,8 @@ use App\Models\Report;
 use App\Models\ReportHistory;
 use App\Models\Rt;
 use App\Models\Rw;
+use App\Models\VillageLetter;
+use App\Services\VillageAnalyticsService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -17,7 +19,7 @@ use Illuminate\View\View;
 
 class KelurahanReportController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, VillageAnalyticsService $analyticsService): View
     {
         $today = now();
         $staleThreshold = now()->subDays(3);
@@ -120,6 +122,7 @@ class KelurahanReportController extends Controller
             ->withQueryString();
 
         return view('kelurahan.dashboard', [
+            'analytics' => $analyticsService->village(),
             'rws' => $rws,
             'rts' => $rts,
             'reports' => $reports,
@@ -150,6 +153,7 @@ class KelurahanReportController extends Controller
             'totalCitizens' => Citizen::query()->count(),
             'activeCitizenCount' => Citizen::query()->where('is_active', true)->count(),
             'activeFamilyCardCount' => FamilyCard::query()->where('is_active', true)->count(),
+            'letterCount' => VillageLetter::query()->count(),
             'attentionSummary' => [
                 'new' => (int) $counts->get(ReportStatus::NEW->value, 0),
                 'stale_processing' => $staleProcessingReports,

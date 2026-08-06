@@ -48,12 +48,15 @@
                 </div>
             </header>
 
+            @include('analytics.village')
+
             <section class="mb-4" aria-labelledby="kpi-heading">
                 <div class="mb-3">
                     <p class="section-eyebrow mb-1">Layanan warga</p>
                     <h2 id="kpi-heading" class="h4 fw-bold mb-0">Ringkasan Laporan</h2>
                 </div>
                 <div class="row g-3">
+                    <div class="col-sm-6 col-xl-4"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.letters.index') }}"><span class="card-body p-4"><strong class="text-body d-block mb-1">Administrasi Surat</strong><small class="text-secondary">{{ number_format($letterCount) }} pengajuan tercatat</small></span></a></div>
                     <div class="col-6 col-lg"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.citizens.index') }}"><span class="card-body p-3"><span class="text-secondary small d-block">Warga Aktif</span><strong class="fs-3 text-body">{{ number_format($activeCitizenCount) }}</strong></span></a></div>
                     <div class="col-6 col-lg"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.family-cards.index') }}"><span class="card-body p-3"><span class="text-secondary small d-block">KK Aktif</span><strong class="fs-3 text-body">{{ number_format($activeFamilyCardCount) }}</strong></span></a></div>
                     <div class="col-6 col-lg">

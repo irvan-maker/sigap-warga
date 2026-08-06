@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Detail Warga')
 @section('content')
-<main class="container py-4">
+<main id="main-content" class="container app-main">
     <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ route($routePrefix.'.dashboard') }}">Dashboard</a></li><li class="breadcrumb-item"><a href="{{ route($routePrefix.'.citizens.index') }}">Warga</a></li><li class="breadcrumb-item active">{{ $citizen->name }}</li></ol></nav>
     <header class="card border-0 shadow-sm mb-4"><div class="card-body p-4 p-lg-5"><div class="d-flex flex-wrap justify-content-between align-items-start gap-3"><div><p class="text-primary text-uppercase fw-semibold small mb-1">Profil Administrasi Warga</p><h1 class="h2 mb-2">{{ $citizen->name }}</h1><span class="badge rounded-pill text-bg-{{ $citizen->is_active ? 'success' : 'secondary' }} px-3 py-2">{{ $citizen->is_active ? 'Aktif' : 'Nonaktif' }}</span></div><div class="d-flex flex-wrap gap-2">@if($citizen->familyCard)<a class="btn btn-outline-primary" href="{{ route($routePrefix.'.family-cards.show', $citizen->familyCard) }}">Kembali ke Detail KK</a>@endif @can('update', $citizen)<a class="btn btn-primary" href="{{ route($routePrefix.'.citizens.edit', $citizen) }}">Edit Warga</a>@endcan</div></div></div></header>
 
