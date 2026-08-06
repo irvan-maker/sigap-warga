@@ -1,0 +1,129 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\ReportStatus;
+use App\Enums\UserRole;
+use App\Models\Citizen;
+use App\Models\Report;
+use App\Models\ReportHistory;
+use App\Models\Rt;
+use App\Models\Rw;
+use App\Services\VillageAnalyticsService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
+
+class AdminDashboardController extends Controller
+{
+    public function __invoke(Request $request, VillageAnalyticsService $analyticsService): RedirectResponse|View
+    {
+        $redirectRoute = match ($request->user()->role) {
+            UserRole::RT => 'rt.dashboard',
+            UserRole::RW => 'rw.dashboard',
+            UserRole::KELURAHAN => 'kelurahan.dashboard',
+            UserRole::ADMIN => null,
+        };
+
+        if ($redirectRoute !== null) {
+            return redirect()->route($redirectRoute);
+        }
+
+        $counts = Report::query()
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $totalReports = (int) $counts->sum();
+        $monthlyReportData = $this->monthlyReportData();
+
+        return view('dashboard', [
+            'analytics' => $analyticsService->village(),
+            'totalCitizens' => Citizen::query()->count(),
+            'totalActiveRws' => Rw::query()->where('is_active', true)->count(),
+            'totalActiveRts' => Rt::query()->where('is_active', true)->count(),
+            'totalReports' => $totalReports,
+            'totalsByStatus' => collect(ReportStatus::cases())->mapWithKeys(
+                fn (ReportStatus $status): array => [
+                    $status->value => (int) $counts->get($status->value, 0),
+                ],
+            ),
+            'reportStatusChart' => [
+                'labels' => collect(ReportStatus::cases())
+                    ->map(fn (ReportStatus $status): string => $status->value)
+                    ->values(),
+                'data' => collect(ReportStatus::cases())
+                    ->map(fn (ReportStatus $status): int => (int) $counts->get($status->value, 0))
+                    ->values(),
+            ],
+            'monthlyReportChart' => $monthlyReportData,
+            'latestReports' => Report::query()
+                ->with([
+                    'citizen:id,name',
+                    'rt:id,rw_id,code,name',
+                    'rt.rw:id,code,name',
+                ])
+                ->latest('reported_at')
+                ->latest('id')
+                ->limit(8)
+                ->get(),
+            'reportSummaryByRt' => Rt::query()
+                ->with('rw:id,code,name')
+                ->withCount([
+                    'reports',
+                    'reports as new_reports_count' => fn ($query) => $query->where('status', ReportStatus::NEW),
+                    'reports as processing_reports_count' => fn ($query) => $query->where('status', ReportStatus::PROCESSING),
+                    'reports as completed_reports_count' => fn ($query) => $query->where('status', ReportStatus::COMPLETED),
+                    'reports as rejected_reports_count' => fn ($query) => $query->where('status', ReportStatus::REJECTED),
+                ])
+                ->orderBy('code')
+                ->get(),
+            'latestActivities' => ReportHistory::query()
+                ->with([
+                    'user:id,name',
+                    'report:id,ticket_number,citizen_id,rt_id,title',
+                    'report.citizen:id,name',
+                    'report.rt:id,rw_id,code,name',
+                    'report.rt.rw:id,code,name',
+                ])
+                ->latest('created_at')
+                ->latest('id')
+                ->limit(8)
+                ->get(),
+        ]);
+    }
+
+    /**
+     * @return array{labels: Collection<int, string>, data: Collection<int, int>}
+     */
+    private function monthlyReportData(): array
+    {
+        $months = collect(range(5, 0))
+            ->map(fn (int $monthsAgo) => now()->startOfMonth()->subMonths($monthsAgo));
+
+        $monthExpression = match (DB::connection()->getDriverName()) {
+            'sqlite' => "strftime('%Y-%m', reported_at)",
+            'pgsql' => "to_char(reported_at, 'YYYY-MM')",
+            'sqlsrv' => "FORMAT(reported_at, 'yyyy-MM')",
+            default => "DATE_FORMAT(reported_at, '%Y-%m')",
+        };
+
+        $counts = Report::query()
+            ->where('reported_at', '>=', $months->first())
+            ->where('reported_at', '<', now()->startOfMonth()->addMonth())
+            ->selectRaw("{$monthExpression} as report_month, COUNT(*) as aggregate")
+            ->groupByRaw($monthExpression)
+            ->pluck('aggregate', 'report_month');
+
+        return [
+            'labels' => $months
+                ->map(fn ($month): string => $month->locale('id')->isoFormat('MMM YYYY'))
+                ->values(),
+            'data' => $months
+                ->map(fn ($month): int => (int) $counts->get($month->format('Y-m'), 0))
+                ->values(),
+        ];
+    }
+}
