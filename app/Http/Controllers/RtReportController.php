@@ -67,8 +67,18 @@ class RtReportController extends Controller
             'activeCitizenCount' => Citizen::query()->where('rt_id', $rtId)->where('is_active', true)->count(),
             'activeFamilyCardCount' => FamilyCard::query()->where('rt_id', $rtId)->where('is_active', true)->count(),
             'familyCardsWithoutHeadCount' => FamilyCard::query()->where('rt_id', $rtId)->whereNull('head_citizen_id')->count(),
-            'citizensWithoutFamilyCardCount' => Citizen::query()->where('rt_id', $rtId)->whereNull('family_card_id')->count(),
-            'citizensWithoutNikCount' => Citizen::query()->where('rt_id', $rtId)->whereNull('nik')->count(),
+            'citizensWithoutFamilyCardCount' => Citizen::query()
+                ->where('rt_id', $rtId)
+                ->where(fn (Builder $query): Builder => $query
+                    ->whereNull('family_card_id')
+                    ->orWhere('family_card_id', ''))
+                ->count(),
+            'citizensWithoutNikCount' => Citizen::query()
+                ->where('rt_id', $rtId)
+                ->where(fn (Builder $query): Builder => $query
+                    ->whereNull('nik')
+                    ->orWhere('nik', ''))
+                ->count(),
             'letterCounts' => VillageLetter::query()->where('rt_id', $rtId)->selectRaw('status, COUNT(*) aggregate')->groupBy('status')->pluck('aggregate', 'status'),
         ]);
     }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FamilyRelationship;
 use App\Enums\ReportStatus;
 use App\Enums\UserRole;
 use App\Models\Citizen;
@@ -9,6 +10,7 @@ use App\Models\Report;
 use App\Models\Rt;
 use App\Models\Rw;
 use App\Models\User;
+use App\Services\HouseholdCensusService;
 use App\Services\ReportStatusService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -100,6 +102,45 @@ class RtReportDashboardTest extends TestCase
                     && $totals[ReportStatus::COMPLETED->value] === 1
                     && $totals[ReportStatus::REJECTED->value] === 1;
             });
+    }
+
+    public function test_data_completeness_counts_census_residents_with_null_or_empty_nik_and_only_residents_without_cards(): void
+    {
+        [$rt, $user] = $this->createRtUser();
+
+        app(HouseholdCensusService::class)->create($user, [
+            'family_number' => '3201010101010101',
+            'address' => 'Jalan Regression Sensus',
+            'head' => [
+                'name' => 'Kepala Tanpa NIK',
+                'nik' => null,
+            ],
+            'members' => [[
+                'name' => 'Anggota Tanpa NIK',
+                'nik' => '',
+                'family_relationship' => FamilyRelationship::CHILD->value,
+            ]],
+        ]);
+
+        Citizen::query()->create([
+            'rt_id' => $rt->id,
+            'name' => 'Warga Tunggal Tanpa KK',
+            'nik' => '3201010101010199',
+            'family_card_id' => null,
+            'is_active' => true,
+        ]);
+
+        $this->assertSame(1, Citizen::query()->whereNull('nik')->count());
+        $this->assertSame(1, Citizen::query()->where('nik', '')->count());
+        $this->assertSame(2, Citizen::query()->whereNotNull('family_card_id')->count());
+
+        $this->actingAs($user)
+            ->get(route('rt.dashboard'))
+            ->assertOk()
+            ->assertViewHas('citizensWithoutNikCount', 2)
+            ->assertViewHas('citizensWithoutFamilyCardCount', 1)
+            ->assertSee('2 warga tanpa NIK')
+            ->assertSee('1 warga tanpa KK');
     }
 
     public function test_status_filter_works(): void
@@ -256,7 +297,7 @@ class RtReportDashboardTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $attributes
+     * @param  array<string, mixed>  $attributes
      */
     private function createReport(Rt $rt, array $attributes = []): Report
     {
