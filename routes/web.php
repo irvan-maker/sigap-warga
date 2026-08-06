@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\CitizenController;
 use App\Http\Controllers\FamilyCardController;
+use App\Http\Controllers\HouseholdCensusController;
 use App\Http\Controllers\KelurahanReportController;
 use App\Http\Controllers\KelurahanRwController;
 use App\Http\Controllers\PublicReportTrackingController;
@@ -62,6 +63,8 @@ Route::middleware(['auth', 'role.rt'])
     ->name('rt.')
     ->group(function (): void {
         Route::get('/dashboard', [RtReportController::class, 'index'])->name('dashboard');
+        Route::get('/household-census/create', [HouseholdCensusController::class, 'create'])->name('household-census.create');
+        Route::post('/household-census', [HouseholdCensusController::class, 'store'])->name('household-census.store');
         Route::get('/reports/{report}', [RtReportController::class, 'show'])->name('reports.show');
         Route::patch('/reports/{report}/status', [RtReportController::class, 'updateStatus'])
             ->name('reports.status.update');

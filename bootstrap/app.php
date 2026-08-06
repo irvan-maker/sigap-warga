@@ -1,12 +1,12 @@
 <?php
 
+use App\Http\Middleware\EnsureUserIsKelurahan;
+use App\Http\Middleware\EnsureUserIsRt;
+use App\Http\Middleware\EnsureUserIsRw;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
-use App\Http\Middleware\EnsureUserIsRt;
-use App\Http\Middleware\EnsureUserIsRw;
-use App\Http\Middleware\EnsureUserIsKelurahan;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(

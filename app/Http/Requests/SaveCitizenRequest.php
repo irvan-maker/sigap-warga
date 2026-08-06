@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\FamilyRelationship;
+use App\Enums\MaritalStatus;
 use App\Models\Citizen;
 use App\Models\FamilyCard;
 use App\Support\PhoneNumberNormalizer;
@@ -36,6 +37,7 @@ class SaveCitizenRequest extends FormRequest
             'region_rt_id' => [$this->user()->rt_id === null && ! ($citizen instanceof Citizen) && ! ($contextCard instanceof FamilyCard) ? 'required' : 'nullable', 'integer', Rule::exists('rts', 'id')],
             'family_card_id' => [$contextCard instanceof FamilyCard ? 'nullable' : 'nullable', Rule::exists('family_cards', 'id')->where(fn ($query) => $query->where('rt_id', $rtId))],
             'family_relationship' => ['nullable', Rule::enum(FamilyRelationship::class), Rule::notIn([FamilyRelationship::HEAD->value])],
+            'marital_status' => ['nullable', Rule::enum(MaritalStatus::class)],
             'nik' => ['nullable', 'digits:16', Rule::unique('citizens', 'nik')->ignore($citizen instanceof Citizen ? $citizen : null)],
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
@@ -57,7 +59,7 @@ class SaveCitizenRequest extends FormRequest
             'nik' => $nullable('nik'), 'name' => trim((string) $this->input('name')),
             'phone' => $nullable('phone'),
             'phone_normalized' => $this->filled('phone') ? app(PhoneNumberNormalizer::class)->normalize((string) $this->input('phone')) : null,
-            'gender' => $nullable('gender'), 'birth_place' => $nullable('birth_place'), 'address' => $nullable('address'),
+            'gender' => $nullable('gender'), 'marital_status' => $nullable('marital_status'), 'birth_place' => $nullable('birth_place'), 'address' => $nullable('address'),
         ]);
     }
 }

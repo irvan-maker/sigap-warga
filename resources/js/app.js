@@ -24,4 +24,62 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    const census = document.querySelector('[data-household-census]');
+    if (census) {
+        const members = census.querySelector('[data-members]');
+        const template = census.querySelector('[data-member-template]');
+        const empty = census.querySelector('[data-members-empty]');
+        let nextIndex = members.querySelectorAll('[data-member]').length;
+
+        const summary = (key, value) => {
+            const output = census.querySelector(`[data-summary="${key}"]`);
+            if (output) output.textContent = value || '—';
+        };
+        const updateSummary = () => {
+            const memberCount = members.querySelectorAll('[data-member]').length;
+            summary('family-number', census.querySelector('[data-summary-family-number]')?.value.trim());
+            summary('head-name', census.querySelector('[data-summary-head-name]')?.value.trim());
+            summary('address', census.querySelector('[data-summary-address]')?.value.trim());
+            summary('member-count', String(memberCount));
+            summary('citizen-count', String(memberCount + 1));
+        };
+        const renumber = () => {
+            members.querySelectorAll('[data-member]').forEach((member, index) => {
+                member.querySelectorAll('[data-member-number]').forEach((number) => { number.textContent = String(index + 1); });
+                member.querySelector('[data-remove-member]')?.setAttribute('aria-label', `Hapus anggota ${index + 1}`);
+            });
+            empty.classList.toggle('d-none', members.querySelector('[data-member]') !== null);
+            updateSummary();
+        };
+
+        census.addEventListener('click', (event) => {
+            if (!(event.target instanceof Element)) return;
+            if (event.target.closest('[data-add-member]')) {
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = template.innerHTML.replaceAll('__INDEX__', String(nextIndex++));
+                const member = wrapper.firstElementChild;
+                members.append(member);
+                renumber();
+                member.querySelector('input, select')?.focus();
+                return;
+            }
+            const button = event.target.closest('[data-remove-member]');
+            if (button) {
+                const member = button.closest('[data-member]');
+                const nextFocus = member.nextElementSibling?.querySelector('input, select') ?? member.previousElementSibling?.querySelector('input, select') ?? census.querySelector('[data-add-member]');
+                member.remove();
+                renumber();
+                nextFocus?.focus();
+            }
+        });
+        census.addEventListener('input', updateSummary);
+
+        const firstInvalid = census.querySelector('.is-invalid');
+        if (firstInvalid) requestAnimationFrame(() => {
+            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstInvalid.focus({ preventScroll: true });
+        });
+        renumber();
+    }
 });

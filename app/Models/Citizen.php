@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\FamilyRelationship;
+use App\Enums\MaritalStatus;
 use Database\Factories\CitizenFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['rt_id', 'family_card_id', 'family_relationship', 'nik', 'name', 'phone', 'phone_normalized', 'gender', 'birth_place', 'birth_date', 'address', 'is_active'])]
+#[Fillable(['rt_id', 'family_card_id', 'family_relationship', 'marital_status', 'nik', 'name', 'phone', 'phone_normalized', 'gender', 'birth_place', 'birth_date', 'address', 'is_active'])]
 class Citizen extends Model
 {
     /** @use HasFactory<CitizenFactory> */
@@ -39,7 +40,7 @@ class Citizen extends Model
 
     protected function casts(): array
     {
-        return ['birth_date' => 'date', 'is_active' => 'boolean', 'family_relationship' => FamilyRelationship::class];
+        return ['birth_date' => 'date', 'is_active' => 'boolean', 'family_relationship' => FamilyRelationship::class, 'marital_status' => MaritalStatus::class];
     }
 
     /**
