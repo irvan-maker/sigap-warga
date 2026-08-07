@@ -43,7 +43,7 @@
                     </div>
                     <div class="hero-meta rounded-3 p-3">
                         <span class="small text-white-50 d-block">Hari ini</span>
-                        <strong>{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</strong>
+                        <strong>{{ now()->timezone('Asia/Jakarta')->locale('id')->isoFormat('dddd, D MMMM Y') }}</strong>
                     </div>
                 </div>
             </header>
@@ -55,26 +55,54 @@
                     <p class="section-eyebrow mb-1">Layanan warga</p>
                     <h2 id="kpi-heading" class="h4 fw-bold mb-0">Ringkasan Laporan</h2>
                 </div>
-                <div class="row g-3">
-                    <div class="col-sm-6 col-xl-4"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.letters.index') }}"><span class="card-body p-4"><strong class="text-body d-block mb-1">Administrasi Surat</strong><small class="text-secondary">{{ number_format($letterCount) }} pengajuan tercatat</small></span></a></div>
-                    <div class="col-6 col-lg"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.citizens.index') }}"><span class="card-body p-3"><span class="text-secondary small d-block">Warga Aktif</span><strong class="fs-3 text-body">{{ number_format($activeCitizenCount) }}</strong></span></a></div>
-                    <div class="col-6 col-lg"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.family-cards.index') }}"><span class="card-body p-3"><span class="text-secondary small d-block">KK Aktif</span><strong class="fs-3 text-body">{{ number_format($activeFamilyCardCount) }}</strong></span></a></div>
-                    <div class="col-6 col-lg">
-                        <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.reports.index') }}#laporan">
-                            <span class="card-body p-3 p-lg-4">
-                                <span class="text-secondary small d-block">Total Laporan</span>
-                                <strong class="fs-3 text-body d-block">{{ number_format($total) }}</strong>
-                                <small class="text-primary">Lihat seluruh laporan</small>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6 col-xl-3">
+                        <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.letters.index') }}">
+                            <span class="card-body p-4 d-flex flex-column">
+                                <span class="text-secondary small d-block mb-1">Administrasi Surat</span>
+                                <strong class="fs-3 text-body">{{ number_format($letterCount) }}</strong>
+                                <small class="text-secondary mt-auto pt-2">pengajuan tercatat</small>
                             </span>
                         </a>
                     </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.citizens.index') }}">
+                            <span class="card-body p-4 d-flex flex-column">
+                                <span class="text-secondary small d-block mb-1">Warga Aktif</span>
+                                <strong class="fs-3 text-body">{{ number_format($activeCitizenCount) }}</strong>
+                                <small class="text-secondary mt-auto pt-2">Lihat data warga</small>
+                            </span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.family-cards.index') }}">
+                            <span class="card-body p-4 d-flex flex-column">
+                                <span class="text-secondary small d-block mb-1">KK Aktif</span>
+                                <strong class="fs-3 text-body">{{ number_format($activeFamilyCardCount) }}</strong>
+                                <small class="text-secondary mt-auto pt-2">Lihat data KK</small>
+                            </span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.reports.index') }}#laporan">
+                            <span class="card-body p-4 d-flex flex-column">
+                                <span class="text-secondary small d-block mb-1">Total Laporan</span>
+                                <strong class="fs-3 text-body">{{ number_format($total) }}</strong>
+                                <small class="text-primary mt-auto pt-2">Lihat seluruh laporan</small>
+                            </span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row g-3">
                     @foreach (\App\Enums\ReportStatus::cases() as $status)
-                        <div class="col-6 col-lg">
+                        <div class="col-6 col-md-3">
                             <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.reports.index', ['status' => $status->value]) }}#laporan">
-                                <span class="card-body p-3 p-lg-4">
-                                    <span class="text-secondary small d-block">{{ $status->label() }}</span>
-                                    <strong class="fs-3 text-body d-block">{{ number_format($totalsByStatus[$status->value]) }}</strong>
-                                    <small class="text-{{ $status->bootstrapColor() }}">Buka daftar terfilter</small>
+                                <span class="card-body p-3 d-flex flex-column">
+                                    <span class="text-secondary small d-block mb-1">{{ $status->label() }}</span>
+                                    <strong class="fs-4 text-body">{{ number_format($totalsByStatus[$status->value]) }}</strong>
+                                    <small class="text-{{ $status->bootstrapColor() }} mt-auto pt-2">Lihat daftar</small>
                                 </span>
                             </a>
                         </div>
