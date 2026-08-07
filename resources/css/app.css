@@ -160,6 +160,18 @@ a { text-underline-offset: .18em; }
 .action-panel { border-left: .3rem solid var(--sigap-blue); }
 .min-w-0 { min-width: 0; }
 .analytics-chart { position: relative; height: 19rem; }
+.analytics-icon-box {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    color: var(--sigap-blue);
+    font-size: 1.25rem;
+    background: var(--sigap-blue-soft);
+    border-radius: .75rem;
+}
+.analytics-icon-box-warning { color: #785500; background: #fff3cd; }
 .insight-card { background: linear-gradient(135deg, #fff 0%, #eef6ff 100%); border-left: .3rem solid #f4b740 !important; }
 
 .kelurahan-dashboard {

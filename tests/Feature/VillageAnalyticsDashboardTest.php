@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\LetterStatus;
 use App\Enums\LetterType;
 use App\Enums\UserRole;
+use App\Enums\VillagePosition;
 use App\Models\Citizen;
 use App\Models\FamilyCard;
 use App\Models\Report;
@@ -38,6 +39,21 @@ class VillageAnalyticsDashboardTest extends TestCase
             ->assertViewHas('analytics', fn (array $data): bool => $data['kpis'] === [
                 'citizens' => 1, 'family_cards' => 1, 'reports' => 1, 'letters' => 1,
             ]);
+    }
+
+    public function test_village_dashboard_keeps_all_six_charts_at_the_bottom_with_secondary_charts_collapsed(): void
+    {
+        [, , , $user] = $this->region('001', '001', UserRole::KELURAHAN);
+        $user->update(['position' => VillagePosition::VILLAGE_SECRETARY]);
+
+        $response = $this->actingAs($user)->get(route('kelurahan.dashboard'))->assertOk();
+        $response->assertSeeInOrder(['Daftar Laporan', 'Ranking RT', 'Statistik Desa'])
+            ->assertSee('id="completeVillageAnalytics"', false)
+            ->assertSee('Lihat Analitik Lengkap');
+
+        foreach (['monthlyReportsChart', 'monthlyLettersChart', 'reportStatusChartAnalytics', 'reportsByRwChart', 'letterStatusChart', 'lettersByRwChart'] as $chartId) {
+            $response->assertSee('id="'.$chartId.'"', false);
+        }
     }
 
     public function test_rw_statistics_are_scoped_to_its_own_region(): void

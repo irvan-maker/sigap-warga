@@ -44,8 +44,6 @@
                 </div>
             </header>
 
-            @include('analytics.village')
-
             <section class="mb-4" aria-labelledby="coverage-heading">
                 <div class="mb-3">
                     <p class="admin-eyebrow mb-1">Cakupan layanan</p>
@@ -314,6 +312,7 @@
                     </section>
                 </div>
             </div>
+            @include('analytics.village')
         </main>
     </div>
 @endsection
