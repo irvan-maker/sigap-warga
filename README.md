@@ -1,58 +1,467 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SIGAP WARGA
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**Sistem Informasi dan Pelaporan Warga**
 
-## About Laravel
+SIGAP WARGA adalah sistem digital untuk membantu pengelolaan laporan warga, administrasi kependudukan, pelayanan surat, serta koordinasi antara RT, RW, dan Kelurahan/Desa.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+> Status saat ini: **Online / Staging / Pilot Development**
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Teknologi
 
-## Learning Laravel
+- Laravel 13
+- PHP 8.3
+- MySQL / MariaDB
+- WhatsApp Cloud API — tahap integrasi
+- QR Code berbasis wilayah
+- Responsive Web Application
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# Arsitektur Inti SIGAP WARGA
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+Prinsip utama sistem:
 
-## Agentic Development
+- **Dashboard adalah pusat data dan tindakan resmi petugas.**
+- **WhatsApp adalah kanal pelaporan warga dan notifikasi.**
+- **QR Code adalah pintu masuk cepat bagi warga.**
+- Setiap laporan harus terhubung dengan wilayah RT/RW.
+- Perubahan status penting disimpan sebagai histori.
+- Notifikasi petugas dikirim kepada pihak yang memegang tindakan berikutnya.
+- Warga menerima notifikasi pada milestone penting laporan.
+- Super Admin memiliki visibility penuh terhadap sistem tanpa harus menerima seluruh notifikasi operasional.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+---
 
-```bash
-composer require laravel/boost --dev
+# Workflow Pelaporan Warga
 
-php artisan boost:install
+## 1. Scan QR Code
+
+QR Code dapat dibuat berdasarkan wilayah RT/RW.
+
+Contoh identitas:
+
+```text
+RT 001 / RW 001
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Alur:
 
-## Contributing
+```text
+Warga
+  ↓
+Scan QR
+  ↓
+WhatsApp SIGAP WARGA terbuka
+  ↓
+Pesan awal sudah tersedia:
+MULAI LAPOR
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+QR wilayah dapat membawa identitas RT/RW sehingga sistem dapat menentukan tujuan laporan secara otomatis.
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 2. Memulai Laporan
 
-## Security Vulnerabilities
+Warga mengirim:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```text
+MULAI LAPOR
+```
 
-## License
+Bot membalas:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```text
+Selamat datang di SIGAP WARGA 👋
+
+Silakan kirim laporan dengan format:
+
+Nama:
+Alamat:
+Kategori:
+Keterangan:
+
+Tambahkan foto/lokasi jika ada.
+```
+
+Warga kemudian mengirim satu pesan lengkap.
+
+---
+
+## 3. Laporan Masuk Sistem
+
+Setelah laporan diterima:
+
+```text
+WhatsApp
+   ↓
+Webhook
+   ↓
+Laravel
+   ↓
+Validasi & Parsing
+   ↓
+Database SIGAP WARGA
+   ↓
+Nomor laporan dibuat
+```
+
+Contoh:
+
+```text
+LPR-2026-0001
+```
+
+Warga menerima konfirmasi:
+
+```text
+✅ Laporan berhasil diterima.
+
+Nomor Laporan: LPR-2026-0001
+Status: Menunggu verifikasi RT
+
+Simpan nomor laporan untuk memantau perkembangan.
+```
+
+---
+
+# Workflow RT
+
+Setelah laporan berhasil dibuat:
+
+```text
+Laporan Baru
+   ↓
+Dashboard RT
+   +
+Notifikasi WhatsApp RT
+```
+
+Contoh notifikasi:
+
+```text
+🔔 Laporan Baru SIGAP WARGA
+
+LPR-2026-0001
+Kategori: Infrastruktur
+Wilayah: RT 001 / RW 001
+
+Silakan buka dashboard SIGAP WARGA
+untuk melakukan verifikasi.
+```
+
+## RT Mulai Meninjau
+
+RT melakukan tindakan resmi melalui dashboard:
+
+```text
+BARU
+  ↓
+MULAI TINJAU
+  ↓
+DITINJAU RT
+```
+
+Perubahan tersebut disimpan ke histori laporan.
+
+Warga menerima:
+
+```text
+🔎 Laporan Anda sedang ditinjau oleh RT.
+```
+
+---
+
+# Eskalasi RT → RW
+
+Jika laporan membutuhkan kewenangan RW:
+
+```text
+RT
+  ↓
+Teruskan ke RW
+  ↓
+MENUNGGU TINDAKAN RW
+  ↓
+Dashboard RW
+  +
+Notifikasi WhatsApp RW
+```
+
+RW menerima:
+
+```text
+🔔 Laporan Diteruskan dari RT
+
+LPR-2026-0001
+Kategori: Infrastruktur
+Asal: RT 001 / RW 001
+
+Silakan buka dashboard SIGAP WARGA
+untuk menindaklanjuti.
+```
+
+Warga menerima:
+
+```text
+📌 Laporan Anda telah diteruskan ke RW
+untuk tindak lanjut berikutnya.
+```
+
+---
+
+# Eskalasi RW → Kelurahan/Desa
+
+Jika laporan membutuhkan kewenangan Kelurahan/Desa:
+
+```text
+RW
+  ↓
+Teruskan ke Kelurahan
+  ↓
+MENUNGGU TINDAKAN KELURAHAN
+  ↓
+Dashboard Kelurahan
+  +
+Notifikasi WhatsApp Petugas Kelurahan
+```
+
+Petugas Kelurahan menerima:
+
+```text
+🔔 Laporan Diteruskan ke Kelurahan
+
+LPR-2026-0001
+Kategori: Infrastruktur
+Asal: RT 001 / RW 001
+
+Silakan buka dashboard SIGAP WARGA
+untuk melakukan tindak lanjut.
+```
+
+Warga menerima:
+
+```text
+🏛️ Laporan Anda telah diteruskan
+ke pihak Kelurahan/Desa.
+```
+
+---
+
+# Penyelesaian Laporan
+
+Setelah penanganan selesai:
+
+```text
+Petugas
+  ↓
+SELESAI
+  ↓
+Histori disimpan
+  ↓
+Notifikasi WhatsApp Warga
+```
+
+Warga menerima:
+
+```text
+✅ Laporan Anda telah selesai ditangani.
+
+Terima kasih telah menggunakan SIGAP WARGA.
+```
+
+---
+
+# Prinsip Notifikasi
+
+## Warga
+
+Warga menerima notifikasi pada milestone penting:
+
+- Laporan berhasil diterima
+- Sedang ditinjau RT
+- Diteruskan ke RW
+- Diteruskan ke Kelurahan/Desa
+- Sedang ditindaklanjuti
+- Selesai
+- Ditolak atau memerlukan perbaikan
+
+## RT
+
+RT menerima:
+
+- Laporan baru di wilayahnya
+- Laporan yang membutuhkan tindakan RT
+
+## RW
+
+RW menerima:
+
+- Laporan yang diteruskan RT
+- Laporan yang membutuhkan tindakan RW
+
+## Kelurahan/Desa
+
+Petugas Kelurahan menerima:
+
+- Laporan yang diteruskan dari RW
+- Laporan yang membutuhkan tindakan Kelurahan
+
+## Super Admin
+
+Super Admin:
+
+- Memiliki visibility penuh
+- Dapat melihat seluruh laporan dan histori
+- Tidak harus menerima seluruh notifikasi operasional
+- Dapat menerima alert/escalation khusus
+
+> **Prinsip utama: notifikasi dikirim kepada pihak yang memegang tindakan berikutnya.**
+
+---
+
+# Standar Akun Petugas
+
+## Super Admin
+
+Super Admin menggunakan:
+
+- Email aktif
+- Email yang dapat diverifikasi
+- Password pribadi
+- Mekanisme recovery melalui email
+
+## RW
+
+Format username:
+
+```text
+rwXXX.namapetugas
+```
+
+Contoh:
+
+```text
+rw001.riandmasiv
+```
+
+## RT
+
+Format username:
+
+```text
+rtXXX.namapetugas.rwXXX
+```
+
+Contoh:
+
+```text
+rt001.riandmasiv.rw001
+```
+
+Username menggunakan huruf kecil tanpa spasi.
+
+Jika terjadi pergantian petugas, akun lama **dinonaktifkan dan tidak digunakan ulang** agar histori aktivitas tetap dapat diaudit.
+
+---
+
+# Modul Persuratan
+
+Workflow persuratan **belum dianggap final**.
+
+Jenis surat perlu diklasifikasikan berdasarkan kewenangan:
+
+- Surat yang dapat diterbitkan RT
+- Surat yang membutuhkan keterlibatan RW
+- Surat yang wajib diterbitkan Kelurahan/Desa
+
+Workflow final harus mengikuti hasil validasi proses administrasi dengan perangkat Desa/Kelurahan.
+
+SIGAP WARGA tidak boleh memberikan kewenangan penerbitan surat kepada role yang secara administratif tidak berwenang.
+
+---
+
+# Deployment
+
+Konfigurasi deployment saat ini:
+
+```text
+Framework    : Laravel 13
+PHP          : 8.3
+Database     : MySQL / MariaDB
+Document Root: /public
+Environment  : production
+APP_DEBUG    : false
+```
+
+Domain utama yang direncanakan:
+
+```text
+sigapwarga.com
+```
+
+Selama proses staging/pilot, aplikasi dapat menggunakan domain sementara yang disediakan server hosting.
+
+---
+
+# Status Pengembangan
+
+SIGAP WARGA saat ini berada pada tahap:
+
+```text
+ONLINE
+  ↓
+STAGING
+  ↓
+PILOT DEVELOPMENT
+  ↓
+UJI COBA
+  ↓
+PRODUCTION
+```
+
+Fitur dan workflow harus melalui pengujian sebelum digunakan secara penuh oleh masyarakat.
+
+---
+
+# Core Workflow
+
+```text
+QR WILAYAH
+    ↓
+WHATSAPP WARGA
+    ↓
+WEBHOOK
+    ↓
+LARAVEL
+    ↓
+DATABASE
+    ↓
+DASHBOARD RT
+    ↓
+RT
+    ↓
+RW (jika diperlukan)
+    ↓
+KELURAHAN/DESA (jika diperlukan)
+    ↓
+PENYELESAIAN
+    ↓
+NOTIFIKASI WARGA
+```
+
+**Dashboard = pusat tindakan resmi.**
+
+**WhatsApp = kanal laporan dan notifikasi.**
+
+**QR Code = pintu masuk warga.**
+
+---
+
+## Catatan Pengembangan
+
+Keputusan arsitektur pada dokumen ini menjadi acuan pengembangan SIGAP WARGA.
+
+Perubahan terhadap core workflow, sistem kewenangan, routing laporan, atau mekanisme notifikasi harus dipertimbangkan terhadap kebutuhan operasional RT, RW, Kelurahan/Desa, dan hasil validasi lapangan.
