@@ -2,6 +2,315 @@
 
 @section('title', 'Dashboard RT - SIGAP WARGA')
 
+@push('styles')
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ==========================================================
+           SIGAP WARGA — RT Dashboard: Glassmorphism (blue accent)
+           ========================================================== */
+        .rt-dashboard {
+            --gl-blue: #2b5cff;
+            --gl-blue-dark: #1a3fd6;
+            --gl-blue-light: #6d90ff;
+            --gl-ink: #1c2340;
+            --gl-muted: #5a6485;
+            --gl-glass-bg: rgba(255, 255, 255, 0.55);
+            --gl-glass-border: rgba(255, 255, 255, 0.65);
+            --gl-glass-shadow: 0 8px 32px rgba(31, 60, 136, 0.14);
+
+            position: relative;
+            min-height: 100vh;
+            overflow-x: hidden;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            color: var(--gl-ink);
+            background: linear-gradient(165deg, #eef2fc 0%, #e6ecfb 45%, #eef4fb 100%);
+        }
+
+        .rt-dashboard h1,
+        .rt-dashboard h2,
+        .rt-dashboard h3,
+        .rt-dashboard .navbar-brand {
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        }
+
+        /* floating blurred color blobs = the "glass" needs something to refract */
+        .rt-dashboard .glass-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(90px);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .rt-dashboard .glass-blob--1 {
+            width: 420px; height: 420px;
+            top: -12%; left: -10%;
+            background: radial-gradient(circle, rgba(43,92,255,0.55), transparent 70%);
+        }
+        .rt-dashboard .glass-blob--2 {
+            width: 380px; height: 380px;
+            top: 18%; right: -14%;
+            background: radial-gradient(circle, rgba(124,92,255,0.45), transparent 70%);
+        }
+        .rt-dashboard .glass-blob--3 {
+            width: 460px; height: 460px;
+            bottom: -16%; left: 22%;
+            background: radial-gradient(circle, rgba(52,209,200,0.4), transparent 70%);
+        }
+
+        .rt-dashboard > .navbar { position: relative; z-index: 2; }
+        .rt-dashboard > main { position: relative; z-index: 1; }
+
+        /* ---------- Navbar ---------- */
+        .rt-dashboard .navbar {
+            background: rgba(255, 255, 255, 0.6) !important;
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5) !important;
+        }
+        .rt-dashboard .brand-mark {
+            width: 34px; height: 34px;
+            font-size: .8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gl-blue), var(--gl-blue-light));
+            box-shadow: 0 4px 14px rgba(43, 92, 255, 0.4);
+        }
+        .rt-dashboard .navbar-brand { color: var(--gl-blue) !important; }
+        .rt-dashboard .navbar .btn-outline-danger {
+            background: rgba(255, 59, 59, 0.08);
+            border: 1px solid rgba(255, 59, 59, 0.35);
+            color: #d13a3a;
+            backdrop-filter: blur(6px);
+            font-weight: 600;
+        }
+        .rt-dashboard .navbar .btn-outline-danger:hover {
+            background: #ff3b3b;
+            border-color: #ff3b3b;
+            color: #fff;
+        }
+
+        /* ---------- Hero ---------- */
+        .rt-dashboard .dashboard-hero {
+            background: linear-gradient(135deg, rgba(43, 92, 255, 0.6) 0%, rgba(94, 74, 255, 0.5) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 20px 50px rgba(31, 60, 136, 0.22);
+        }
+        .rt-dashboard .dashboard-hero .badge {
+            backdrop-filter: blur(6px);
+        }
+        .rt-dashboard .hero-meta {
+            background: rgba(255, 255, 255, 0.16);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* ---------- Generic glass card treatment ---------- */
+        .rt-dashboard .card {
+            background: var(--gl-glass-bg) !important;
+            backdrop-filter: blur(18px) saturate(180%);
+            -webkit-backdrop-filter: blur(18px) saturate(180%);
+            border: 1px solid var(--gl-glass-border) !important;
+            border-radius: 20px !important;
+            box-shadow: var(--gl-glass-shadow) !important;
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+        .rt-dashboard .card.navigation-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 40px rgba(31, 60, 136, 0.22) !important;
+        }
+        .rt-dashboard .card-header {
+            background: transparent !important;
+            border-bottom: 1px solid rgba(43, 92, 255, 0.12) !important;
+        }
+
+        .rt-dashboard .section-eyebrow {
+            text-transform: uppercase;
+            font-weight: 800;
+            font-size: .72rem;
+            letter-spacing: .09em;
+            color: var(--gl-blue);
+        }
+
+        /* ---------- Insight card ---------- */
+        .rt-dashboard .insight-card {
+            border-left: 3px solid rgba(43, 92, 255, 0.5) !important;
+        }
+        .rt-dashboard .insight-card i.bi-lightbulb {
+            color: var(--gl-blue) !important;
+        }
+
+        /* ---------- Metric cards ---------- */
+        .rt-dashboard .metric-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px; height: 44px;
+            border-radius: 14px;
+            font-weight: 700;
+            backdrop-filter: blur(6px);
+        }
+        .rt-dashboard .metric-card-total {
+            background: linear-gradient(135deg, rgba(43, 92, 255, 0.16), rgba(124, 92, 255, 0.12)) !important;
+            border: 1px solid rgba(43, 92, 255, 0.3) !important;
+        }
+        .rt-dashboard .metric-card-total .metric-icon {
+            background: var(--gl-blue) !important;
+            color: #fff !important;
+        }
+        .rt-dashboard .progress {
+            height: 6px;
+            background: rgba(43, 92, 255, 0.12);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .rt-dashboard .progress-bar {
+            border-radius: 999px;
+        }
+
+        /* ---------- Quick actions ---------- */
+        .rt-dashboard .quick-action {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.6) !important;
+            border-radius: 16px !important;
+            backdrop-filter: blur(10px);
+            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+        .rt-dashboard .quick-action:hover {
+            transform: translateX(3px);
+            background: rgba(255, 255, 255, 0.75);
+            box-shadow: 0 10px 26px rgba(31, 60, 136, 0.16);
+        }
+        .rt-dashboard .quick-action-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px; height: 40px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: .8rem;
+            backdrop-filter: blur(6px);
+        }
+
+        /* ---------- Activity feed ---------- */
+        .rt-dashboard .activity-item { color: inherit; }
+        .rt-dashboard .activity-item:hover strong { color: var(--gl-blue); }
+        .rt-dashboard .activity-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(43, 92, 255, 0.12);
+        }
+        .rt-dashboard .empty-icon {
+            width: 48px; height: 48px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            background: rgba(43, 92, 255, 0.12);
+            color: var(--gl-blue);
+            font-weight: 700;
+        }
+
+        /* ---------- Region info rows ---------- */
+        .rt-dashboard .region-row.border-bottom {
+            border-color: rgba(43, 92, 255, 0.14) !important;
+        }
+
+        /* ---------- Buttons ---------- */
+        .rt-dashboard .btn {
+            border-radius: 12px;
+            font-weight: 700;
+        }
+        .rt-dashboard .btn-primary {
+            background: linear-gradient(135deg, var(--gl-blue), var(--gl-blue-light));
+            border: none;
+            box-shadow: 0 8px 22px rgba(43, 92, 255, 0.35);
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .rt-dashboard .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(43, 92, 255, 0.45);
+        }
+        .rt-dashboard .btn-outline-primary {
+            background: rgba(43, 92, 255, 0.08);
+            border: 1px solid rgba(43, 92, 255, 0.4);
+            color: var(--gl-blue);
+            backdrop-filter: blur(6px);
+        }
+        .rt-dashboard .btn-outline-primary:hover {
+            background: var(--gl-blue);
+            border-color: var(--gl-blue);
+            color: #fff;
+        }
+        .rt-dashboard .btn-outline-secondary {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(28, 35, 64, 0.2);
+            color: var(--gl-ink);
+            backdrop-filter: blur(6px);
+        }
+
+        /* ---------- Forms ---------- */
+        .rt-dashboard .form-select,
+        .rt-dashboard .form-control {
+            background: rgba(255, 255, 255, 0.6) !important;
+            border: 1px solid rgba(43, 92, 255, 0.25) !important;
+            border-radius: 12px !important;
+            backdrop-filter: blur(6px);
+        }
+        .rt-dashboard .form-select:focus,
+        .rt-dashboard .form-control:focus {
+            border-color: var(--gl-blue) !important;
+            box-shadow: 0 0 0 3px rgba(43, 92, 255, 0.15) !important;
+            background: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        /* ---------- Badges ---------- */
+        .rt-dashboard .badge {
+            font-weight: 700;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        /* ---------- Table ---------- */
+        .rt-dashboard .table-responsive {
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .rt-dashboard table.table thead.table-light th {
+            background: rgba(43, 92, 255, 0.08) !important;
+            color: var(--gl-blue);
+            text-transform: uppercase;
+            font-size: .72rem;
+            letter-spacing: .06em;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(43, 92, 255, 0.15);
+        }
+        .rt-dashboard table.table tbody tr {
+            border-bottom: 1px solid rgba(43, 92, 255, 0.08);
+        }
+        .rt-dashboard .table-hover tbody tr:hover {
+            background-color: rgba(43, 92, 255, 0.06);
+        }
+
+        /* ---------- Pagination ---------- */
+        .rt-dashboard .pagination .page-link {
+            border: 1px solid rgba(43, 92, 255, 0.25);
+            border-radius: 10px;
+            margin-inline: 3px;
+            color: var(--gl-blue);
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(6px);
+        }
+        .rt-dashboard .pagination .page-item.active .page-link {
+            background: var(--gl-blue);
+            border-color: var(--gl-blue);
+            color: #fff;
+        }
+    </style>
+@endpush
+
 @section('content')
     @php
         $user = auth()->user();
@@ -10,6 +319,10 @@
     @endphp
 
     <div class="rt-dashboard min-vh-100">
+        <span class="glass-blob glass-blob--1" aria-hidden="true"></span>
+        <span class="glass-blob glass-blob--2" aria-hidden="true"></span>
+        <span class="glass-blob glass-blob--3" aria-hidden="true"></span>
+
         <nav class="navbar bg-white border-bottom sticky-top" aria-label="Navigasi utama">
             <div class="container py-1">
                 <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-primary" href="{{ route('rt.dashboard') }}">
