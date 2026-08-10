@@ -2,6 +2,7 @@
 
 namespace App\Context;
 
+use App\Enums\CitizenIntent;
 use App\Enums\TerritoryResolutionStatus;
 use App\Models\Citizen;
 use App\Models\Rt;
@@ -21,7 +22,7 @@ final readonly class ServiceContext
         public ?Rt $identityRt = null,
         public ?Rt $entryRt = null,
         public ?string $channel = null,
-        public ?string $intent = null,
+        public ?CitizenIntent $intent = null,
         public ?string $message = null,
         public TerritoryResolutionStatus $territoryStatus = TerritoryResolutionStatus::UNRESOLVED,
     ) {}
