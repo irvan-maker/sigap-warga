@@ -33,6 +33,18 @@
             <header class="dashboard-hero overflow-hidden position-relative rounded-4 p-4 p-lg-5 mb-4 text-white shadow-sm">
                 <div class="position-relative d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-4"><div><span class="badge rounded-pill bg-white bg-opacity-10 border border-white border-opacity-25 px-3 py-2 mb-3">Dashboard RT</span><p class="text-white-50 mb-1">Selamat datang,</p><h1 class="display-6 fw-bold mb-3">{{ $user->name }}</h1><p class="mb-0 text-white-75">Pantau layanan warga dan laksanakan sensus keluarga dalam satu halaman.</p></div><div class="hero-meta rounded-4 p-3 p-lg-4"><div class="small text-white-50 text-uppercase fw-semibold mb-1">Wilayah tugas</div><div class="h5 fw-bold mb-2">{{ $user->rt?->code ?? 'RT belum tersedia' }} · {{ $user->rw?->code ?? 'RW belum tersedia' }}</div><div class="small text-white-75">{{ now()->timezone('Asia/Jakarta')->locale('id')->isoFormat('dddd, D MMMM Y') }}</div></div></div>
             </header>
+
+            <div class="card insight-card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h3 class="h5"><i class="bi bi-lightbulb me-2 text-primary"></i>Insight Hari Ini</h3>
+                    <ul class="mb-0">
+                        @foreach($analytics['insights'] as $insight)
+                            <li>{{ $insight }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+
             <section class="card border-0 shadow-sm mb-4"><div class="card-body"><div class="d-flex flex-wrap justify-content-between align-items-center gap-3"><div><h2 class="h5 mb-1">Pengajuan Surat</h2><div class="d-flex flex-wrap gap-2 small"><span>Draft: {{ $letterCounts['DRAFT'] ?? 0 }}</span><span>Diajukan: {{ $letterCounts['SUBMITTED'] ?? 0 }}</span><span>Diproses: {{ ($letterCounts['RW_REVIEWED'] ?? 0)+($letterCounts['APPROVED'] ?? 0) }}</span><span>Selesai: {{ $letterCounts['ISSUED'] ?? 0 }}</span><span>Ditolak: {{ $letterCounts['REJECTED'] ?? 0 }}</span></div></div><a class="btn btn-primary" href="{{ route('rt.letters.index') }}">Buka Pengajuan Surat</a></div></div></section>
             <section class="mb-4" aria-labelledby="master-data-heading"><h2 id="master-data-heading" class="h4 fw-bold mb-3">Master Data</h2><div class="row g-3"><div class="col-lg-6"><a class="card navigation-card h-100 text-decoration-none shadow-sm" href="{{ route('rt.household-census.create') }}"><span class="card-body"><strong class="d-block">Sensus Warga</strong><span class="text-secondary">{{ number_format($activeCitizenCount) }} warga aktif</span></span></a></div><div class="col-lg-6">
     <div class="card h-100 shadow-sm">

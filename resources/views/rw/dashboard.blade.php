@@ -3,7 +3,30 @@
 @section('content')
 <nav class="navbar bg-white border-bottom sticky-top" aria-label="Navigasi utama"><div class="container"><a class="navbar-brand fw-bold text-primary" href="{{ route('rw.dashboard') }}"><i class="bi bi-buildings me-2"></i>SIGAP WARGA <span class="text-secondary fw-normal">· RW</span></a><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-danger btn-sm" type="submit"><i class="bi bi-box-arrow-right me-1"></i>Keluar</button></form></div></nav>
 <main id="main-content" class="container app-main">
-    <header class="dashboard-hero card border-0 overflow-hidden position-relative text-white mb-4"><div class="card-body position-relative p-4 p-lg-5" style="z-index:1"><p class="text-white-75 text-uppercase small fw-bold mb-2">Dashboard pelayanan wilayah</p><h1 class="display-6 fw-bold mb-2">Ringkasan RW</h1><p class="text-white-75 mb-0">Pantau laporan, administrasi warga, dan koordinasi seluruh RT dalam satu layar.</p></div></header>
+    <header class="dashboard-hero card border-0 overflow-hidden position-relative text-white mb-4">
+        <div class="card-body position-relative p-4 p-lg-5 d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-4" style="z-index:1">
+            <div>
+                <p class="text-white-75 text-uppercase small fw-bold mb-2">Dashboard pelayanan wilayah</p>
+                <h1 class="display-6 fw-bold mb-2">Ringkasan RW</h1>
+                <p class="text-white-75 mb-0">Pantau laporan, administrasi warga, dan koordinasi seluruh RT dalam satu layar.</p>
+            </div>
+            <div class="hero-meta rounded-3 p-3">
+                <span class="small text-white-50 d-block">Hari ini</span>
+                <strong>{{ now()->timezone('Asia/Jakarta')->locale('id')->isoFormat('dddd, D MMMM Y') }}</strong>
+            </div>
+        </div>
+    </header>
+
+    <div class="card insight-card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <h3 class="h5"><i class="bi bi-lightbulb me-2 text-primary"></i>Insight Hari Ini</h3>
+            <ul class="mb-0">
+                @foreach($analytics['insights'] as $insight)
+                    <li>{{ $insight }}</li>
+                @endforeach
+            </ul>
+        </div>
+    </div>
 
     <section class="mb-4" aria-labelledby="rw-kpi"><div class="d-flex justify-content-between align-items-end mb-3"><div><p class="section-eyebrow mb-1">Kinerja wilayah</p><h2 id="rw-kpi" class="h4 section-title mb-0">Indikator Utama</h2></div></div><div class="row g-3"><div class="col-6 col-lg"><div class="card h-100"><div class="card-body"><span class="icon-box mb-3"><i class="bi bi-inbox"></i></span><div class="text-secondary small">Total Laporan</div><div class="fs-2 fw-bold">{{ $total }}</div></div></div></div>@foreach(\App\Enums\ReportStatus::cases() as $status)<div class="col-6 col-lg"><div class="card h-100"><div class="card-body"><div class="text-secondary small">{{ $status->value }}</div><div class="fs-2 fw-bold">{{ $totalsByStatus[$status->value] }}</div></div></div></div>@endforeach<div class="col-6 col-lg"><div class="card h-100"><div class="card-body"><div class="text-secondary small">RT Aktif</div><div class="fs-2 fw-bold">{{ $activeRtCount }}</div></div></div></div></div></section>
 
