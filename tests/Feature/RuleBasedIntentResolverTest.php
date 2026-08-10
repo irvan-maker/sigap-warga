@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Context\IntentResolution;
 use App\Enums\CitizenIntent;
+use App\Enums\IntentRule;
 use App\Enums\UrgencyLevel;
 use App\Models\Rt;
 use App\Models\Rw;
@@ -116,6 +117,51 @@ class RuleBasedIntentResolverTest extends TestCase
         yield 'test' => ['tes'];
     }
 
+    #[DataProvider('negatedEmergencyMessages')]
+    public function test_negated_emergency_phrases_remain_unknown(string $message): void
+    {
+        $this->assertResolution($message, CitizenIntent::UNKNOWN, UrgencyLevel::NORMAL);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function negatedEmergencyMessages(): iterable
+    {
+        yield 'not a fire' => ['bukan kebakaran'];
+        yield 'there is no fire' => ['tidak ada kebakaran'];
+        yield 'does not need ambulance' => ['tidak butuh ambulans'];
+        yield 'ambulance not required' => ['ambulans tidak diperlukan'];
+        yield 'person did not faint' => ['orangnya tidak pingsan'];
+    }
+
+    #[DataProvider('colloquialEmergencyMessages')]
+    public function test_real_colloquial_emergency_is_not_suppressed_by_negation_handling(string $message): void
+    {
+        $this->assertResolution($message, CitizenIntent::EMERGENCY, UrgencyLevel::EMERGENCY);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function colloquialEmergencyMessages(): iterable
+    {
+        yield 'not conscious' => ['orang tidak sadar'];
+        yield 'colloquial unconscious' => ['orang gak sadar'];
+        yield 'direct ambulance request' => ['tolong panggil ambulans'];
+        yield 'colloquial house fire' => ['rumah kebakar'];
+    }
+
+    #[DataProvider('ambulanceInformationMessages')]
+    public function test_ambulance_information_questions_remain_information(string $message): void
+    {
+        $this->assertResolution($message, CitizenIntent::INFORMATION, UrgencyLevel::NORMAL);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function ambulanceInformationMessages(): iterable
+    {
+        yield 'contact number' => ['nomor ambulans berapa'];
+        yield 'cost' => ['berapa biaya ambulans'];
+        yield 'schedule' => ['jadwal ambulans'];
+    }
+
     public function test_incident_territory_is_preserved_without_database_side_effects(): void
     {
         $rw = Rw::query()->create(['code' => '001', 'name' => 'RW 001']);
@@ -125,12 +171,15 @@ class RuleBasedIntentResolverTest extends TestCase
             'name' => 'RT 010',
         ]);
 
-        $resolution = app(RuleBasedIntentResolver::class)->resolve(
+        $result = app(RuleBasedIntentResolver::class)->resolveWithExplanation(
             'jalan depan rumah rusak',
             $incidentRt,
         );
 
-        $this->assertTrue($resolution->incidentRt?->is($incidentRt));
+        $this->assertTrue($result->resolution->incidentRt?->is($incidentRt));
+        $this->assertSame(IntentRule::REPORT_ROAD_DAMAGE, $result->matchedRule);
+        $this->assertSame(CitizenIntent::REPORT, $result->matchedCategory);
+        $this->assertSame('jalan depan rumah rusak', $result->matchedPhrase);
         $this->assertDatabaseCount('citizens', 0);
         $this->assertDatabaseCount('reports', 0);
     }
@@ -140,10 +189,19 @@ class RuleBasedIntentResolverTest extends TestCase
         CitizenIntent $intent,
         UrgencyLevel $urgency,
     ): void {
-        $resolution = app(RuleBasedIntentResolver::class)->resolve($message);
+        $result = app(RuleBasedIntentResolver::class)->resolveWithExplanation($message);
+        $resolution = $result->resolution;
 
         $this->assertSame($intent, $resolution->intent);
         $this->assertSame($urgency, $resolution->urgency);
+        $this->assertSame($intent, $result->matchedCategory);
+        $this->assertInstanceOf(IntentRule::class, $result->matchedRule);
+        if ($intent === CitizenIntent::UNKNOWN) {
+            $this->assertSame(IntentRule::UNKNOWN_NO_MATCH, $result->matchedRule);
+            $this->assertNull($result->matchedPhrase);
+        } else {
+            $this->assertNotNull($result->matchedPhrase);
+        }
         $this->assertTrue($this->validate($resolution));
     }
 

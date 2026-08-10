@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Context\IntentResolution;
+use App\Context\RuleBasedIntentResolution;
 use App\Enums\CitizenIntent;
+use App\Enums\IntentRule;
 use App\Enums\UrgencyLevel;
 use App\Models\Rt;
 use Illuminate\Support\Str;
@@ -15,22 +17,44 @@ class RuleBasedIntentResolver
 {
     public function resolve(string $message, ?Rt $incidentRt = null): IntentResolution
     {
+        return $this->resolveWithExplanation($message, $incidentRt)->resolution;
+    }
+
+    public function resolveWithExplanation(
+        string $message,
+        ?Rt $incidentRt = null,
+    ): RuleBasedIntentResolution {
         $message = $this->normalize($message);
 
-        [$intent, $urgency] = match (true) {
-            $this->containsAny($message, $this->emergencyPhrases()) => [CitizenIntent::EMERGENCY, UrgencyLevel::EMERGENCY],
-            $this->containsAny($message, $this->informationPhrases()) => [CitizenIntent::INFORMATION, UrgencyLevel::NORMAL],
-            $this->containsAny($message, $this->letterPhrases()) => [CitizenIntent::LETTER, UrgencyLevel::NORMAL],
-            $this->containsAny($message, $this->aspirationPhrases()) => [CitizenIntent::ASPIRATION, UrgencyLevel::NORMAL],
-            $this->containsAny($message, $this->highPriorityReportPhrases()) => [CitizenIntent::REPORT, UrgencyLevel::HIGH],
-            $this->containsAny($message, $this->normalReportPhrases()) => [CitizenIntent::REPORT, UrgencyLevel::NORMAL],
-            default => [CitizenIntent::UNKNOWN, UrgencyLevel::NORMAL],
-        };
+        if ($match = $this->findEmergencyMatch($message)) {
+            return $this->result(
+                CitizenIntent::EMERGENCY,
+                UrgencyLevel::EMERGENCY,
+                $incidentRt,
+                ...$match,
+            );
+        }
 
-        return new IntentResolution(
-            intent: $intent,
-            urgency: $urgency,
-            incidentRt: $incidentRt,
+        $families = [
+            [CitizenIntent::INFORMATION, UrgencyLevel::NORMAL, $this->informationRules()],
+            [CitizenIntent::LETTER, UrgencyLevel::NORMAL, $this->letterRules()],
+            [CitizenIntent::ASPIRATION, UrgencyLevel::NORMAL, $this->aspirationRules()],
+            [CitizenIntent::REPORT, UrgencyLevel::HIGH, $this->highPriorityReportRules()],
+            [CitizenIntent::REPORT, UrgencyLevel::NORMAL, $this->normalReportRules()],
+        ];
+
+        foreach ($families as [$intent, $urgency, $rules]) {
+            if ($match = $this->findMatch($message, $rules)) {
+                return $this->result($intent, $urgency, $incidentRt, ...$match);
+            }
+        }
+
+        return $this->result(
+            CitizenIntent::UNKNOWN,
+            UrgencyLevel::NORMAL,
+            $incidentRt,
+            IntentRule::UNKNOWN_NO_MATCH,
+            null,
         );
     }
 
@@ -43,112 +67,190 @@ class RuleBasedIntentResolver
     }
 
     /**
-     * @param  list<string>  $phrases
+     * @return array{IntentRule, string}|null
      */
-    private function containsAny(string $message, array $phrases): bool
+    private function findEmergencyMatch(string $message): ?array
     {
-        foreach ($phrases as $phrase) {
+        foreach ($this->emergencyRules() as [$rule, $phrase]) {
+            if (! str_contains($message, $phrase)) {
+                continue;
+            }
+
+            if (! $this->isUnconsciousStatePhrase($phrase)
+                && $this->isNegatedNearPhrase($message, $phrase)) {
+                continue;
+            }
+
+            return [$rule, $phrase];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  list<array{IntentRule, string}>  $rules
+     * @return array{IntentRule, string}|null
+     */
+    private function findMatch(string $message, array $rules): ?array
+    {
+        foreach ($rules as [$rule, $phrase]) {
             if (str_contains($message, $phrase)) {
-                return true;
+                return [$rule, $phrase];
             }
         }
 
-        return false;
+        return null;
     }
 
-    /** @return list<string> */
-    private function emergencyPhrases(): array
+    private function isNegatedNearPhrase(string $message, string $phrase): bool
+    {
+        $position = strpos($message, $phrase);
+
+        if ($position === false) {
+            return false;
+        }
+
+        $prefix = substr($message, max(0, $position - 50), min(50, $position));
+
+        return preg_match(
+            '/(?:tidak|bukan|nggak|gak|ga|enggak|belum)(?:\s+[\p{L}\p{N}]+){0,2}\s*$/u',
+            $prefix,
+        ) === 1;
+    }
+
+    private function isUnconsciousStatePhrase(string $phrase): bool
+    {
+        return in_array($phrase, [
+            'tidak sadar',
+            'gak sadar',
+            'ga sadar',
+            'nggak sadar',
+            'enggak sadar',
+            'belum sadar',
+        ], true);
+    }
+
+    private function result(
+        CitizenIntent $intent,
+        UrgencyLevel $urgency,
+        ?Rt $incidentRt,
+        IntentRule $rule,
+        ?string $phrase,
+    ): RuleBasedIntentResolution {
+        return new RuleBasedIntentResolution(
+            resolution: new IntentResolution($intent, $urgency, $incidentRt),
+            matchedRule: $rule,
+            matchedCategory: $intent,
+            matchedPhrase: $phrase,
+        );
+    }
+
+    /** @return list<array{IntentRule, string}> */
+    private function emergencyRules(): array
     {
         return [
-            'tolong ambulans',
-            'tolong panggil ambulans',
-            'panggil ambulans sekarang',
-            'butuh ambulans',
-            'butuh ambulance',
-            'orang pingsan',
-            'orang tidak sadar',
-            'kebakaran',
-            'rumah terbakar',
-            'kecelakaan parah',
-            'kecelakaan berat',
-            'pertolongan medis segera',
-            'orang sesak napas',
-            'ancaman keselamatan',
+            [IntentRule::EMERGENCY_DIRECT_AMBULANCE_REQUEST, 'tolong panggil ambulans'],
+            [IntentRule::EMERGENCY_DIRECT_AMBULANCE_REQUEST, 'panggil ambulans sekarang'],
+            [IntentRule::EMERGENCY_DIRECT_AMBULANCE_REQUEST, 'tolong ambulans'],
+            [IntentRule::EMERGENCY_DIRECT_AMBULANCE_REQUEST, 'butuh ambulans'],
+            [IntentRule::EMERGENCY_DIRECT_AMBULANCE_REQUEST, 'butuh ambulance'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'orang tidak sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'orang gak sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'orang ga sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'orang nggak sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'orang enggak sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'tidak sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'gak sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'ga sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'nggak sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'enggak sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'belum sadar'],
+            [IntentRule::EMERGENCY_PERSON_UNCONSCIOUS, 'pingsan'],
+            [IntentRule::EMERGENCY_FIRE, 'rumah terbakar'],
+            [IntentRule::EMERGENCY_FIRE, 'rumah kebakar'],
+            [IntentRule::EMERGENCY_FIRE, 'kebakaran'],
+            [IntentRule::EMERGENCY_FIRE, 'kebakar'],
+            [IntentRule::EMERGENCY_SEVERE_ACCIDENT, 'kecelakaan parah'],
+            [IntentRule::EMERGENCY_SEVERE_ACCIDENT, 'kecelakaan berat'],
+            [IntentRule::EMERGENCY_MEDICAL_HELP, 'pertolongan medis segera'],
+            [IntentRule::EMERGENCY_BREATHING_DIFFICULTY, 'sesak napas'],
+            [IntentRule::EMERGENCY_SAFETY_THREAT, 'ancaman keselamatan'],
         ];
     }
 
-    /** @return list<string> */
-    private function informationPhrases(): array
+    /** @return list<array{IntentRule, string}> */
+    private function informationRules(): array
     {
         return [
-            'jam pelayanan',
-            'syarat surat',
-            'syarat minta ambulans',
-            'kantor desa buka',
-            'kantor kelurahan buka',
-            'jadwal ambulans',
-            'jadwal posyandu',
-            'nomor ambulans',
-            'nomor kontak',
-            'kontak kelurahan',
-            'buka jam berapa',
+            [IntentRule::INFORMATION_AMBULANCE_REQUIREMENTS, 'syarat minta ambulans'],
+            [IntentRule::INFORMATION_AMBULANCE_COST, 'berapa biaya ambulans'],
+            [IntentRule::INFORMATION_AMBULANCE_CONTACT, 'nomor ambulans'],
+            [IntentRule::INFORMATION_AMBULANCE_SCHEDULE, 'jadwal ambulans'],
+            [IntentRule::INFORMATION_LETTER_REQUIREMENTS, 'syarat surat'],
+            [IntentRule::INFORMATION_SERVICE_HOURS, 'jam pelayanan'],
+            [IntentRule::INFORMATION_SERVICE_HOURS, 'kantor desa buka'],
+            [IntentRule::INFORMATION_SERVICE_HOURS, 'kantor kelurahan buka'],
+            [IntentRule::INFORMATION_SERVICE_HOURS, 'buka jam berapa'],
+            [IntentRule::INFORMATION_POSYANDU_SCHEDULE, 'jadwal posyandu'],
+            [IntentRule::INFORMATION_PUBLIC_CONTACT, 'nomor kontak'],
+            [IntentRule::INFORMATION_PUBLIC_CONTACT, 'kontak kelurahan'],
         ];
     }
 
-    /** @return list<string> */
-    private function letterPhrases(): array
+    /** @return list<array{IntentRule, string}> */
+    private function letterRules(): array
     {
         return [
-            'bikin surat domisili',
-            'buat surat domisili',
-            'mau bikin surat',
-            'butuh surat pengantar',
-            'surat pengantar',
-            'urus surat usaha',
-            'surat usaha',
-            'surat keterangan',
-            'pengantar nikah',
+            [IntentRule::LETTER_DOMICILE, 'bikin surat domisili'],
+            [IntentRule::LETTER_DOMICILE, 'buat surat domisili'],
+            [IntentRule::LETTER_INTRODUCTION, 'butuh surat pengantar'],
+            [IntentRule::LETTER_INTRODUCTION, 'surat pengantar'],
+            [IntentRule::LETTER_BUSINESS, 'urus surat usaha'],
+            [IntentRule::LETTER_BUSINESS, 'surat usaha'],
+            [IntentRule::LETTER_CERTIFICATE, 'surat keterangan'],
+            [IntentRule::LETTER_MARRIAGE_INTRODUCTION, 'pengantar nikah'],
+            [IntentRule::LETTER_INTRODUCTION, 'mau bikin surat'],
         ];
     }
 
-    /** @return list<string> */
-    private function aspirationPhrases(): array
+    /** @return list<array{IntentRule, string}> */
+    private function aspirationRules(): array
     {
         return [
-            'saya usul',
-            'saya punya usulan',
-            'usul dibuatkan',
-            'usul lampu jalan',
-            'saran untuk',
-            'saran taman desa',
-            'sebaiknya ada',
-            'usulan untuk musyawarah',
+            [IntentRule::ASPIRATION_PROPOSAL, 'saya punya usulan'],
+            [IntentRule::ASPIRATION_PROPOSAL, 'usulan untuk musyawarah'],
+            [IntentRule::ASPIRATION_PROPOSAL, 'usul dibuatkan'],
+            [IntentRule::ASPIRATION_PROPOSAL, 'usul lampu jalan'],
+            [IntentRule::ASPIRATION_PROPOSAL, 'saya usul'],
+            [IntentRule::ASPIRATION_SUGGESTION, 'saran taman desa'],
+            [IntentRule::ASPIRATION_SUGGESTION, 'saran untuk'],
+            [IntentRule::ASPIRATION_SUGGESTION, 'sebaiknya ada'],
         ];
     }
 
-    /** @return list<string> */
-    private function highPriorityReportPhrases(): array
+    /** @return list<array{IntentRule, string}> */
+    private function highPriorityReportRules(): array
     {
         return [
-            'pohon tumbang menutup jalan',
-            'jalan longsor',
-            'banjir mulai masuk rumah',
-            'banjir masuk rumah',
-            'tiang listrik hampir roboh',
+            [IntentRule::REPORT_HIGH_FALLEN_TREE, 'pohon tumbang menutup jalan'],
+            [IntentRule::REPORT_HIGH_LANDSLIDE, 'jalan longsor'],
+            [IntentRule::REPORT_HIGH_FLOOD, 'banjir mulai masuk rumah'],
+            [IntentRule::REPORT_HIGH_FLOOD, 'banjir masuk rumah'],
+            [IntentRule::REPORT_HIGH_UTILITY_POLE, 'tiang listrik hampir roboh'],
         ];
     }
 
-    /** @return list<string> */
-    private function normalReportPhrases(): array
+    /** @return list<array{IntentRule, string}> */
+    private function normalReportRules(): array
     {
         return [
-            'jalan depan rumah rusak',
-            'jalan rusak',
-            'lampu jalan mati',
-            'sampah menumpuk',
-            'drainase mampet',
-            'saluran air tersumbat',
-            'fasilitas umum rusak',
+            [IntentRule::REPORT_ROAD_DAMAGE, 'jalan depan rumah rusak'],
+            [IntentRule::REPORT_ROAD_DAMAGE, 'jalan rusak'],
+            [IntentRule::REPORT_STREET_LIGHT, 'lampu jalan mati'],
+            [IntentRule::REPORT_GARBAGE, 'sampah menumpuk'],
+            [IntentRule::REPORT_DRAINAGE, 'drainase mampet'],
+            [IntentRule::REPORT_DRAINAGE, 'saluran air tersumbat'],
+            [IntentRule::REPORT_PUBLIC_FACILITY, 'fasilitas umum rusak'],
         ];
     }
 }
