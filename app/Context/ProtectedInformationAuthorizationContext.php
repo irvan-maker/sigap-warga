@@ -8,6 +8,9 @@ use App\Models\Rt;
 
 /**
  * Facts for a future authorization policy. This is not an allow/deny result.
+ *
+ * This context may hold Citizen, User, and Rt model references. It is an
+ * internal domain object and must never be serialized directly to a response.
  */
 final readonly class ProtectedInformationAuthorizationContext
 {
