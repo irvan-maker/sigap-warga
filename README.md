@@ -45,6 +45,123 @@ Checkpoint di atas harus diperbarui ketika milestone atau HEAD rujukan berubah. 
 - EMERGENCY, INFORMATION, LETTER, dan ASPIRATION dapat dipahami/dirutekan pada pipeline inbound, tetapi belum dieksekusi oleh processor tersebut.
 - Outbound WhatsApp, QR trusted territory, operator queue, dan emergency dispatch belum tersedia.
 
+## Citizen Interaction: Progressive Clarification
+
+Prinsip interaksi warga SIGAP WARGA adalah:
+
+> **ASK ONLY WHAT IS MISSING.**
+
+Sistem harus memakai identity dan context yang sudah diketahui, memahami pesan natural-language terlebih dahulu, lalu hanya meminta fakta yang benar-benar masih kurang untuk service terkait. Prinsip ini adalah UX/domain governance; conversational bot dan progressive clarification **belum diimplementasikan**.
+
+### Hindari chatbot-form wajib
+
+Jangan memulai setiap interaksi dengan form generik seperti:
+
+```text
+Nama:
+Alamat:
+Kategori:
+Keterangan:
+```
+
+Known WhatsApp sender dapat di-resolve ke existing Citizen melalui `IdentityResolver`. Nama, domicile, dan master data lain yang sudah tersedia tidak perlu ditanyakan berulang. Namun:
+
+```text
+known phone != authenticated
+known phone != authorized
+```
+
+Unknown sender tidak boleh menyebabkan Citizen dibuat otomatis. Protected information tetap memerlukan verification dan authorization yang sesuai.
+
+`Citizen.rt_id` adalah domicile/census territory, bukan lokasi kejadian. Jika service memerlukan lokasi peristiwa, gunakan istilah **“lokasi kejadian”**, bukan “alamat” yang ambigu. Domicile tidak boleh digunakan sebagai incident territory.
+
+### Target REPORT experience
+
+`MULAI LAPOR` adalah shortcut opsional, bukan satu-satunya command dan bukan syarat agar pesan dipahami.
+
+```text
+Warga:
+MULAI LAPOR
+
+SIGAP WARGA:
+Selamat datang di SIGAP WARGA 👋
+
+Silakan ceritakan kejadian atau masalah yang ingin Anda laporkan.
+
+Contoh:
+“Lampu jalan di depan Pos RT 03 mati sejak tadi malam.”
+```
+
+Natural language tetap menjadi first-class input, misalnya:
+
+```text
+jalan depan rumah rusak
+sampah menumpuk sudah tiga hari
+pohon tumbang menutup jalan
+```
+
+Kategori tidak wajib ditanyakan di awal. Jika intent/kategori dapat dipahami secara aman dari pesan, pipeline dapat dilanjutkan. Jika pesan ambigu, barulah sistem meminta clarification yang spesifik.
+
+Conceptual processing:
+
+```text
+message
+  -> identity
+  -> existing context
+  -> intent / urgency
+  -> territory
+  -> eligibility
+  -> routing
+  -> ask only missing facts
+```
+
+### Current implementation vs target UX
+
+| Current implementation | Target UX — belum implemented |
+|---|---|
+| WhatsApp inbound text | Progressive clarification berdasarkan missing facts |
+| Existing Citizen identity resolution | Outbound acknowledgement dan pertanyaan lanjutan |
+| Rule-based intent/urgency understanding | Trusted QR → WhatsApp handoff |
+| Service eligibility dan routing | Operator clarification untuk konflik/ambiguity |
+| REPORT execution ketika seluruh requirement terpenuhi | WhatsApp media dan location support |
+| Text-only; tidak ada outbound conversational flow | Percakapan multi-step yang auditable dan fail-safe |
+
+Jangan mengatakan “tambahkan foto/lokasi jika ada” sebagai current WhatsApp capability. Media dan location melalui WhatsApp masih **PLANNED**.
+
+### Future QR interaction
+
+```text
+Scan QR
+  -> universal service gateway
+  -> trusted entry context
+  -> choose service
+  -> WhatsApp handoff
+  -> citizen describes problem
+```
+
+QR-derived entry territory bukan incident territory:
+
+```text
+QR entry territory != incident territory
+validly established incident territory > entry territory
+```
+
+Konsep **“1 QR Menyelesaikan Semuanya”** berarti satu QR menjadi universal service gateway untuk REPORT, INFORMATION, LETTER, ASPIRATION, dan EMERGENCY. Konsep ini bukan satu form identik yang dipaksakan kepada semua layanan; setiap service tetap memakai capability, eligibility, territory, authorization, dan oversight rules masing-masing.
+
+### Interaction guardrails
+
+DO NOT:
+
+- repeatedly ask known master data;
+- use domicile as incident location;
+- auto-create Citizen from WhatsApp;
+- trust user-typed RT as authoritative territory;
+- force every service into an identical form;
+- claim unsupported WhatsApp media/location capability;
+- claim emergency dispatch without real operator/service acknowledgement.
+
+Untuk EMERGENCY, sistem tidak boleh mengatakan bantuan atau ambulans telah dikirim sebelum acknowledgement nyata dari operator/service yang berwenang tersedia.
+
 ## Arsitektur Aktual
 
 ### Context dan understanding
