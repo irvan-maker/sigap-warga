@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Context\CreateCitizenReportCommand;
 use App\Enums\CitizenIntent;
+use App\Enums\InboundRequestStatus;
 use App\Enums\ServiceRouteTarget;
 use App\Enums\ServiceTerritoryStatus;
 use App\Enums\UrgencyLevel;
@@ -25,13 +26,44 @@ final class CreateCitizenReportService
     {
         $serviceTerritory = $this->validate($command);
 
-        return DB::transaction(fn (): Report => $this->reportRecordService->create(
-            citizen: $command->requester,
-            serviceTerritory: $serviceTerritory,
-            title: trim($command->title),
-            description: trim($command->description),
-            reportedAt: $command->reportedAt,
-        ), 3);
+        return DB::transaction(function () use ($command, $serviceTerritory): Report {
+            $inboundRequest = $command->inboundRequest->newQuery()
+                ->lockForUpdate()
+                ->find($command->inboundRequest->getKey());
+
+            if ($inboundRequest === null) {
+                throw new DomainException('A persisted inbound request is required.');
+            }
+
+            if ($inboundRequest->report()->exists()) {
+                throw new DomainException('The inbound request already produced a report.');
+            }
+
+            $inboundRequest->update([
+                'status' => InboundRequestStatus::PROCESSING,
+                'service_target' => ServiceRouteTarget::REPORT_SERVICE,
+                'attempt_count' => $inboundRequest->attempt_count + 1,
+                'processing_started_at' => now(),
+                'completed_at' => null,
+                'last_error_code' => null,
+            ]);
+
+            $report = $this->reportRecordService->create(
+                citizen: $command->requester,
+                serviceTerritory: $serviceTerritory,
+                title: trim($command->title),
+                description: trim($command->description),
+                reportedAt: $command->reportedAt,
+                inboundRequest: $inboundRequest,
+            );
+
+            $inboundRequest->update([
+                'status' => InboundRequestStatus::SUCCEEDED,
+                'completed_at' => now(),
+            ]);
+
+            return $report;
+        }, 3);
     }
 
     private function validate(CreateCitizenReportCommand $command): Rt
@@ -62,8 +94,8 @@ final class CreateCitizenReportService
             throw new DomainException('Report title and description are required.');
         }
 
-        if (trim($command->source) === '' || trim($command->correlationRequestId) === '') {
-            throw new DomainException('Report source and correlation request ID are required.');
+        if (! $command->inboundRequest->exists) {
+            throw new DomainException('A persisted inbound request is required.');
         }
 
         return $territory->preferredRt;

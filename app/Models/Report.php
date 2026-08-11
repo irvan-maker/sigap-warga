@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
     'description',
     'status',
     'reported_at',
+    'inbound_request_id',
 ])]
 class Report extends Model
 {
@@ -85,6 +86,14 @@ class Report extends Model
     {
         // Operational service/incident territory; citizen.rt is domicile.
         return $this->belongsTo(Rt::class);
+    }
+
+    /**
+     * @return BelongsTo<InboundRequest, $this>
+     */
+    public function inboundRequest(): BelongsTo
+    {
+        return $this->belongsTo(InboundRequest::class);
     }
 
     /**

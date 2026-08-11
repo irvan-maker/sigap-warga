@@ -3,13 +3,13 @@
 namespace App\Context;
 
 use App\Models\Citizen;
+use App\Models\InboundRequest;
 use DateTimeImmutable;
 
 /**
  * Trusted, channel-neutral facts for executing a citizen REPORT decision.
  *
- * The source and correlation ID are carried for future durable audit and
- * idempotency support; the current schema cannot persist them yet.
+ * Inbound identity and correlation are owned by a persisted inbound request.
  */
 final readonly class CreateCitizenReportCommand
 {
@@ -19,7 +19,6 @@ final readonly class CreateCitizenReportCommand
         public string $title,
         public string $description,
         public DateTimeImmutable $reportedAt,
-        public string $source,
-        public string $correlationRequestId,
+        public InboundRequest $inboundRequest,
     ) {}
 }

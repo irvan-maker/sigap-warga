@@ -7,6 +7,7 @@ use App\Context\EntryContext;
 use App\Context\ServiceRoutingDecision;
 use App\Context\ServiceTerritoryDecision;
 use App\Enums\CitizenIntent;
+use App\Enums\InboundRequestStatus;
 use App\Enums\ReportStatus;
 use App\Enums\ServiceRouteTarget;
 use App\Enums\ServiceRoutingReason;
@@ -15,14 +16,17 @@ use App\Enums\ServiceTerritoryStatus;
 use App\Enums\TerritoryPurpose;
 use App\Enums\UrgencyLevel;
 use App\Models\Citizen;
+use App\Models\InboundRequest;
 use App\Models\Report;
 use App\Models\Rt;
 use App\Models\Rw;
 use App\Services\CitizenRequestInterpreter;
 use App\Services\CreateCitizenReportService;
+use App\Services\ReceiveInboundRequestService;
 use App\Services\ServiceRouter;
 use DateTimeImmutable;
 use DomainException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -41,6 +45,8 @@ class CreateCitizenReportServiceTest extends TestCase
         $this->assertSame($citizen->id, $report->citizen_id);
         $this->assertSame($rt->id, $report->rt_id);
         $this->assertSame(ReportStatus::NEW, $report->status);
+        $this->assertNotNull($report->inbound_request_id);
+        $this->assertSame(InboundRequestStatus::SUCCEEDED, $report->inboundRequest->status);
     }
 
     public function test_high_urgency_remains_a_report_not_an_emergency(): void
@@ -156,8 +162,7 @@ class CreateCitizenReportServiceTest extends TestCase
             title: 'Jalan lingkungan rusak',
             description: 'Permukaan jalan rusak dan perlu diperbaiki.',
             reportedAt: new DateTimeImmutable,
-            source: 'trusted-test-adapter',
-            correlationRequestId: 'pipeline-request-001',
+            inboundRequest: $this->receiveInbound('pipeline-event-001'),
         );
 
         $report = $this->create($command);
@@ -199,8 +204,68 @@ class CreateCitizenReportServiceTest extends TestCase
             title: 'Jalan lingkungan rusak',
             description: 'Permukaan jalan rusak dan perlu diperbaiki.',
             reportedAt: new DateTimeImmutable,
+            inboundRequest: $this->receiveInbound('request-001'),
+        );
+    }
+
+    public function test_one_inbound_request_cannot_create_two_reports(): void
+    {
+        $rt = $this->createRt($this->createRw('001'), '001');
+        $citizen = $this->createCitizen($rt);
+        $command = $this->command($citizen, $rt, UrgencyLevel::NORMAL);
+
+        $this->create($command);
+
+        $this->expectException(DomainException::class);
+
+        try {
+            $this->create($command);
+        } finally {
+            $this->assertDatabaseCount('reports', 1);
+            $this->assertDatabaseCount('report_histories', 1);
+        }
+    }
+
+    public function test_cross_territory_report_keeps_inbound_trace(): void
+    {
+        [$domicileRt, $incidentRt] = $this->createDifferentTerritories();
+        $citizen = $this->createCitizen($domicileRt);
+
+        $report = $this->create($this->command($citizen, $incidentRt, UrgencyLevel::NORMAL));
+
+        $this->assertNotNull($report->inbound_request_id);
+        $this->assertSame($incidentRt->id, $report->rt_id);
+        $this->assertSame($domicileRt->id, $citizen->fresh()->rt_id);
+    }
+
+    public function test_report_creation_failure_leaves_no_partial_domain_writes_or_link(): void
+    {
+        $rt = $this->createRt($this->createRw('001'), '001');
+        $citizen = $this->createCitizen($rt);
+        $command = $this->command($citizen, $rt, UrgencyLevel::NORMAL);
+        $inboundId = $command->inboundRequest->id;
+        DB::table('citizens')->where('id', $citizen->id)->delete();
+
+        try {
+            $this->create($command);
+            $this->fail('The report insert must fail when its citizen no longer exists.');
+        } catch (QueryException) {
+            $this->assertDatabaseCount('reports', 0);
+            $this->assertDatabaseCount('report_histories', 0);
+            $this->assertDatabaseHas('inbound_requests', [
+                'id' => $inboundId,
+                'status' => InboundRequestStatus::RECEIVED->value,
+                'service_target' => null,
+                'attempt_count' => 0,
+            ]);
+        }
+    }
+
+    private function receiveInbound(string $externalEventId): InboundRequest
+    {
+        return app(ReceiveInboundRequestService::class)->receive(
             source: 'trusted-test-adapter',
-            correlationRequestId: 'request-001',
+            externalEventId: $externalEventId,
         );
     }
 
