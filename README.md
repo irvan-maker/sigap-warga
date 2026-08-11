@@ -13,15 +13,16 @@ README ini adalah **single source of truth** untuk checkpoint engineering, batas
 | Item | Bukti aktual |
 |---|---|
 | Branch | `feature/whatsapp-integration` |
-| Latest commit | `6399531e2829d324ab4db50fa07620031ad7474b` — `feat: add WhatsApp inbound webhook adapter` (11 Agustus 2026) |
+| Latest commit | `599b284` — `docs: add deployment and production readiness pack` |
 | Fase | WhatsApp inbound adapter dan REPORT vertical slice sudah terbentuk; menuju **P0 Deployment Readiness**, belum production/pilot-ready |
-| Verified runtime | PHP `8.3.30`; Laravel Framework `13.23.0` (verifikasi manual maintainer) |
+| Verified runtime | PHP `8.3.30`; Laravel Framework `13.23.0`; PHPUnit `12.5.33` (verifikasi manual maintainer) |
 | Manifest contract | PHP `^8.3`, Laravel `^13.8`, PHPUnit `^12.5.12`; Vite `^8.0.0` |
 | Database source | 20 migration files; terbaru `2026_08_11_010000_add_processing_reason_to_inbound_requests.php` |
 | Applied migration | Tidak dapat dipastikan dari repository; wajib diverifikasi per environment sebelum deploy |
-| Last verified full regression baseline | `449 tests`, `1,988 assertions`, **PASS** (verifikasi manual maintainer; tidak dibuktikan sebagai full-suite run setelah WhatsApp adapter/HEAD `6399531`) |
+| Current full regression baseline | `465 tests`, `2,050 assertions`, **PASS** — `php vendor/phpunit/phpunit/phpunit` (verifikasi manual maintainer) |
 | Latest targeted WhatsApp adapter verification | `16 tests`, `62 assertions`, **PASS** |
 | Worktree sebelum pembaruan README | Bersih |
+| Remote synchronization | `origin/feature/whatsapp-integration` synchronized pada checkpoint `599b284` |
 
 Checkpoint di atas harus diperbarui ketika milestone atau HEAD rujukan berubah. Status Meta, hosting, database production, dan layanan eksternal tidak dapat disimpulkan dari source code.
 
@@ -320,10 +321,10 @@ Baseline yang telah diverifikasi manual oleh maintainer:
 
 | Baseline | Hasil | Cakupan dan batas klaim |
 |---|---|---|
-| Last verified full regression | `449 tests`, `1,988 assertions`, **PASS** | Baseline full repository terakhir yang diketahui. Repository evidence tidak membuktikan suite ini dijalankan setelah WhatsApp adapter atau terhadap HEAD `6399531` |
+| Current full regression | `465 tests`, `2,050 assertions`, **PASS** | Dijalankan dengan `php vendor/phpunit/phpunit/phpunit` menggunakan PHP `8.3.30` dan PHPUnit `12.5.33` |
 | Latest targeted WhatsApp adapter verification | `16 tests`, `62 assertions`, **PASS** | Verifikasi terbaru yang terfokus pada adapter/webhook WhatsApp; bukan pengganti full regression |
 
-Karena kedua baseline memiliki cakupan dan waktu verifikasi berbeda, status targeted WhatsApp tidak boleh digabungkan menjadi klaim bahwa full suite telah lulus pada HEAD saat ini. **Full suite wajib dijalankan kembali sebelum deployment atau release checkpoint.**
+Full regression `465 tests` / `2,050 assertions` diverifikasi setelah WhatsApp inbound adapter (`6399531`) berada dalam repository history dan sebelum/bersamaan dengan checkpoint deployment documentation (`599b284`). Jika deployment commit berubah setelah checkpoint ini, full suite wajib dijalankan kembali dan hasilnya diatribusikan kepada commit yang benar-benar dideploy.
 
 Test suite repository mencakup:
 

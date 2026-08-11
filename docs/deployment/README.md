@@ -16,12 +16,13 @@ Gunakan bersama:
 | Item | Checkpoint |
 |---|---|
 | Development branch | `feature/whatsapp-integration` |
-| Documentation checkpoint | P0 Deployment & Production Readiness Pack; commit final belum ditentukan sampai dokumentasi direview dan di-commit |
+| Documentation checkpoint | `599b284` — `docs: add deployment and production readiness pack` |
 | Application checkpoint | `6399531` — `feat: add WhatsApp inbound webhook adapter` |
 | Public target | `https://sigap.cloud.uym.ac.id` |
-| Release requirement | Full regression harus PASS terhadap commit yang benar-benar akan dideploy; baseline lama atau targeted test saja tidak cukup |
+| Current full regression baseline | `465 tests`, `2,050 assertions`, **PASS**; PHP `8.3.30`, PHPUnit `12.5.33`; diverifikasi setelah adapter `6399531` berada dalam history dan sebelum/bersamaan dengan documentation checkpoint `599b284` |
+| Release requirement | Baseline current dapat dipakai untuk checkpoint dokumentasi ini; jika deployment commit berubah, full regression harus PASS kembali terhadap commit yang benar-benar akan dideploy |
 
-Jangan hardcode commit deployment baru di dokumen sebelum commit tersebut ada dan dipilih sebagai release candidate.
+Jangan mencatat commit deployment baru sebelum commit tersebut ada dan dipilih sebagai release candidate.
 
 ## Architecture
 
