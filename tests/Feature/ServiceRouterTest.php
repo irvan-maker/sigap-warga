@@ -114,12 +114,16 @@ class ServiceRouterTest extends TestCase
         $this->assertBlockedFor($decision, RoutingReadinessReason::INTENT_UNKNOWN);
     }
 
-    public function test_missing_identity_is_blocked(): void
+    public function test_information_with_missing_identity_is_routable_when_capability_allows_it(): void
     {
         $entryRt = $this->createRt($this->createRw('001'), '001');
         $decision = $this->route($this->interpretWithoutCitizen('nomor ambulans desa berapa', entryRt: $entryRt));
 
-        $this->assertBlockedFor($decision, RoutingReadinessReason::IDENTITY_REQUIRED);
+        $this->assertRoutable(
+            $decision,
+            ServiceRouteTarget::INFORMATION_SERVICE,
+            ServiceRoutingReason::ROUTED_TO_INFORMATION,
+        );
     }
 
     public function test_territory_confirmation_required_is_blocked(): void

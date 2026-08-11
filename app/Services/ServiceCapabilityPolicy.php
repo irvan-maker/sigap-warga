@@ -19,7 +19,7 @@ final class ServiceCapabilityPolicy
     public function decide(ServiceRoutingDecision $routingDecision): ServiceCapabilityDecision
     {
         return new ServiceCapabilityDecision(
-            capability: $this->capabilityFor($routingDecision->target),
+            capability: $this->forTarget($routingDecision->target),
             routingDecision: $routingDecision,
             executionEligibility: $routingDecision->canRoute()
                 ? ServiceExecutionEligibility::ELIGIBLE
@@ -28,7 +28,7 @@ final class ServiceCapabilityPolicy
         );
     }
 
-    private function capabilityFor(ServiceRouteTarget $target): ServiceCapability
+    public function forTarget(ServiceRouteTarget $target): ServiceCapability
     {
         return match ($target) {
             ServiceRouteTarget::REPORT_SERVICE => new ServiceCapability(

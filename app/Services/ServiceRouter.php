@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Context\CitizenRequestUnderstanding;
 use App\Context\ServiceRoutingDecision;
-use App\Enums\CitizenIntent;
 use App\Enums\RoutingReadinessReason;
+use App\Enums\ServiceEligibilityReason;
 use App\Enums\ServiceRouteTarget;
 use App\Enums\ServiceRoutingReason;
 use App\Enums\ServiceRoutingStatus;
@@ -15,72 +15,64 @@ use App\Enums\ServiceRoutingStatus;
  */
 final class ServiceRouter
 {
+    public function __construct(
+        private readonly ServiceEligibilityPolicy $eligibilityPolicy,
+    ) {}
+
     public function route(CitizenRequestUnderstanding $understanding): ServiceRoutingDecision
     {
         $intentResolution = $understanding->serviceUnderstanding->intentResolution;
         $territoryDecision = $understanding->serviceUnderstanding->serviceTerritoryDecision;
+        $eligibility = $this->eligibilityPolicy->evaluate($understanding);
 
-        if (! $understanding->routingReadiness->canProceed()) {
+        if (! $eligibility->isEligible() || $eligibility->routeTarget === null) {
             return new ServiceRoutingDecision(
                 status: ServiceRoutingStatus::BLOCKED,
                 target: ServiceRouteTarget::MANUAL_CLARIFICATION,
                 intent: $intentResolution->intent,
                 urgency: $intentResolution->urgency,
                 serviceTerritoryDecision: $territoryDecision,
-                reason: $understanding->routingReadiness->reason,
-            );
-        }
-
-        $route = $this->routeFor($intentResolution->intent);
-
-        if ($route === null) {
-            return new ServiceRoutingDecision(
-                status: ServiceRoutingStatus::BLOCKED,
-                target: ServiceRouteTarget::MANUAL_CLARIFICATION,
-                intent: $intentResolution->intent,
-                urgency: $intentResolution->urgency,
-                serviceTerritoryDecision: $territoryDecision,
-                reason: RoutingReadinessReason::INTENT_UNKNOWN,
+                reason: $this->blockedReason($understanding, $eligibility->reason),
             );
         }
 
         return new ServiceRoutingDecision(
             status: ServiceRoutingStatus::ROUTABLE,
-            target: $route['target'],
+            target: $eligibility->routeTarget,
             intent: $intentResolution->intent,
             urgency: $intentResolution->urgency,
             serviceTerritoryDecision: $territoryDecision,
-            reason: $route['reason'],
+            reason: $this->routingReason($eligibility->routeTarget),
         );
     }
 
-    /**
-     * @return array{target: ServiceRouteTarget, reason: ServiceRoutingReason}|null
-     */
-    private function routeFor(CitizenIntent $intent): ?array
+    private function blockedReason(
+        CitizenRequestUnderstanding $understanding,
+        ServiceEligibilityReason $reason,
+    ): RoutingReadinessReason {
+        return match ($reason) {
+            ServiceEligibilityReason::IDENTITY_REQUIRED => RoutingReadinessReason::IDENTITY_REQUIRED,
+            ServiceEligibilityReason::TERRITORY_REQUIRED => RoutingReadinessReason::TERRITORY_REQUIRED,
+            ServiceEligibilityReason::IDENTITY_AND_TERRITORY_REQUIRED => RoutingReadinessReason::IDENTITY_AND_TERRITORY_REQUIRED,
+            ServiceEligibilityReason::INVALID_INTENT_OR_ROUTING => $understanding->serviceUnderstanding->isIntentUrgencyValid()
+                ? RoutingReadinessReason::INTENT_UNKNOWN
+                : RoutingReadinessReason::INTENT_URGENCY_INVALID,
+            ServiceEligibilityReason::ROUTING_NOT_READY,
+            ServiceEligibilityReason::ELIGIBLE => $understanding->routingReadiness->reason,
+        };
+    }
+
+    private function routingReason(ServiceRouteTarget $target): ServiceRoutingReason
     {
-        return match ($intent) {
-            CitizenIntent::REPORT => [
-                'target' => ServiceRouteTarget::REPORT_SERVICE,
-                'reason' => ServiceRoutingReason::ROUTED_TO_REPORT,
-            ],
-            CitizenIntent::EMERGENCY => [
-                'target' => ServiceRouteTarget::EMERGENCY_SERVICE,
-                'reason' => ServiceRoutingReason::ROUTED_TO_EMERGENCY,
-            ],
-            CitizenIntent::LETTER => [
-                'target' => ServiceRouteTarget::LETTER_SERVICE,
-                'reason' => ServiceRoutingReason::ROUTED_TO_LETTER,
-            ],
-            CitizenIntent::INFORMATION => [
-                'target' => ServiceRouteTarget::INFORMATION_SERVICE,
-                'reason' => ServiceRoutingReason::ROUTED_TO_INFORMATION,
-            ],
-            CitizenIntent::ASPIRATION => [
-                'target' => ServiceRouteTarget::ASPIRATION_SERVICE,
-                'reason' => ServiceRoutingReason::ROUTED_TO_ASPIRATION,
-            ],
-            CitizenIntent::UNKNOWN => null,
+        return match ($target) {
+            ServiceRouteTarget::REPORT_SERVICE => ServiceRoutingReason::ROUTED_TO_REPORT,
+            ServiceRouteTarget::EMERGENCY_SERVICE => ServiceRoutingReason::ROUTED_TO_EMERGENCY,
+            ServiceRouteTarget::LETTER_SERVICE => ServiceRoutingReason::ROUTED_TO_LETTER,
+            ServiceRouteTarget::INFORMATION_SERVICE => ServiceRoutingReason::ROUTED_TO_INFORMATION,
+            ServiceRouteTarget::ASPIRATION_SERVICE => ServiceRoutingReason::ROUTED_TO_ASPIRATION,
+            ServiceRouteTarget::MANUAL_CLARIFICATION => throw new \LogicException(
+                'Manual clarification cannot be a routable operational service.',
+            ),
         };
     }
 }
