@@ -23,5 +23,11 @@ final readonly class TrustedInboundEvent
         public DateTimeImmutable $receivedAt,
         public ?Rt $entryRt = null,
         public ?Rt $incidentRt = null,
+        public ?string $sourceNamespace = null,
     ) {}
+
+    public function durableSourceNamespace(): string
+    {
+        return $this->sourceNamespace ?? $this->source->value;
+    }
 }

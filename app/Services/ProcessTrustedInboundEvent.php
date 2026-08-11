@@ -47,7 +47,7 @@ final class ProcessTrustedInboundEvent
     {
         $message = $this->validate($event);
         $inboundRequest = $this->receiveInboundRequestService->receive(
-            source: $event->source->value,
+            source: $event->durableSourceNamespace(),
             externalEventId: $event->externalEventId,
             receivedAt: $event->receivedAt,
         );

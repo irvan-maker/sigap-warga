@@ -18,9 +18,15 @@ use App\Http\Controllers\RtReportController;
 use App\Http\Controllers\RwReportController;
 use App\Http\Controllers\RwRtController;
 use App\Http\Controllers\VillageLetterController;
+use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', PublicPortalController::class)->name('public.home');
+
+Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])
+    ->name('webhooks.whatsapp.verify');
+Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive'])
+    ->name('webhooks.whatsapp.receive');
 
 Route::get('/tracking', [PublicReportTrackingController::class, 'index'])
     ->name('tracking.index');

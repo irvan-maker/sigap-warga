@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/whatsapp',
+        ]);
+
         $middleware->alias([
             'role.rt' => EnsureUserIsRt::class,
             'role.rw' => EnsureUserIsRw::class,
