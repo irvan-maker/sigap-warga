@@ -218,6 +218,7 @@ class RuleBasedIntentResolver
         return [
             [IntentRule::LETTER_DOMICILE, 'bikin surat domisili'],
             [IntentRule::LETTER_DOMICILE, 'buat surat domisili'],
+            [IntentRule::LETTER_DOMICILE, 'buatkan surat domisili'],
             [IntentRule::LETTER_INTRODUCTION, 'butuh surat pengantar'],
             [IntentRule::LETTER_INTRODUCTION, 'surat pengantar'],
             [IntentRule::LETTER_BUSINESS, 'urus surat usaha'],

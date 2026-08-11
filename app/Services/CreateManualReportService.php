@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Citizen;
 use App\Models\Report;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -14,7 +15,7 @@ use Throwable;
 class CreateManualReportService
 {
     public function __construct(
-        private readonly TicketNumberGenerator $ticketNumberGenerator,
+        private readonly CreateReportRecordService $reportRecordService,
     ) {}
 
     /**
@@ -25,7 +26,7 @@ class CreateManualReportService
      *     phone_normalized: string,
      *     title: string,
      *     description: string,
-     *     photos?: list<\Illuminate\Http\UploadedFile>
+     *     photos?: list<UploadedFile>
      * } $data
      */
     public function create(array $data): Report
@@ -56,14 +57,13 @@ class CreateManualReportService
                     $citizen->update(['name' => $data['citizen_name']]);
                 }
 
-                $report = Report::query()->create([
-                    'ticket_number' => $this->ticketNumberGenerator->generate(),
-                    'citizen_id' => $citizen->id,
-                    'rt_id' => $data['rt_id'],
-                    'title' => $data['title'],
-                    'description' => $data['description'],
-                    'reported_at' => now(),
-                ]);
+                $report = $this->reportRecordService->create(
+                    citizen: $citizen,
+                    serviceTerritory: $citizen->rt,
+                    title: $data['title'],
+                    description: $data['description'],
+                    reportedAt: now(),
+                );
 
                 foreach ($data['photos'] ?? [] as $photo) {
                     $extension = strtolower($photo->extension());

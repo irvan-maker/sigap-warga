@@ -86,6 +86,7 @@ class RuleBasedIntentResolverTest extends TestCase
     public static function letterMessages(): iterable
     {
         yield 'domicile letter' => ['bikin surat domisili'];
+        yield 'polite domicile letter' => ['buatkan surat domisili'];
         yield 'introduction letter' => ['surat pengantar'];
         yield 'business letter' => ['surat usaha'];
     }
