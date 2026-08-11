@@ -4,6 +4,7 @@ namespace App\Context;
 
 use App\Enums\CitizenIntent;
 use App\Enums\RoutingReadinessReason;
+use App\Enums\ServiceEligibilityReason;
 use App\Enums\ServiceRouteTarget;
 use App\Enums\ServiceRoutingReason;
 use App\Enums\ServiceRoutingStatus;
@@ -22,7 +23,7 @@ final readonly class ServiceRoutingDecision
         public CitizenIntent $intent,
         public UrgencyLevel $urgency,
         public ServiceTerritoryDecision $serviceTerritoryDecision,
-        public ServiceRoutingReason|RoutingReadinessReason $reason,
+        public ServiceRoutingReason|RoutingReadinessReason|ServiceEligibilityReason $reason,
     ) {}
 
     public function canRoute(): bool

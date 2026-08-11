@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Context\CitizenRequestUnderstanding;
+use App\Context\InformationAccessClassification;
 use App\Context\ServiceCapability;
 use App\Context\ServiceEligibilityDecision;
 use App\Enums\CapabilityRequirement;
+use App\Enums\CitizenIntent;
 use App\Enums\ContextGuidanceReason;
 use App\Enums\MissingServiceRequirement;
 use App\Enums\ServiceEligibilityReason;
@@ -22,6 +24,7 @@ final class ServiceEligibilityPolicy
 {
     public function __construct(
         private readonly ServiceCapabilityPolicy $capabilityPolicy,
+        private readonly RuleBasedInformationAccessClassifier $informationAccessClassifier,
     ) {}
 
     public function evaluate(CitizenRequestUnderstanding $understanding): ServiceEligibilityDecision
@@ -37,6 +40,29 @@ final class ServiceEligibilityPolicy
         }
 
         $capability = $this->capabilityPolicy->forTarget($target);
+        $informationAccessClassification = null;
+
+        if ($intent === CitizenIntent::INFORMATION) {
+            $informationAccessClassification = $this->informationAccessClassifier->classify(
+                $serviceUnderstanding->contextResult->context->message,
+            );
+
+            if (! $informationAccessClassification->allowsAnonymousAccess()) {
+                $context = $serviceUnderstanding->contextResult->context;
+
+                return $this->blocked(
+                    reason: $context->citizen === null
+                        ? ServiceEligibilityReason::IDENTITY_REQUIRED
+                        : ServiceEligibilityReason::AUTHORIZATION_REQUIRED,
+                    target: $target,
+                    capability: $capability,
+                    missingRequirement: $context->citizen === null
+                        ? MissingServiceRequirement::IDENTITY
+                        : MissingServiceRequirement::AUTHORIZATION,
+                    informationAccessClassification: $informationAccessClassification,
+                );
+            }
+        }
 
         if ($this->hasUnresolvedContextConflict($understanding)) {
             return $this->blocked(
@@ -68,6 +94,7 @@ final class ServiceEligibilityPolicy
             routeTarget: $target,
             capability: $capability,
             reason: ServiceEligibilityReason::ELIGIBLE,
+            informationAccessClassification: $informationAccessClassification,
         );
     }
 
@@ -120,6 +147,7 @@ final class ServiceEligibilityPolicy
         ?ServiceRouteTarget $target = null,
         ?ServiceCapability $capability = null,
         ?MissingServiceRequirement $missingRequirement = null,
+        ?InformationAccessClassification $informationAccessClassification = null,
     ): ServiceEligibilityDecision {
         return new ServiceEligibilityDecision(
             status: ServiceEligibilityStatus::BLOCKED,
@@ -127,6 +155,7 @@ final class ServiceEligibilityPolicy
             capability: $capability,
             reason: $reason,
             missingRequirement: $missingRequirement,
+            informationAccessClassification: $informationAccessClassification,
         );
     }
 }

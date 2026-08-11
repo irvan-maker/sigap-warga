@@ -19,6 +19,10 @@ enum IntentRule: string
     case INFORMATION_LETTER_REQUIREMENTS = 'information_letter_requirements';
     case INFORMATION_POSYANDU_SCHEDULE = 'information_posyandu_schedule';
     case INFORMATION_PUBLIC_CONTACT = 'information_public_contact';
+    case INFORMATION_SERVICE_PROCEDURE = 'information_service_procedure';
+    case INFORMATION_OFFICIAL_FEE = 'information_official_fee';
+    case INFORMATION_PROTECTED_REQUEST = 'information_protected_request';
+    case INFORMATION_AMBIGUOUS_REQUEST = 'information_ambiguous_request';
     case LETTER_DOMICILE = 'letter_domicile';
     case LETTER_INTRODUCTION = 'letter_introduction';
     case LETTER_BUSINESS = 'letter_business';

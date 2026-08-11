@@ -18,6 +18,7 @@ final readonly class ServiceEligibilityDecision
         public ?ServiceCapability $capability,
         public ServiceEligibilityReason $reason,
         public ?MissingServiceRequirement $missingRequirement = null,
+        public ?InformationAccessClassification $informationAccessClassification = null,
     ) {}
 
     public function isEligible(): bool

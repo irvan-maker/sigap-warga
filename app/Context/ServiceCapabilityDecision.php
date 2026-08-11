@@ -3,6 +3,7 @@
 namespace App\Context;
 
 use App\Enums\RoutingReadinessReason;
+use App\Enums\ServiceEligibilityReason;
 use App\Enums\ServiceExecutionEligibility;
 use App\Enums\ServiceRoutingReason;
 
@@ -15,7 +16,7 @@ final readonly class ServiceCapabilityDecision
         public ServiceCapability $capability,
         public ServiceRoutingDecision $routingDecision,
         public ServiceExecutionEligibility $executionEligibility,
-        public ServiceRoutingReason|RoutingReadinessReason $reason,
+        public ServiceRoutingReason|RoutingReadinessReason|ServiceEligibilityReason $reason,
     ) {}
 
     public function isExecutable(): bool

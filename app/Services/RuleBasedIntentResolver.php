@@ -194,6 +194,21 @@ class RuleBasedIntentResolver
             [IntentRule::INFORMATION_POSYANDU_SCHEDULE, 'jadwal posyandu'],
             [IntentRule::INFORMATION_PUBLIC_CONTACT, 'nomor kontak'],
             [IntentRule::INFORMATION_PUBLIC_CONTACT, 'kontak kelurahan'],
+            [IntentRule::INFORMATION_SERVICE_PROCEDURE, 'bagaimana cara mengurus'],
+            [IntentRule::INFORMATION_SERVICE_PROCEDURE, 'prosedur pelayanan'],
+            [IntentRule::INFORMATION_SERVICE_PROCEDURE, 'cara mengurus surat'],
+            [IntentRule::INFORMATION_OFFICIAL_FEE, 'biaya resmi'],
+            [IntentRule::INFORMATION_OFFICIAL_FEE, 'tarif resmi'],
+            [IntentRule::INFORMATION_PROTECTED_REQUEST, 'nik '],
+            [IntentRule::INFORMATION_PROTECTED_REQUEST, 'anggota kk'],
+            [IntentRule::INFORMATION_PROTECTED_REQUEST, 'status laporan'],
+            [IntentRule::INFORMATION_PROTECTED_REQUEST, 'laporan budi statusnya'],
+            [IntentRule::INFORMATION_PROTECTED_REQUEST, 'laporan andi statusnya'],
+            [IntentRule::INFORMATION_PROTECTED_REQUEST, 'status surat'],
+            [IntentRule::INFORMATION_PROTECTED_REQUEST, 'surat milik'],
+            [IntentRule::INFORMATION_PROTECTED_REQUEST, 'data sensus'],
+            [IntentRule::INFORMATION_PROTECTED_REQUEST, 'informasi internal'],
+            [IntentRule::INFORMATION_AMBIGUOUS_REQUEST, 'informasi tentang warga'],
         ];
     }
 

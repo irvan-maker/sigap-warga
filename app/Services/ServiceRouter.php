@@ -49,11 +49,12 @@ final class ServiceRouter
     private function blockedReason(
         CitizenRequestUnderstanding $understanding,
         ServiceEligibilityReason $reason,
-    ): RoutingReadinessReason {
+    ): RoutingReadinessReason|ServiceEligibilityReason {
         return match ($reason) {
             ServiceEligibilityReason::IDENTITY_REQUIRED => RoutingReadinessReason::IDENTITY_REQUIRED,
             ServiceEligibilityReason::TERRITORY_REQUIRED => RoutingReadinessReason::TERRITORY_REQUIRED,
             ServiceEligibilityReason::IDENTITY_AND_TERRITORY_REQUIRED => RoutingReadinessReason::IDENTITY_AND_TERRITORY_REQUIRED,
+            ServiceEligibilityReason::AUTHORIZATION_REQUIRED => ServiceEligibilityReason::AUTHORIZATION_REQUIRED,
             ServiceEligibilityReason::INVALID_INTENT_OR_ROUTING => $understanding->serviceUnderstanding->isIntentUrgencyValid()
                 ? RoutingReadinessReason::INTENT_UNKNOWN
                 : RoutingReadinessReason::INTENT_URGENCY_INVALID,
