@@ -275,6 +275,18 @@ Jangan menandai item selesai hanya berdasarkan keberadaan code.
 
 Target public pilot saat ini: `sigap.cloud.uym.ac.id`.
 
+Deployment pack P0:
+
+- [Deployment Guide](docs/deployment/README.md)
+- [Environment Checklist](docs/deployment/ENVIRONMENT_CHECKLIST.md)
+- [Operations Runbook](docs/deployment/OPERATIONS_RUNBOOK.md)
+
+| P0 checkpoint | Status |
+|---|---|
+| Deployment documentation | 🟢 IMPLEMENTED |
+| Campus deployment | 🟠 BLOCKED — awaiting hosting cooperation |
+| WhatsApp REPORT E2E | 🟠 BLOCKED — trusted territory dan deployment belum tersedia |
+
 ```text
 GitHub
   -> campus hosting (dependency administrator)
@@ -361,7 +373,7 @@ Status roadmap adalah rencana; checkbox hanya dicentang berdasarkan evidence.
 
 ### P0 — Deployment Readiness
 
-- [ ] Susun deployment pack dan server requirement
+- [x] Susun deployment pack dan server requirement
 - [ ] Dapatkan akses/koordinasi hosting kampus
 - [ ] Backup sebelum migration
 - [ ] Konfigurasi production `.env` tanpa commit secret
