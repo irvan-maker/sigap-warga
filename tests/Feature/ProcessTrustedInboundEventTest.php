@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Context\TrustedInboundEvent;
 use App\Context\TrustedInboundProcessingResult;
+use App\Enums\InboundProcessingReason;
 use App\Enums\InboundRequestStatus;
 use App\Enums\InboundSource;
 use App\Enums\ServiceEligibilityReason;
@@ -13,7 +14,9 @@ use App\Models\Citizen;
 use App\Models\Rt;
 use App\Models\Rw;
 use App\Services\CitizenRequestInterpreter;
+use App\Services\InboundRequestLifecyclePolicy;
 use App\Services\ProcessTrustedInboundEvent;
+use App\Services\ReceiveInboundRequestService;
 use DateTimeImmutable;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -76,8 +79,9 @@ class ProcessTrustedInboundEventTest extends TestCase
 
         $this->assertSame(TrustedInboundProcessingOutcome::BLOCKED, $result->outcome);
         $this->assertSame(ServiceEligibilityReason::IDENTITY_REQUIRED, $result->eligibilityDecision?->reason);
-        $this->assertSame(InboundRequestStatus::RECEIVED, $result->inboundRequest->status);
+        $this->assertSame(InboundRequestStatus::BLOCKED, $result->inboundRequest->status);
         $this->assertSame(ServiceRouteTarget::REPORT_SERVICE, $result->inboundRequest->service_target);
+        $this->assertSame(InboundProcessingReason::IDENTITY_REQUIRED, $result->inboundRequest->processing_reason);
         $this->assertDatabaseCount('reports', 0);
         $this->assertDatabaseCount('citizens', 0);
     }
@@ -92,7 +96,8 @@ class ProcessTrustedInboundEventTest extends TestCase
 
         $this->assertSame(TrustedInboundProcessingOutcome::NON_REPORT_SERVICE, $result->outcome);
         $this->assertSame(ServiceRouteTarget::INFORMATION_SERVICE, $result->routingDecision?->target);
-        $this->assertSame(InboundRequestStatus::RECEIVED, $result->inboundRequest->status);
+        $this->assertSame(InboundRequestStatus::PENDING_ACTION, $result->inboundRequest->status);
+        $this->assertSame(InboundProcessingReason::PENDING_SERVICE_ACTION, $result->inboundRequest->processing_reason);
         $this->assertDatabaseCount('reports', 0);
     }
 
@@ -110,6 +115,7 @@ class ProcessTrustedInboundEventTest extends TestCase
         $this->assertSame(TrustedInboundProcessingOutcome::NON_REPORT_SERVICE, $result->outcome);
         $this->assertSame(ServiceRouteTarget::EMERGENCY_SERVICE, $result->routingDecision?->target);
         $this->assertSame(ServiceRouteTarget::EMERGENCY_SERVICE, $result->inboundRequest->service_target);
+        $this->assertSame(InboundRequestStatus::PENDING_ACTION, $result->inboundRequest->status);
         $this->assertDatabaseCount('reports', 0);
     }
 
@@ -126,7 +132,96 @@ class ProcessTrustedInboundEventTest extends TestCase
 
         $this->assertSame(TrustedInboundProcessingOutcome::NON_REPORT_SERVICE, $result->outcome);
         $this->assertSame(ServiceRouteTarget::LETTER_SERVICE, $result->routingDecision?->target);
+        $this->assertSame(InboundRequestStatus::PENDING_ACTION, $result->inboundRequest->status);
         $this->assertDatabaseCount('reports', 0);
+    }
+
+    public function test_duplicate_blocked_request_short_circuits_without_reinterpretation(): void
+    {
+        $incidentRt = $this->createRt('001', '001');
+        $event = $this->event(
+            'event-blocked-duplicate',
+            '6289999999999',
+            'jalan rusak',
+            incidentRt: $incidentRt,
+        );
+        $first = $this->process($event);
+
+        $this->mock(CitizenRequestInterpreter::class)->shouldNotReceive('interpret');
+        $duplicate = $this->process($event);
+
+        $this->assertSame(TrustedInboundProcessingOutcome::BLOCKED, $duplicate->outcome);
+        $this->assertSame(InboundRequestStatus::BLOCKED, $duplicate->inboundRequest->status);
+        $this->assertSame($first->inboundRequest->correlation_id, $duplicate->inboundRequest->correlation_id);
+        $this->assertSame(InboundProcessingReason::IDENTITY_REQUIRED, $duplicate->inboundRequest->processing_reason);
+        $this->assertDatabaseCount('reports', 0);
+    }
+
+    public function test_duplicate_pending_action_short_circuits_without_reinterpretation(): void
+    {
+        $event = $this->event(
+            'event-information-duplicate',
+            '6289999999999',
+            'nomor ambulans desa berapa',
+        );
+        $first = $this->process($event);
+
+        $this->mock(CitizenRequestInterpreter::class)->shouldNotReceive('interpret');
+        $duplicate = $this->process($event);
+
+        $this->assertSame(TrustedInboundProcessingOutcome::NON_REPORT_SERVICE, $duplicate->outcome);
+        $this->assertSame(InboundRequestStatus::PENDING_ACTION, $duplicate->inboundRequest->status);
+        $this->assertSame($first->inboundRequest->correlation_id, $duplicate->inboundRequest->correlation_id);
+        $this->assertSame(ServiceRouteTarget::INFORMATION_SERVICE, $duplicate->inboundRequest->service_target);
+    }
+
+    public function test_aspiration_waits_for_its_unimplemented_service(): void
+    {
+        $rt = $this->createRt('001', '001');
+        $citizen = $this->createCitizen($rt);
+
+        $result = $this->process($this->event(
+            'event-aspiration',
+            $citizen->phone_normalized,
+            'saya usul dibuatkan lampu jalan',
+        ));
+
+        $this->assertSame(TrustedInboundProcessingOutcome::NON_REPORT_SERVICE, $result->outcome);
+        $this->assertSame(InboundRequestStatus::PENDING_ACTION, $result->inboundRequest->status);
+        $this->assertSame(ServiceRouteTarget::ASPIRATION_SERVICE, $result->inboundRequest->service_target);
+        $this->assertDatabaseCount('reports', 0);
+    }
+
+    public function test_processing_duplicate_does_not_start_second_execution(): void
+    {
+        $event = $this->event('event-processing', '6281234567890', 'jalan rusak');
+        $inbound = app(ReceiveInboundRequestService::class)->receive(
+            $event->source->value,
+            $event->externalEventId,
+            $event->receivedAt,
+        );
+        $inbound->update([
+            'status' => InboundRequestStatus::PROCESSING,
+            'attempt_count' => 1,
+            'processing_started_at' => now(),
+        ]);
+
+        $this->mock(CitizenRequestInterpreter::class)->shouldNotReceive('interpret');
+        $result = $this->process($event);
+
+        $this->assertSame(TrustedInboundProcessingOutcome::PROCESSING_IN_PROGRESS, $result->outcome);
+        $this->assertSame(InboundRequestStatus::PROCESSING, $result->inboundRequest->status);
+        $this->assertDatabaseCount('reports', 0);
+    }
+
+    public function test_invalid_lifecycle_transition_is_rejected(): void
+    {
+        $this->expectException(DomainException::class);
+
+        app(InboundRequestLifecyclePolicy::class)->assertCanTransition(
+            InboundRequestStatus::BLOCKED,
+            InboundRequestStatus::PROCESSING,
+        );
     }
 
     public function test_cross_territory_report_preserves_citizen_domicile(): void
@@ -185,6 +280,24 @@ class ProcessTrustedInboundEventTest extends TestCase
         $this->assertStringNotContainsString('secret provider detail', $result->inboundRequest->last_error_code);
         $this->assertDatabaseCount('reports', 0);
         $this->assertDatabaseCount('report_histories', 0);
+    }
+
+    public function test_failed_request_is_not_automatically_retried_on_duplicate(): void
+    {
+        $event = $this->event('event-failed-duplicate', '6281234567890', 'jalan rusak');
+        $interpreter = $this->mock(CitizenRequestInterpreter::class);
+        $interpreter->shouldReceive('interpret')
+            ->once()
+            ->andThrow(new RuntimeException('technical failure'));
+
+        $first = $this->process($event);
+        $duplicate = $this->process($event);
+
+        $this->assertSame(TrustedInboundProcessingOutcome::FAILED, $duplicate->outcome);
+        $this->assertSame(InboundRequestStatus::FAILED, $duplicate->inboundRequest->status);
+        $this->assertSame($first->inboundRequest->correlation_id, $duplicate->inboundRequest->correlation_id);
+        $this->assertSame(1, $duplicate->inboundRequest->attempt_count);
+        $this->assertDatabaseCount('reports', 0);
     }
 
     public function test_inbound_receipt_does_not_persist_sender_phone_or_message(): void

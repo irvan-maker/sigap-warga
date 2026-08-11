@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\InboundProcessingReason;
 use App\Enums\InboundRequestStatus;
 use App\Enums\ServiceRouteTarget;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'correlation_id',
     'status',
     'service_target',
+    'processing_reason',
     'attempt_count',
     'received_at',
     'processing_started_at',
@@ -42,6 +44,7 @@ class InboundRequest extends Model
         return [
             'status' => InboundRequestStatus::class,
             'service_target' => ServiceRouteTarget::class,
+            'processing_reason' => InboundProcessingReason::class,
             'attempt_count' => 'integer',
             'received_at' => 'immutable_datetime',
             'processing_started_at' => 'immutable_datetime',

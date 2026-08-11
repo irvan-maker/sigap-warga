@@ -9,7 +9,9 @@ use App\Context\ServiceEligibilityDecision;
 use App\Context\ServiceRoutingDecision;
 use App\Context\TrustedInboundEvent;
 use App\Context\TrustedInboundProcessingResult;
+use App\Enums\InboundProcessingReason;
 use App\Enums\InboundRequestStatus;
+use App\Enums\ServiceEligibilityReason;
 use App\Enums\ServiceRouteTarget;
 use App\Enums\TrustedInboundProcessingOutcome;
 use App\Enums\TrustedInboundProcessingReason;
@@ -38,6 +40,7 @@ final class ProcessTrustedInboundEvent
         private readonly ServiceEligibilityPolicy $serviceEligibilityPolicy,
         private readonly ServiceRouter $serviceRouter,
         private readonly CreateCitizenReportService $createCitizenReportService,
+        private readonly InboundRequestLifecyclePolicy $lifecyclePolicy,
     ) {}
 
     public function process(TrustedInboundEvent $event): TrustedInboundProcessingResult
@@ -49,17 +52,13 @@ final class ProcessTrustedInboundEvent
             receivedAt: $event->receivedAt,
         );
 
-        $existingReport = $inboundRequest->report()->first();
+        $shortCircuit = $this->claimOrShortCircuit($inboundRequest);
 
-        if ($inboundRequest->status === InboundRequestStatus::SUCCEEDED
-            && $existingReport !== null) {
-            return new TrustedInboundProcessingResult(
-                inboundRequest: $inboundRequest,
-                outcome: TrustedInboundProcessingOutcome::DUPLICATE_ALREADY_PROCESSED,
-                reason: TrustedInboundProcessingReason::INBOUND_ALREADY_SUCCEEDED,
-                report: $existingReport,
-            );
+        if ($shortCircuit !== null) {
+            return $shortCircuit;
         }
+
+        $inboundRequest->refresh();
 
         $understanding = null;
         $eligibility = null;
@@ -80,7 +79,7 @@ final class ProcessTrustedInboundEvent
             $routing = $this->serviceRouter->route($understanding);
 
             if (! $eligibility->isEligible() || ! $routing->canRoute()) {
-                $this->recordServiceTarget($inboundRequest, $eligibility->routeTarget);
+                $this->completeBlocked($inboundRequest, $eligibility);
 
                 return $this->result(
                     inboundRequest: $inboundRequest->fresh(),
@@ -93,7 +92,7 @@ final class ProcessTrustedInboundEvent
             }
 
             if ($routing->target !== ServiceRouteTarget::REPORT_SERVICE) {
-                $this->recordServiceTarget($inboundRequest, $routing->target);
+                $this->completePendingAction($inboundRequest, $routing->target);
 
                 return $this->result(
                     inboundRequest: $inboundRequest->fresh(),
@@ -136,14 +135,12 @@ final class ProcessTrustedInboundEvent
                 ->with('report')
                 ->find($inboundRequest->getKey());
 
-            if ($completedInboundRequest?->status === InboundRequestStatus::SUCCEEDED
-                && $completedInboundRequest->report !== null) {
-                return new TrustedInboundProcessingResult(
-                    inboundRequest: $completedInboundRequest,
-                    outcome: TrustedInboundProcessingOutcome::DUPLICATE_ALREADY_PROCESSED,
-                    reason: TrustedInboundProcessingReason::INBOUND_ALREADY_SUCCEEDED,
-                    report: $completedInboundRequest->report,
-                );
+            if ($completedInboundRequest !== null
+                && ! in_array($completedInboundRequest->status, [
+                    InboundRequestStatus::RECEIVED,
+                    InboundRequestStatus::PROCESSING,
+                ], true)) {
+                return $this->durableResult($completedInboundRequest);
             }
 
             $this->recordFailure($inboundRequest, $routing?->target ?? $eligibility?->routeTarget);
@@ -197,13 +194,137 @@ final class ProcessTrustedInboundEvent
         }
     }
 
-    private function recordServiceTarget(
+    private function claimOrShortCircuit(
         InboundRequest $inboundRequest,
-        ?ServiceRouteTarget $target,
+    ): ?TrustedInboundProcessingResult {
+        return DB::transaction(function () use ($inboundRequest): ?TrustedInboundProcessingResult {
+            $locked = InboundRequest::query()
+                ->with('report')
+                ->lockForUpdate()
+                ->findOrFail($inboundRequest->getKey());
+
+            if ($locked->status !== InboundRequestStatus::RECEIVED) {
+                return $this->durableResult($locked);
+            }
+
+            $this->lifecyclePolicy->assertCanTransition(
+                $locked->status,
+                InboundRequestStatus::PROCESSING,
+            );
+
+            $claimed = InboundRequest::query()
+                ->whereKey($locked->getKey())
+                ->where('status', InboundRequestStatus::RECEIVED->value)
+                ->update([
+                    'status' => InboundRequestStatus::PROCESSING->value,
+                    'attempt_count' => $locked->attempt_count + 1,
+                    'processing_started_at' => now(),
+                    'completed_at' => null,
+                    'processing_reason' => null,
+                    'last_error_code' => null,
+                    'updated_at' => now(),
+                ]);
+
+            if ($claimed === 1) {
+                return null;
+            }
+
+            return $this->durableResult(
+                InboundRequest::query()->with('report')->findOrFail($locked->getKey()),
+            );
+        }, 3);
+    }
+
+    private function durableResult(InboundRequest $inboundRequest): TrustedInboundProcessingResult
+    {
+        return match ($inboundRequest->status) {
+            InboundRequestStatus::SUCCEEDED => new TrustedInboundProcessingResult(
+                inboundRequest: $inboundRequest,
+                outcome: TrustedInboundProcessingOutcome::DUPLICATE_ALREADY_PROCESSED,
+                reason: TrustedInboundProcessingReason::INBOUND_ALREADY_SUCCEEDED,
+                report: $inboundRequest->report,
+            ),
+            InboundRequestStatus::BLOCKED => new TrustedInboundProcessingResult(
+                inboundRequest: $inboundRequest,
+                outcome: TrustedInboundProcessingOutcome::BLOCKED,
+                reason: TrustedInboundProcessingReason::ELIGIBILITY_BLOCKED,
+            ),
+            InboundRequestStatus::PENDING_ACTION => new TrustedInboundProcessingResult(
+                inboundRequest: $inboundRequest,
+                outcome: TrustedInboundProcessingOutcome::NON_REPORT_SERVICE,
+                reason: TrustedInboundProcessingReason::SERVICE_NOT_EXECUTED,
+            ),
+            InboundRequestStatus::FAILED => new TrustedInboundProcessingResult(
+                inboundRequest: $inboundRequest,
+                outcome: TrustedInboundProcessingOutcome::FAILED,
+                reason: TrustedInboundProcessingReason::PROCESSING_EXCEPTION,
+            ),
+            InboundRequestStatus::PROCESSING => new TrustedInboundProcessingResult(
+                inboundRequest: $inboundRequest,
+                outcome: TrustedInboundProcessingOutcome::PROCESSING_IN_PROGRESS,
+                reason: TrustedInboundProcessingReason::INBOUND_PROCESSING,
+            ),
+            InboundRequestStatus::RECEIVED => throw new DomainException(
+                'A received inbound request must be claimed before processing.',
+            ),
+        };
+    }
+
+    private function completeBlocked(
+        InboundRequest $inboundRequest,
+        ServiceEligibilityDecision $eligibility,
     ): void {
-        if ($target !== null) {
-            $inboundRequest->update(['service_target' => $target]);
-        }
+        $this->complete(
+            inboundRequest: $inboundRequest,
+            status: InboundRequestStatus::BLOCKED,
+            target: $eligibility->routeTarget,
+            reason: $this->blockedReason($eligibility->reason),
+        );
+    }
+
+    private function completePendingAction(
+        InboundRequest $inboundRequest,
+        ServiceRouteTarget $target,
+    ): void {
+        $this->complete(
+            inboundRequest: $inboundRequest,
+            status: InboundRequestStatus::PENDING_ACTION,
+            target: $target,
+            reason: InboundProcessingReason::PENDING_SERVICE_ACTION,
+        );
+    }
+
+    private function complete(
+        InboundRequest $inboundRequest,
+        InboundRequestStatus $status,
+        ?ServiceRouteTarget $target,
+        InboundProcessingReason $reason,
+    ): void {
+        DB::transaction(function () use ($inboundRequest, $status, $target, $reason): void {
+            $locked = InboundRequest::query()->lockForUpdate()->findOrFail($inboundRequest->getKey());
+
+            $this->lifecyclePolicy->assertCanTransition($locked->status, $status);
+            $locked->update([
+                'status' => $status,
+                'service_target' => $target,
+                'processing_reason' => $reason,
+                'completed_at' => now(),
+                'last_error_code' => null,
+            ]);
+        }, 3);
+    }
+
+    private function blockedReason(ServiceEligibilityReason $reason): InboundProcessingReason
+    {
+        return match ($reason) {
+            ServiceEligibilityReason::IDENTITY_REQUIRED => InboundProcessingReason::IDENTITY_REQUIRED,
+            ServiceEligibilityReason::TERRITORY_REQUIRED => InboundProcessingReason::TERRITORY_REQUIRED,
+            ServiceEligibilityReason::IDENTITY_AND_TERRITORY_REQUIRED => InboundProcessingReason::IDENTITY_AND_TERRITORY_REQUIRED,
+            ServiceEligibilityReason::AUTHORIZATION_REQUIRED => InboundProcessingReason::AUTHORIZATION_REQUIRED,
+            ServiceEligibilityReason::INVALID_INTENT_OR_ROUTING => InboundProcessingReason::INVALID_INTENT_OR_ROUTING,
+            ServiceEligibilityReason::ROUTING_NOT_READY,
+            ServiceEligibilityReason::ELIGIBLE => InboundProcessingReason::ROUTING_NOT_READY,
+        };
     }
 
     private function recordFailure(
@@ -213,16 +334,18 @@ final class ProcessTrustedInboundEvent
         DB::transaction(function () use ($inboundRequest, $target): void {
             $locked = InboundRequest::query()->lockForUpdate()->find($inboundRequest->getKey());
 
-            if ($locked === null
-                || ($locked->status === InboundRequestStatus::SUCCEEDED
-                    && $locked->report()->exists())) {
+            if ($locked === null || $locked->status !== InboundRequestStatus::PROCESSING) {
                 return;
             }
 
+            $this->lifecyclePolicy->assertCanTransition(
+                $locked->status,
+                InboundRequestStatus::FAILED,
+            );
             $locked->update([
                 'status' => InboundRequestStatus::FAILED,
                 'service_target' => $target,
-                'attempt_count' => $locked->attempt_count + 1,
+                'processing_reason' => null,
                 'completed_at' => now(),
                 'last_error_code' => 'TRUSTED_INBOUND_PROCESSING_FAILED',
             ]);

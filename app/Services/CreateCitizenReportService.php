@@ -20,6 +20,7 @@ final class CreateCitizenReportService
 {
     public function __construct(
         private readonly CreateReportRecordService $reportRecordService,
+        private readonly InboundRequestLifecyclePolicy $lifecyclePolicy,
     ) {}
 
     public function create(CreateCitizenReportCommand $command): Report
@@ -39,14 +40,23 @@ final class CreateCitizenReportService
                 throw new DomainException('The inbound request already produced a report.');
             }
 
-            $inboundRequest->update([
-                'status' => InboundRequestStatus::PROCESSING,
-                'service_target' => ServiceRouteTarget::REPORT_SERVICE,
-                'attempt_count' => $inboundRequest->attempt_count + 1,
-                'processing_started_at' => now(),
-                'completed_at' => null,
-                'last_error_code' => null,
-            ]);
+            if ($inboundRequest->status === InboundRequestStatus::RECEIVED) {
+                $this->lifecyclePolicy->assertCanTransition(
+                    $inboundRequest->status,
+                    InboundRequestStatus::PROCESSING,
+                );
+                $inboundRequest->update([
+                    'status' => InboundRequestStatus::PROCESSING,
+                    'service_target' => ServiceRouteTarget::REPORT_SERVICE,
+                    'attempt_count' => $inboundRequest->attempt_count + 1,
+                    'processing_started_at' => now(),
+                    'completed_at' => null,
+                    'processing_reason' => null,
+                    'last_error_code' => null,
+                ]);
+            } elseif ($inboundRequest->status !== InboundRequestStatus::PROCESSING) {
+                throw new DomainException('The inbound request is not available for report execution.');
+            }
 
             $report = $this->reportRecordService->create(
                 citizen: $command->requester,
@@ -57,6 +67,10 @@ final class CreateCitizenReportService
                 inboundRequest: $inboundRequest,
             );
 
+            $this->lifecyclePolicy->assertCanTransition(
+                $inboundRequest->status,
+                InboundRequestStatus::SUCCEEDED,
+            );
             $inboundRequest->update([
                 'status' => InboundRequestStatus::SUCCEEDED,
                 'completed_at' => now(),
