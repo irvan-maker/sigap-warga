@@ -13,6 +13,10 @@ use DomainException;
  */
 final class WhatsAppWebhookParser
 {
+    public function __construct(
+        private readonly WhatsAppHandoffMarkerParser $handoffMarkerParser,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $payload
      */
@@ -81,15 +85,18 @@ final class WhatsAppWebhookParser
             return null;
         }
 
+        $marker = $this->handoffMarkerParser->extract($body);
+
         return new TrustedInboundEvent(
             source: InboundSource::META_WHATSAPP,
             externalEventId: $messageId,
             senderPhone: $sender,
-            message: $body,
+            message: $marker->message,
             receivedAt: $this->receivedAt($message['timestamp'] ?? null),
             entryRt: null,
             incidentRt: null,
             sourceNamespace: $this->sourceNamespace($phoneNumberId),
+            handoffToken: $marker->token,
         );
     }
 

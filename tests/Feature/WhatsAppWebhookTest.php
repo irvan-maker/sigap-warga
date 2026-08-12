@@ -9,6 +9,9 @@ use App\Models\Citizen;
 use App\Models\InboundRequest;
 use App\Models\Rt;
 use App\Models\Rw;
+use App\Models\ServiceHandoff;
+use App\Services\ServiceEntryPointIssuer;
+use App\Services\ServiceHandoffIssuer;
 use App\Services\WhatsAppWebhookParser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -31,6 +34,114 @@ class WhatsAppWebhookTest extends TestCase
             'services.whatsapp.webhook_verify_token' => self::VERIFY_TOKEN,
             'services.whatsapp.source_namespace' => 'meta-whatsapp-test',
         ]);
+    }
+
+    public function test_valid_qr_handoff_creates_same_territory_report_once_with_clean_message(): void
+    {
+        $rt = $this->createRt();
+        $citizen = Citizen::factory()->for($rt)->create([
+            'phone' => '081234567890',
+            'phone_normalized' => '6281234567890',
+        ]);
+        $handoffToken = $this->handoffToken($rt);
+        $rawBody = $this->textPayload(
+            'wamid.qr-golden',
+            $citizen->phone_normalized,
+            "[SW:{$handoffToken}] jalan rusak",
+        );
+
+        $this->postRaw($rawBody, $this->signature($rawBody))->assertOk();
+        $this->postRaw($rawBody, $this->signature($rawBody))->assertOk();
+
+        $inbound = InboundRequest::query()->firstOrFail();
+        $report = $inbound->report()->firstOrFail();
+        $handoff = ServiceHandoff::query()->firstOrFail();
+
+        $this->assertSame(InboundRequestStatus::SUCCEEDED, $inbound->status);
+        $this->assertSame(ServiceRouteTarget::REPORT_SERVICE, $inbound->service_target);
+        $this->assertSame($inbound->id, $handoff->consumed_by_inbound_request_id);
+        $this->assertSame($rt->id, $report->rt_id);
+        $this->assertSame($rt->id, $citizen->fresh()->rt_id);
+        $this->assertSame('jalan rusak', $report->description);
+        $this->assertStringNotContainsString('[SW:', $report->description);
+        $this->assertDatabaseCount('inbound_requests', 1);
+        $this->assertDatabaseCount('reports', 1);
+        $this->assertDatabaseCount('report_histories', 1);
+        $this->assertDatabaseCount('report_ticket_sequences', 1);
+    }
+
+    public function test_qr_entry_conflicting_with_domicile_is_blocked_without_report(): void
+    {
+        $domicileRt = $this->createRt();
+        $otherRw = Rw::query()->create(['code' => '007', 'name' => 'RW 007']);
+        $entryRt = Rt::query()->create([
+            'rw_id' => $otherRw->id,
+            'code' => '007',
+            'name' => 'RT 007',
+        ]);
+        $citizen = Citizen::factory()->for($domicileRt)->create([
+            'phone' => '081234567890',
+            'phone_normalized' => '6281234567890',
+        ]);
+        $token = $this->handoffToken($entryRt);
+
+        $this->postSignedText('wamid.qr-conflict', $citizen->phone_normalized, "[SW:{$token}] jalan rusak")
+            ->assertOk();
+
+        $this->assertSame(InboundRequestStatus::BLOCKED, InboundRequest::query()->sole()->status);
+        $this->assertSame($domicileRt->id, $citizen->fresh()->rt_id);
+        $this->assertDatabaseCount('reports', 0);
+    }
+
+    public function test_qr_handoff_does_not_authenticate_unknown_citizen(): void
+    {
+        $token = $this->handoffToken($this->createRt());
+
+        $this->postSignedText('wamid.qr-unknown', '6289999999999', "[SW:{$token}] jalan rusak")
+            ->assertOk();
+
+        $this->assertSame(InboundRequestStatus::BLOCKED, InboundRequest::query()->sole()->status);
+        $this->assertSame(InboundProcessingReason::IDENTITY_REQUIRED, InboundRequest::query()->sole()->processing_reason);
+        $this->assertDatabaseCount('citizens', 0);
+        $this->assertDatabaseCount('reports', 0);
+    }
+
+    public function test_handoff_replay_by_different_meta_message_is_rejected(): void
+    {
+        $rt = $this->createRt();
+        $citizen = Citizen::factory()->for($rt)->create([
+            'phone' => '081234567890',
+            'phone_normalized' => '6281234567890',
+        ]);
+        $token = $this->handoffToken($rt);
+
+        $this->postSignedText('wamid.qr-first', $citizen->phone_normalized, "[SW:{$token}] jalan rusak")->assertOk();
+        $this->postSignedText('wamid.qr-replay', $citizen->phone_normalized, "[SW:{$token}] jalan rusak")->assertOk();
+
+        $this->assertDatabaseCount('inbound_requests', 2);
+        $this->assertDatabaseCount('reports', 1);
+        $this->assertSame(
+            InboundRequestStatus::BLOCKED,
+            InboundRequest::query()->where('external_event_id', 'wamid.qr-replay')->sole()->status,
+        );
+    }
+
+    public function test_malformed_and_multiple_markers_never_provide_entry_authority(): void
+    {
+        $rt = $this->createRt();
+        $citizen = Citizen::factory()->for($rt)->create([
+            'phone' => '081234567890',
+            'phone_normalized' => '6281234567890',
+        ]);
+        $first = $this->handoffToken($rt);
+        $second = $this->handoffToken($rt);
+
+        $this->postSignedText('wamid.qr-malformed', $citizen->phone_normalized, '[SW:not-valid] jalan rusak')->assertOk();
+        $this->postSignedText('wamid.qr-multiple', $citizen->phone_normalized, "[SW:{$first}] [SW:{$second}] jalan rusak")->assertOk();
+
+        $this->assertDatabaseCount('reports', 0);
+        $this->assertSame(2, InboundRequest::query()->where('status', InboundRequestStatus::BLOCKED)->count());
+        $this->assertSame(0, ServiceHandoff::query()->whereNotNull('consumed_at')->count());
     }
 
     public function test_get_verification_returns_challenge_for_matching_subscription(): void
@@ -305,6 +416,20 @@ class WhatsAppWebhookTest extends TestCase
     private function signature(string $rawBody): string
     {
         return 'sha256='.hash_hmac('sha256', $rawBody, self::APP_SECRET);
+    }
+
+    private function postSignedText(string $messageId, string $sender, string $message): TestResponse
+    {
+        $rawBody = $this->textPayload($messageId, $sender, $message);
+
+        return $this->postRaw($rawBody, $this->signature($rawBody));
+    }
+
+    private function handoffToken(Rt $rt): string
+    {
+        $entry = app(ServiceEntryPointIssuer::class)->issue($rt);
+
+        return app(ServiceHandoffIssuer::class)->issue($entry->record)->token;
     }
 
     private function textPayload(string $messageId, string $sender, string $message): string

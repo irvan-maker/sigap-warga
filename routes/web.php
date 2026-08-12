@@ -17,11 +17,18 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RtReportController;
 use App\Http\Controllers\RwReportController;
 use App\Http\Controllers\RwRtController;
+use App\Http\Controllers\ServiceGatewayController;
 use App\Http\Controllers\VillageLetterController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', PublicPortalController::class)->name('public.home');
+
+Route::get('/q/{entryToken}', [ServiceGatewayController::class, 'show'])
+    ->name('service-gateway.show');
+Route::post('/q/{entryToken}/whatsapp', [ServiceGatewayController::class, 'whatsapp'])
+    ->middleware('throttle:10,1')
+    ->name('service-gateway.whatsapp');
 
 Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])
     ->name('webhooks.whatsapp.verify');

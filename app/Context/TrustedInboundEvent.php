@@ -24,10 +24,26 @@ final readonly class TrustedInboundEvent
         public ?Rt $entryRt = null,
         public ?Rt $incidentRt = null,
         public ?string $sourceNamespace = null,
+        public ?string $handoffToken = null,
     ) {}
 
     public function durableSourceNamespace(): string
     {
         return $this->sourceNamespace ?? $this->source->value;
+    }
+
+    public function withEntryRt(Rt $entryRt): self
+    {
+        return new self(
+            source: $this->source,
+            externalEventId: $this->externalEventId,
+            senderPhone: $this->senderPhone,
+            message: $this->message,
+            receivedAt: $this->receivedAt,
+            entryRt: $entryRt,
+            incidentRt: $this->incidentRt,
+            sourceNamespace: $this->sourceNamespace,
+            handoffToken: $this->handoffToken,
+        );
     }
 }

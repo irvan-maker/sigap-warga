@@ -41,6 +41,7 @@ final class ProcessTrustedInboundEvent
         private readonly ServiceRouter $serviceRouter,
         private readonly CreateCitizenReportService $createCitizenReportService,
         private readonly InboundRequestLifecyclePolicy $lifecyclePolicy,
+        private readonly ServiceHandoffConsumer $serviceHandoffConsumer,
     ) {}
 
     public function process(TrustedInboundEvent $event): TrustedInboundProcessingResult
@@ -65,6 +66,17 @@ final class ProcessTrustedInboundEvent
         $routing = null;
 
         try {
+            if ($event->entryRt === null && $event->handoffToken !== null) {
+                $entryRt = $this->serviceHandoffConsumer->consume(
+                    $event->handoffToken,
+                    $inboundRequest,
+                );
+
+                if ($entryRt !== null) {
+                    $event = $event->withEntryRt($entryRt);
+                }
+            }
+
             $understanding = $this->citizenRequestInterpreter->interpret(
                 entry: new EntryContext(
                     channel: $event->source->value,

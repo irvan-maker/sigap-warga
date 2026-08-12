@@ -59,4 +59,12 @@ class InboundRequest extends Model
     {
         return $this->hasOne(Report::class);
     }
+
+    /**
+     * @return HasOne<ServiceHandoff, $this>
+     */
+    public function serviceHandoff(): HasOne
+    {
+        return $this->hasOne(ServiceHandoff::class, 'consumed_by_inbound_request_id');
+    }
 }

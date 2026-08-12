@@ -58,6 +58,12 @@ final class CreateCitizenReportService
                 throw new DomainException('The inbound request is not available for report execution.');
             }
 
+            if ($inboundRequest->service_target !== ServiceRouteTarget::REPORT_SERVICE) {
+                $inboundRequest->update([
+                    'service_target' => ServiceRouteTarget::REPORT_SERVICE,
+                ]);
+            }
+
             $report = $this->reportRecordService->create(
                 citizen: $command->requester,
                 serviceTerritory: $serviceTerritory,

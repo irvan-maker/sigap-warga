@@ -39,6 +39,7 @@ return [
         'webhook_verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN'),
         'app_secret' => env('WHATSAPP_APP_SECRET'),
         'source_namespace' => env('WHATSAPP_SOURCE_NAMESPACE', 'meta-whatsapp'),
+        'public_number' => env('WHATSAPP_PUBLIC_NUMBER'),
     ],
 
 ];
