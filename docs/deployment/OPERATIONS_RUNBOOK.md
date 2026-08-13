@@ -50,9 +50,12 @@ git status
 git rev-parse HEAD
 composer validate --no-check-publish
 powershell -ExecutionPolicy Bypass -File scripts/build-release.ps1
+powershell -ExecutionPolicy Bypass -File scripts/verify-release.ps1 -Archive storage/app/releases/<release>.zip
 ```
 
-Script artefak menghasilkan ZIP prabuild dan checksum SHA-256 di `storage/app/releases/`. Artefak tidak memuat `.env`, data lokal, log, backup, `node_modules`, atau `public/hot`; secret tetap diprovision langsung oleh hosting.
+Script artefak menghasilkan ZIP prabuild dan checksum SHA-256 di `storage/app/releases/`. Builder membuang metadata `.git` dependency, menolak dependency development, dan memastikan Artisan dapat boot. Artefak tidak memuat `.env`, data lokal, log, backup, `node_modules`, atau `public/hot`; secret tetap diprovision langsung oleh hosting.
+
+`verify-release.ps1` wajib dijalankan terhadap ZIP final. Validator memeriksa checksum dan entry terlarang, lalu mengekstrak ke direktori sementara untuk menguji Laravel boot, seluruh migration, cache produksi, route webhook, setup pilot terisolasi, dan readiness tanpa credential produksi. Direktori serta database rehearsal dihapus setelah pemeriksaan.
 
 **EXPECTED RESULT**
 

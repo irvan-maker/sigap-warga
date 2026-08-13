@@ -38,6 +38,9 @@ foreach ($path in @($stagingDir, $sourceArchive, $releaseArchive, $checksumPath)
     }
 }
 
+$buildSucceeded = $false
+
+try {
 & git -C $projectDir archive --format=zip "--output=$sourceArchive" $commitHash
 
 if ($LASTEXITCODE -ne 0) {
@@ -79,16 +82,66 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Composer production install gagal.'
 }
 
-if ((Test-Path -LiteralPath (Join-Path $stagingDir '.env')) -or (Test-Path -LiteralPath (Join-Path $stagingDir 'public\hot'))) {
-    throw 'Artefak memuat file environment atau Vite hot yang dilarang.'
+$vendorDir = Join-Path $stagingDir 'vendor'
+$nestedRepositories = @(Get-ChildItem -LiteralPath $vendorDir -Directory -Filter '.git' -Force -Recurse -ErrorAction SilentlyContinue)
+
+foreach ($repository in $nestedRepositories) {
+    Get-ChildItem -LiteralPath $repository.FullName -Force -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+        if (-not $_.PSIsContainer -and $_.IsReadOnly) {
+            $_.IsReadOnly = $false
+        }
+    }
+
+    [System.IO.Directory]::Delete($repository.FullName, $true)
+}
+
+$forbiddenPaths = @(
+    (Join-Path $stagingDir '.env'),
+    (Join-Path $stagingDir 'public\hot'),
+    (Join-Path $stagingDir 'node_modules'),
+    (Join-Path $vendorDir 'phpunit'),
+    (Join-Path $vendorDir 'mockery'),
+    (Join-Path $vendorDir 'fakerphp')
+)
+
+if ($forbiddenPaths | Where-Object { Test-Path -LiteralPath $_ }) {
+    throw 'Artefak memuat environment, Vite hot, node_modules, atau dependency development yang dilarang.'
+}
+
+& $PhpExe (Join-Path $stagingDir 'artisan') --version
+
+if ($LASTEXITCODE -ne 0) {
+    throw 'Artefak production tidak dapat melakukan boot Artisan.'
 }
 
 Compress-Archive -Path (Join-Path $stagingDir '*') -DestinationPath $releaseArchive -CompressionLevel Optimal
 $checksum = (Get-FileHash -LiteralPath $releaseArchive -Algorithm SHA256).Hash.ToLowerInvariant()
 [System.IO.File]::WriteAllText($checksumPath, "$checksum  $(Split-Path -Leaf $releaseArchive)`n")
+$buildSucceeded = $true
+}
+finally {
+    if (Test-Path -LiteralPath $stagingDir) {
+        Get-ChildItem -LiteralPath $stagingDir -Force -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+            if (-not $_.PSIsContainer -and $_.IsReadOnly) {
+                $_.IsReadOnly = $false
+            }
+        }
 
-Remove-Item -LiteralPath $stagingDir -Recurse -Force
-Remove-Item -LiteralPath $sourceArchive -Force
+        [System.IO.Directory]::Delete($stagingDir, $true)
+    }
+
+    if (Test-Path -LiteralPath $sourceArchive) {
+        [System.IO.File]::Delete($sourceArchive)
+    }
+
+    if (-not $buildSucceeded) {
+        foreach ($partialOutput in @($releaseArchive, $checksumPath)) {
+            if (Test-Path -LiteralPath $partialOutput) {
+                [System.IO.File]::Delete($partialOutput)
+            }
+        }
+    }
+}
 
 Write-Output "Release: $releaseArchive"
 Write-Output "SHA256: $checksum"
