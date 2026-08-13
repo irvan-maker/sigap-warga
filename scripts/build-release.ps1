@@ -17,9 +17,10 @@ if ($LASTEXITCODE -ne 0 -or $commitHash -notmatch '^[a-f0-9]{40}$') {
 }
 
 $shortHash = $commitHash.Substring(0, 7)
-$stagingDir = Join-Path $releaseRoot "staging-$shortHash"
-$sourceArchive = Join-Path $releaseRoot "source-$shortHash.zip"
-$releaseArchive = Join-Path $releaseRoot "sigap-warga-$shortHash.zip"
+$buildId = Get-Date -Format 'yyyyMMdd-HHmmss'
+$stagingDir = Join-Path $releaseRoot "staging-$shortHash-$buildId"
+$sourceArchive = Join-Path $releaseRoot "source-$shortHash-$buildId.zip"
+$releaseArchive = Join-Path $releaseRoot "sigap-warga-$shortHash-$buildId.zip"
 $checksumPath = "$releaseArchive.sha256"
 
 New-Item -ItemType Directory -Force -Path $releaseRoot | Out-Null
@@ -33,7 +34,7 @@ foreach ($path in @($stagingDir, $sourceArchive, $releaseArchive, $checksumPath)
     }
 
     if (Test-Path -LiteralPath $resolvedPath) {
-        Remove-Item -LiteralPath $resolvedPath -Recurse -Force
+        throw "Target build unik sudah tersedia: $resolvedPath"
     }
 }
 
@@ -53,6 +54,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $buildSource 'manifest.json'))) {
 }
 
 Copy-Item -LiteralPath $buildSource -Destination $buildTarget -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $projectDir 'vendor') -Destination (Join-Path $stagingDir 'vendor') -Recurse -Force
 
 foreach ($relativeDirectory in @(
     'bootstrap\cache',
