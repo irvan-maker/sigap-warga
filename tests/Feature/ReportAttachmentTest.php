@@ -22,7 +22,7 @@ class ReportAttachmentTest extends TestCase
     {
         parent::setUp();
 
-        Storage::fake('public');
+        Storage::fake('local');
         $this->withoutVite();
     }
 
@@ -99,13 +99,15 @@ class ReportAttachmentTest extends TestCase
         $this->assertSame($photo->getSize(), $attachment->size);
     }
 
-    public function test_uploaded_files_exist_on_public_disk(): void
+    public function test_uploaded_files_exist_on_private_local_disk(): void
     {
         $this->submitManualReport([
             'photos' => [UploadedFile::fake()->image('bukti.png')],
         ]);
 
-        Storage::disk('public')->assertExists(ReportAttachment::query()->sole()->path);
+        $attachment = ReportAttachment::query()->sole();
+        $this->assertSame('local', $attachment->disk);
+        Storage::disk('local')->assertExists($attachment->path);
     }
 
     public function test_deleting_report_deletes_attachment_records(): void
@@ -122,18 +124,18 @@ class ReportAttachmentTest extends TestCase
         [$report, $attachment] = $this->createReportWithAttachment();
         $directory = "reports/{$report->id}";
 
-        Storage::disk('public')->assertExists($attachment->path);
+        Storage::disk('local')->assertExists($attachment->path);
 
         $report->delete();
 
-        Storage::disk('public')->assertMissing($attachment->path);
-        $this->assertFalse(Storage::disk('public')->directoryExists($directory));
+        Storage::disk('local')->assertMissing($attachment->path);
+        $this->assertFalse(Storage::disk('local')->directoryExists($directory));
     }
 
     public function test_deleting_report_succeeds_when_attachment_file_is_already_missing(): void
     {
         [$report, $attachment] = $this->createReportWithAttachment();
-        Storage::disk('public')->delete($attachment->path);
+        Storage::disk('local')->delete($attachment->path);
 
         $deleted = $report->delete();
 
@@ -144,7 +146,8 @@ class ReportAttachmentTest extends TestCase
 
     public function test_public_tracking_displays_attachments(): void
     {
-        [$report] = $this->createReportWithAttachment();
+        [$report, $attachment] = $this->createReportWithAttachment();
+        $attachment->update(['is_public' => true]);
 
         $this->post(route('tracking.store'), [
             'ticket_number' => $report->ticket_number,
@@ -152,6 +155,18 @@ class ReportAttachmentTest extends TestCase
         ])->assertOk()
             ->assertSee('Foto Laporan')
             ->assertSee("/report-attachments/{$report->attachments->first()->id}", false);
+    }
+
+    public function test_public_tracking_hides_attachments_by_default(): void
+    {
+        [$report, $attachment] = $this->createReportWithAttachment();
+
+        $this->post(route('tracking.store'), [
+            'ticket_number' => $report->ticket_number,
+            'phone' => '081234567890',
+        ])->assertOk()
+            ->assertDontSee('Foto Laporan')
+            ->assertDontSee("/report-attachments/{$attachment->id}", false);
     }
 
     public function test_public_tracking_does_not_expose_internal_paths(): void
@@ -219,7 +234,7 @@ class ReportAttachmentTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function submitManualReport(array $overrides = [])
     {
@@ -253,8 +268,9 @@ class ReportAttachmentTest extends TestCase
             'rt_id' => $rt->id,
         ]);
         $path = "reports/{$report->id}/attachment-test.jpg";
-        Storage::disk('public')->put($path, 'fake-image-content');
+        Storage::disk('local')->put($path, 'fake-image-content');
         $attachment = $report->attachments()->create([
+            'disk' => 'local',
             'original_name' => 'bukti.jpg',
             'stored_name' => 'attachment-test.jpg',
             'path' => $path,

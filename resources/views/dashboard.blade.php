@@ -43,6 +43,7 @@
                     </div>
                 </div>
             </header>
+            <section class="card border-0 shadow-sm mb-4"><div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3"><div><h2 class="h5">Kontrol Modul</h2><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-success">Laporan Cepat · PILOT</span><span class="badge text-bg-warning">Sensus · PROTOTYPE</span><span class="badge text-bg-warning">Posyandu · PROTOTYPE</span><span class="badge text-bg-warning">Persuratan · PROTOTYPE</span><span class="badge text-bg-secondary">Darurat · NONAKTIF</span></div></div><div class="d-flex gap-2">@if(config('modules.quick_report.enabled'))<a class="btn btn-primary" href="{{ route('admin.service-entry-points.index') }}">Atur QR Wilayah</a>@endif @if(config('modules.posyandu.enabled'))<a class="btn btn-outline-primary" href="{{ route('admin.posyandu.index') }}">Atur Posyandu <span class="badge text-bg-light ms-1">{{ $posyanduSiteCount }}</span></a>@endif</div></div></section>
 
             <section class="mb-4" aria-labelledby="coverage-heading">
                 <div class="mb-3">
@@ -365,7 +366,7 @@
                     labels: @json($reportStatusChart['labels']),
                     datasets: [{
                         data: @json($reportStatusChart['data']),
-                        backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545'],
+                        backgroundColor: ['#0d6efd', '#ffc107', '#0dcaf0', '#198754', '#dc3545'],
                         borderColor: '#ffffff',
                         borderWidth: 3,
                     }],

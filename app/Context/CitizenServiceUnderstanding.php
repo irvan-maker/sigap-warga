@@ -39,7 +39,8 @@ final readonly class CitizenServiceUnderstanding
     public function canProceedToRouting(): bool
     {
         $contextAllowsProceeding = $this->isContextReady()
-            || $this->isTerritoryConflictClarifiedByIncident();
+            || $this->isTerritoryConflictClarifiedByIncident()
+            || $this->isTerritoryConflictAcceptedAtDomicile();
 
         return $contextAllowsProceeding
             && $this->isIntentUrgencyValid()
@@ -61,5 +62,17 @@ final readonly class CitizenServiceUnderstanding
             && $context->entryRt?->is($incidentRt) === true
             && $this->serviceTerritoryDecision->preferredSource === TerritoryPurpose::INCIDENT
             && $this->serviceTerritoryDecision->preferredRt?->is($incidentRt) === true;
+    }
+
+    public function isTerritoryConflictAcceptedAtDomicile(): bool
+    {
+        $context = $this->contextResult->context;
+
+        return $this->intentResolution->intent === CitizenIntent::REPORT
+            && $context->hasTerritoryConflict()
+            && $context->citizen?->is_active === true
+            && $context->identityRt !== null
+            && $this->serviceTerritoryDecision->preferredSource === TerritoryPurpose::IDENTITY
+            && $this->serviceTerritoryDecision->preferredRt?->is($context->identityRt) === true;
     }
 }

@@ -94,7 +94,7 @@ class RoutingReadinessDiagnoserTest extends TestCase
         $this->assertBlockedFor($readiness, RoutingReadinessReason::IDENTITY_INACTIVE);
     }
 
-    public function test_unclarified_conflict_requires_territory_confirmation(): void
+    public function test_report_conflict_can_use_domicile_as_safe_intake(): void
     {
         [$identityRt, $entryRt] = $this->createDifferentTerritories();
         $this->createCitizen($identityRt);
@@ -106,7 +106,8 @@ class RoutingReadinessDiagnoserTest extends TestCase
             urgency: UrgencyLevel::NORMAL,
         ));
 
-        $this->assertBlockedFor($readiness, RoutingReadinessReason::TERRITORY_CONFIRMATION_REQUIRED);
+        $this->assertSame(RoutingReadinessStatus::READY, $readiness->status);
+        $this->assertSame(RoutingReadinessReason::READY, $readiness->reason);
     }
 
     public function test_incident_clarified_conflict_is_ready_without_side_effects(): void

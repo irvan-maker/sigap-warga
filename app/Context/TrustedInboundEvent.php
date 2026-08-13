@@ -25,6 +25,8 @@ final readonly class TrustedInboundEvent
         public ?Rt $incidentRt = null,
         public ?string $sourceNamespace = null,
         public ?string $handoffToken = null,
+        public ?string $claimedEntryRtCode = null,
+        public ?string $claimedEntryRwCode = null,
     ) {}
 
     public function durableSourceNamespace(): string
@@ -44,6 +46,8 @@ final readonly class TrustedInboundEvent
             incidentRt: $this->incidentRt,
             sourceNamespace: $this->sourceNamespace,
             handoffToken: $this->handoffToken,
+            claimedEntryRtCode: $this->claimedEntryRtCode,
+            claimedEntryRwCode: $this->claimedEntryRwCode,
         );
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LetterApprovalLevel;
 use App\Enums\LetterStatus;
 use App\Enums\LetterType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,10 +12,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use LogicException;
 
-#[Fillable(['public_tracking_code', 'letter_number', 'letter_type', 'citizen_id', 'rt_id', 'submitted_by', 'reviewed_by_rw', 'approved_by_village', 'purpose', 'notes', 'status', 'submitted_at', 'reviewed_at', 'approved_at', 'issued_at', 'is_active'])]
+#[Fillable(['public_tracking_code', 'letter_number', 'letter_type', 'required_approval_level', 'citizen_id', 'rt_id', 'submitted_by', 'reviewed_by_rw', 'approved_by_village', 'approved_by_user_id', 'purpose', 'notes', 'status', 'submitted_at', 'reviewed_at', 'approved_at', 'issued_at', 'is_active'])]
 class VillageLetter extends Model
 {
-    protected $attributes = ['status' => 'DRAFT', 'is_active' => true];
+    protected $attributes = [
+        'status' => 'DRAFT',
+        'required_approval_level' => LetterApprovalLevel::KELURAHAN->value,
+        'is_active' => true,
+    ];
 
     protected static function booted(): void
     {
@@ -38,7 +43,7 @@ class VillageLetter extends Model
 
     protected function casts(): array
     {
-        return ['letter_type' => LetterType::class, 'status' => LetterStatus::class, 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'approved_at' => 'datetime', 'issued_at' => 'datetime', 'is_active' => 'boolean'];
+        return ['letter_type' => LetterType::class, 'required_approval_level' => LetterApprovalLevel::class, 'status' => LetterStatus::class, 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'approved_at' => 'datetime', 'issued_at' => 'datetime', 'is_active' => 'boolean'];
     }
 
     public function citizen(): BelongsTo
@@ -63,7 +68,7 @@ class VillageLetter extends Model
 
     public function approver(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'approved_by_village');
+        return $this->belongsTo(User::class, 'approved_by_user_id');
     }
 
     public function histories(): HasMany

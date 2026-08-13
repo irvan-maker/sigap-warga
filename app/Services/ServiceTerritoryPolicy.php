@@ -24,10 +24,7 @@ class ServiceTerritoryPolicy
                 $territories->identityRt,
                 TerritoryPurpose::IDENTITY,
             ),
-            CitizenIntent::REPORT => $this->firstAvailable($intent, [
-                TerritoryPurpose::INCIDENT->value => $territories->incidentRt,
-                TerritoryPurpose::ENTRY->value => $territories->entryRt,
-            ]),
+            CitizenIntent::REPORT => $this->reportTerritory($intent, $territories),
             CitizenIntent::EMERGENCY => $this->firstAvailable($intent, [
                 TerritoryPurpose::INCIDENT->value => $territories->incidentRt,
                 TerritoryPurpose::ENTRY->value => $territories->entryRt,
@@ -42,6 +39,23 @@ class ServiceTerritoryPolicy
             ]),
             CitizenIntent::UNKNOWN => $this->unresolved($intent),
         };
+    }
+
+    private function reportTerritory(
+        CitizenIntent $intent,
+        TerritoryCandidates $territories,
+    ): ServiceTerritoryDecision {
+        if ($territories->incidentRt !== null) {
+            return $this->resolved($intent, $territories->incidentRt, TerritoryPurpose::INCIDENT);
+        }
+
+        if ($territories->identityRt !== null
+            && $territories->entryRt !== null
+            && ! $territories->identityRt->is($territories->entryRt)) {
+            return $this->resolved($intent, $territories->identityRt, TerritoryPurpose::IDENTITY);
+        }
+
+        return $this->fromCandidate($intent, $territories->entryRt, TerritoryPurpose::ENTRY);
     }
 
     /**

@@ -10,6 +10,7 @@ Checklist ini mencatat nama konfigurasi dan acceptance criteria tanpa nilai secr
 - [ ] `APP_DEBUG=false`
 - [ ] `APP_URL=https://sigap.cloud.uym.ac.id`
 - [ ] Locale/fallback locale disetujui
+- [ ] `APP_TIMEZONE=Asia/Jakarta` dan `APP_LOCALE=id`
 - [ ] Identitas dan kontak desa/kelurahan diverifikasi
 - [ ] Release/deployment commit dicatat di luar secret configuration
 
@@ -87,6 +88,9 @@ Checklist ini mencatat nama konfigurasi dan acceptance criteria tanpa nilai secr
 - [ ] Valid signed POST diterima
 - [ ] Invalid/missing/malformed HMAC ditolak
 - [ ] Duplicate provider delivery tetap idempotent
+- [ ] `QUEUE_CONNECTION` bukan `sync`/`null` dan worker queue `whatsapp,default` persisten
+- [ ] Scheduler menjalankan `schedule:run` setiap menit
+- [ ] `php artisan pilot:readiness --public` lulus
 
 ## HTTPS
 

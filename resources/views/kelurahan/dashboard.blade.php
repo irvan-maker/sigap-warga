@@ -47,6 +47,7 @@
                     </div>
                 </div>
             </header>
+            <section class="card border-0 shadow-sm mb-4"><div class="card-body d-flex flex-wrap justify-content-between gap-3"><div><h2 class="h5">Status Modul</h2><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-success">Laporan Cepat · PILOT</span><span class="badge text-bg-warning">Sensus · PROTOTYPE</span><span class="badge text-bg-warning">Posyandu · AGREGAT</span><span class="badge text-bg-warning">Persuratan · PROTOTYPE</span></div></div><div class="text-end"><div class="text-secondary small">Kunjungan Posyandu bulan ini</div><strong class="h4">{{ number_format($posyanduMonthlyVisitCount) }}</strong><div class="small text-secondary">Data individual hanya untuk petugas yang ditugaskan</div></div></div></section>
 
             <section class="mb-4" aria-labelledby="kpi-heading">
                 <div class="mb-3">
@@ -137,6 +138,8 @@
                             <div class="d-grid gap-2">
                                 <a class="attention-link rounded-3 p-3 text-decoration-none" href="{{ route('kelurahan.reports.index', ['status' => \App\Enums\ReportStatus::NEW->value]) }}#laporan"><span class="text-body">{{ number_format($attentionSummary['new']) }} laporan baru menunggu tindak lanjut</span><span aria-hidden="true">→</span></a>
                                 <a class="attention-link rounded-3 p-3 text-decoration-none" href="{{ route('kelurahan.reports.index', ['status' => \App\Enums\ReportStatus::PROCESSING->value]) }}#laporan"><span class="text-body">{{ number_format($attentionSummary['stale_processing']) }} laporan diproses lebih dari 3 hari</span><span aria-hidden="true">→</span></a>
+                                <a class="attention-link rounded-3 p-3 text-decoration-none" href="{{ route('kelurahan.reports.index') }}#laporan"><span class="text-body">{{ number_format($attentionSummary['overdue_response']) }} laporan melewati batas respons</span><span aria-hidden="true">→</span></a>
+                                <a class="attention-link rounded-3 p-3 text-decoration-none" href="{{ route('kelurahan.reports.index') }}#laporan"><span class="text-body">{{ number_format($attentionSummary['overdue_resolution']) }} laporan melewati target penyelesaian</span><span aria-hidden="true">→</span></a>
                                 <a class="attention-link rounded-3 p-3 text-decoration-none" href="{{ route('kelurahan.rws.index', ['status' => 'active']) }}"><span class="text-body">{{ number_format($attentionSummary['rws_without_active_rts']) }} RW belum memiliki RT aktif</span><span aria-hidden="true">→</span></a>
                                 <div class="information-tile d-flex justify-content-between align-items-center rounded-3 p-3"><span>{{ number_format($attentionSummary['rts_without_active_officers']) }} RT belum memiliki petugas aktif</span><span class="badge text-bg-secondary">Informasi</span></div>
                             </div>

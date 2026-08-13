@@ -84,12 +84,14 @@ class PublicReportTrackingTest extends TestCase
         $report = $service->transition(
             $report,
             ReportStatus::PROCESSING,
-            note: 'Tahap pertama yang unik.',
+            note: 'Catatan internal pertama.',
+            publicNote: 'Tahap pertama yang unik.',
         );
         $service->transition(
             $report,
             ReportStatus::COMPLETED,
-            note: 'Tahap kedua yang unik.',
+            note: 'Catatan internal kedua.',
+            publicNote: 'Tahap kedua yang unik.',
         );
 
         $this->post(route('tracking.store'), [
@@ -98,7 +100,8 @@ class PublicReportTrackingTest extends TestCase
         ])->assertOk()->assertSeeInOrder([
             'Tahap pertama yang unik.',
             'Tahap kedua yang unik.',
-        ]);
+        ])->assertDontSee('Catatan internal pertama.')
+            ->assertDontSee('Catatan internal kedua.');
     }
 
     public function test_sensitive_fields_are_not_exposed(): void

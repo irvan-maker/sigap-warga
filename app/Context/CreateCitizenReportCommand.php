@@ -2,8 +2,11 @@
 
 namespace App\Context;
 
+use App\Enums\ReportCategory;
+use App\Enums\ReportPriority;
 use App\Models\Citizen;
 use App\Models\InboundRequest;
+use App\Models\Rt;
 use DateTimeImmutable;
 
 /**
@@ -20,5 +23,8 @@ final readonly class CreateCitizenReportCommand
         public string $description,
         public DateTimeImmutable $reportedAt,
         public InboundRequest $inboundRequest,
+        public ReportCategory $category = ReportCategory::OTHER,
+        public ReportPriority $priority = ReportPriority::NORMAL,
+        public ?Rt $entryRt = null,
     ) {}
 }

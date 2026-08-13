@@ -14,6 +14,7 @@ use App\Enums\ServiceEligibilityReason;
 use App\Enums\ServiceEligibilityStatus;
 use App\Enums\ServiceRouteTarget;
 use App\Enums\ServiceTerritoryStatus;
+use App\Enums\TerritoryPurpose;
 
 /**
  * Reconciles generic readiness with service-specific requirements.
@@ -64,7 +65,8 @@ final class ServiceEligibilityPolicy
             }
         }
 
-        if ($this->hasUnresolvedContextConflict($understanding)) {
+        if ($this->hasUnresolvedContextConflict($understanding)
+            && ! $this->canUseDomicileAsReportIntake($understanding)) {
             return $this->blocked(
                 reason: ServiceEligibilityReason::ROUTING_NOT_READY,
                 target: $target,
@@ -108,6 +110,21 @@ final class ServiceEligibilityPolicy
         }
 
         return $reason === ContextGuidanceReason::IDENTITY_REACTIVATION_REQUIRED;
+    }
+
+    private function canUseDomicileAsReportIntake(CitizenRequestUnderstanding $understanding): bool
+    {
+        $serviceUnderstanding = $understanding->serviceUnderstanding;
+        $context = $serviceUnderstanding->contextResult->context;
+        $territory = $serviceUnderstanding->serviceTerritoryDecision;
+
+        return $context->hasTerritoryConflict()
+            && $serviceUnderstanding->intentResolution->intent === CitizenIntent::REPORT
+            && $context->citizen?->is_active === true
+            && $context->identityRt !== null
+            && $territory->status === ServiceTerritoryStatus::RESOLVED
+            && $territory->preferredSource === TerritoryPurpose::IDENTITY
+            && $territory->preferredRt?->is($context->identityRt) === true;
     }
 
     private function missingRequirements(

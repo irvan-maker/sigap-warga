@@ -53,4 +53,21 @@ class Rt extends Model
     {
         return $this->hasMany(Report::class);
     }
+
+    public function serviceEntryPoints(): HasMany
+    {
+        return $this->hasMany(ServiceEntryPoint::class);
+    }
+
+    public function activeServiceEntryPoints(): HasMany
+    {
+        return $this->serviceEntryPoints()
+            ->where('is_active', true)
+            ->whereNull('revoked_at');
+    }
+
+    public function isAvailableForService(): bool
+    {
+        return $this->exists && $this->is_active && $this->rw?->is_active === true;
+    }
 }

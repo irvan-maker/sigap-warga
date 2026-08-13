@@ -4,16 +4,25 @@ namespace Tests\Feature;
 
 use App\Enums\InboundProcessingReason;
 use App\Enums\InboundRequestStatus;
+use App\Enums\ReportCategory;
+use App\Enums\ReportPriority;
 use App\Enums\ServiceRouteTarget;
+use App\Jobs\ProcessWhatsAppInboundEvent;
 use App\Models\Citizen;
 use App\Models\InboundRequest;
+use App\Models\Report;
 use App\Models\Rt;
 use App\Models\Rw;
 use App\Models\ServiceHandoff;
+use App\Models\WhatsAppConversation;
 use App\Services\ServiceEntryPointIssuer;
 use App\Services\ServiceHandoffIssuer;
 use App\Services\WhatsAppWebhookParser;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -70,7 +79,94 @@ class WhatsAppWebhookTest extends TestCase
         $this->assertDatabaseCount('report_ticket_sequences', 1);
     }
 
-    public function test_qr_entry_conflicting_with_domicile_is_blocked_without_report(): void
+    public function test_qr_start_message_keeps_private_conversation_context_for_the_next_report(): void
+    {
+        $rt = $this->createRt();
+        $citizen = Citizen::factory()->for($rt)->create([
+            'phone' => '081234567890',
+            'phone_normalized' => '6281234567890',
+        ]);
+        $this->postSignedText('wamid.qr-start', $citizen->phone_normalized, $this->entryMessage($rt))
+            ->assertOk();
+        $this->assertDatabaseCount('reports', 0);
+        $this->assertDatabaseCount('whatsapp_conversations', 1);
+
+        $this->postSignedText('wamid.qr-follow-up', $citizen->phone_normalized, 'jalan rusak di depan balai warga')
+            ->assertOk();
+
+        $report = $citizen->reports()->sole();
+        $conversation = WhatsAppConversation::query()->sole();
+        $this->assertSame($rt->id, $report->entry_rt_id);
+        $this->assertSame($rt->id, $report->incident_rt_id);
+        $this->assertSame($rt->id, $report->current_rt_id);
+        $this->assertSame(ReportCategory::ROAD_DAMAGE, $report->category);
+        $this->assertSame(ReportPriority::NORMAL, $report->priority);
+        $this->assertNotSame($citizen->phone_normalized, $conversation->participant_hash);
+        $this->assertNotContains($citizen->phone_normalized, $conversation->getAttributes(), true);
+    }
+
+    public function test_qr_start_sends_welcome_reply_through_configured_meta_endpoint(): void
+    {
+        Http::fake([
+            'https://graph.facebook.com/v23.0/phone-number-001/messages' => Http::response([
+                'messages' => [['id' => 'wamid.outbound-welcome']],
+            ]),
+        ]);
+        config([
+            'services.whatsapp.outbound_enabled' => true,
+            'services.whatsapp.access_token' => 'test-access-token',
+            'services.whatsapp.phone_number_id' => 'phone-number-001',
+            'services.whatsapp.graph_version' => 'v23.0',
+        ]);
+        $rt = $this->createRt();
+        $citizen = Citizen::factory()->for($rt)->create([
+            'phone' => '081234567890',
+            'phone_normalized' => '6281234567890',
+        ]);
+        $this->postSignedText('wamid.qr-welcome', $citizen->phone_normalized, $this->entryMessage($rt))
+            ->assertOk();
+
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://graph.facebook.com/v23.0/phone-number-001/messages'
+            && $request->hasHeader('Authorization', 'Bearer test-access-token')
+            && $request['to'] === $citizen->phone_normalized
+            && str_contains($request['text']['body'], 'Apa yang bisa saya bantu?')
+        );
+    }
+
+    public function test_start_typed_without_an_active_qr_context_is_not_claimed_as_an_official_scan(): void
+    {
+        Http::fake([
+            'https://graph.facebook.com/v23.0/phone-number-001/messages' => Http::response([
+                'messages' => [['id' => 'wamid.outbound-no-qr-context']],
+            ]),
+        ]);
+        config([
+            'services.whatsapp.outbound_enabled' => true,
+            'services.whatsapp.access_token' => 'test-access-token',
+            'services.whatsapp.phone_number_id' => 'phone-number-001',
+            'services.whatsapp.graph_version' => 'v23.0',
+        ]);
+        $rt = $this->createRt();
+        $citizen = Citizen::factory()->for($rt)->create([
+            'phone' => '081234567890',
+            'phone_normalized' => '6281234567890',
+        ]);
+
+        $this->postSignedText(
+            'wamid.start-without-qr',
+            $citizen->phone_normalized,
+            'MULAI LAPORAN SIGAP WARGA',
+        )->assertOk();
+
+        Http::assertSent(fn (Request $request): bool => str_contains(
+            $request['text']['body'],
+            'Konteks QR belum dapat diverifikasi',
+        ));
+        $this->assertDatabaseCount('whatsapp_conversations', 0);
+        $this->assertDatabaseCount('reports', 0);
+    }
+
+    public function test_qr_entry_conflicting_with_domicile_is_accepted_at_domicile_without_changing_identity(): void
     {
         $domicileRt = $this->createRt();
         $otherRw = Rw::query()->create(['code' => '007', 'name' => 'RW 007']);
@@ -83,21 +179,37 @@ class WhatsAppWebhookTest extends TestCase
             'phone' => '081234567890',
             'phone_normalized' => '6281234567890',
         ]);
-        $token = $this->handoffToken($entryRt);
-
-        $this->postSignedText('wamid.qr-conflict', $citizen->phone_normalized, "[SW:{$token}] jalan rusak")
+        $this->postSignedText(
+            'wamid.qr-context-before-conflict',
+            $citizen->phone_normalized,
+            $this->entryMessage($domicileRt),
+        )->assertOk();
+        $this->postSignedText(
+            'wamid.qr-conflict',
+            $citizen->phone_normalized,
+            $this->entryMessage($entryRt, 'jalan rusak'),
+        )
             ->assertOk();
 
-        $this->assertSame(InboundRequestStatus::BLOCKED, InboundRequest::query()->sole()->status);
+        $this->assertSame(
+            InboundRequestStatus::SUCCEEDED,
+            InboundRequest::query()->where('external_event_id', 'wamid.qr-conflict')->sole()->status,
+        );
         $this->assertSame($domicileRt->id, $citizen->fresh()->rt_id);
-        $this->assertDatabaseCount('reports', 0);
+        $report = Report::query()->sole();
+        $this->assertSame($domicileRt->id, $report->rt_id);
+        $this->assertSame($entryRt->id, $report->entry_rt_id);
     }
 
     public function test_qr_handoff_does_not_authenticate_unknown_citizen(): void
     {
-        $token = $this->handoffToken($this->createRt());
+        $rt = $this->createRt();
 
-        $this->postSignedText('wamid.qr-unknown', '6289999999999', "[SW:{$token}] jalan rusak")
+        $this->postSignedText(
+            'wamid.qr-unknown',
+            '6289999999999',
+            $this->entryMessage($rt, 'jalan rusak'),
+        )
             ->assertOk();
 
         $this->assertSame(InboundRequestStatus::BLOCKED, InboundRequest::query()->sole()->status);
@@ -133,8 +245,9 @@ class WhatsAppWebhookTest extends TestCase
             'phone' => '081234567890',
             'phone_normalized' => '6281234567890',
         ]);
-        $first = $this->handoffToken($rt);
-        $second = $this->handoffToken($rt);
+        $entry = app(ServiceEntryPointIssuer::class)->issue($rt);
+        $first = app(ServiceHandoffIssuer::class)->issue($entry->record)->token;
+        $second = app(ServiceHandoffIssuer::class)->issue($entry->record)->token;
 
         $this->postSignedText('wamid.qr-malformed', $citizen->phone_normalized, '[SW:not-valid] jalan rusak')->assertOk();
         $this->postSignedText('wamid.qr-multiple', $citizen->phone_normalized, "[SW:{$first}] [SW:{$second}] jalan rusak")->assertOk();
@@ -152,6 +265,27 @@ class WhatsAppWebhookTest extends TestCase
             ->assertSeeText('challenge-123');
     }
 
+    public function test_get_verification_accepts_real_meta_query_with_conflicting_underscore_aliases(): void
+    {
+        $this->get('/webhooks/whatsapp?hub.mode=subscribe'.
+            '&hub.challenge=1401067747'.
+            '&hub.verify_token='.self::VERIFY_TOKEN.
+            '&hub_mode=subscribe'.
+            '&hub_challenge=1401067747'.
+            '&hub_verify_token=DIFFERENT_TOKEN')
+            ->assertOk()
+            ->assertContent('1401067747');
+    }
+
+    public function test_get_verification_does_not_allow_underscore_token_to_override_wrong_dotted_token(): void
+    {
+        $this->get('/webhooks/whatsapp?hub.mode=subscribe'.
+            '&hub.verify_token=WRONG_TOKEN'.
+            '&hub.challenge=challenge-123'.
+            '&hub_verify_token='.self::VERIFY_TOKEN)
+            ->assertForbidden();
+    }
+
     public function test_get_verification_rejects_wrong_token_without_leaking_secret(): void
     {
         $response = $this->get(
@@ -161,6 +295,29 @@ class WhatsAppWebhookTest extends TestCase
         $response->assertForbidden();
         $response->assertDontSee(self::VERIFY_TOKEN);
         $response->assertDontSee(self::APP_SECRET);
+    }
+
+    public function test_get_verification_supports_underscore_aliases_when_dotted_parameters_are_absent(): void
+    {
+        $this->get('/webhooks/whatsapp?hub_mode=subscribe&hub_verify_token='.
+            self::VERIFY_TOKEN.'&hub_challenge=compatibility-challenge')
+            ->assertOk()
+            ->assertContent('compatibility-challenge');
+    }
+
+    public function test_get_verification_rejects_missing_challenge(): void
+    {
+        $this->get('/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token='.self::VERIFY_TOKEN)
+            ->assertForbidden();
+    }
+
+    public function test_get_verification_rejects_duplicate_exact_verify_token(): void
+    {
+        $this->get('/webhooks/whatsapp?hub.mode=subscribe'.
+            '&hub.verify_token='.self::VERIFY_TOKEN.
+            '&hub.verify_token=DIFFERENT_TOKEN'.
+            '&hub.challenge=challenge-123')
+            ->assertForbidden();
     }
 
     public function test_get_verification_rejects_wrong_or_missing_mode(): void
@@ -181,6 +338,21 @@ class WhatsAppWebhookTest extends TestCase
         $this->postSigned($rawBody)->assertOk()->assertSeeText('EVENT_RECEIVED');
 
         $this->assertDatabaseCount('inbound_requests', 1);
+    }
+
+    public function test_verified_webhook_dispatches_an_encrypted_whatsapp_queue_job(): void
+    {
+        Queue::fake();
+        $rawBody = $this->textPayload('wamid.queued', '6289999999999', 'jalan rusak');
+
+        $this->postSigned($rawBody)->assertOk()->assertSeeText('EVENT_RECEIVED');
+
+        Queue::assertPushed(ProcessWhatsAppInboundEvent::class, function ($job): bool {
+            $this->assertInstanceOf(ShouldBeEncrypted::class, $job);
+
+            return $job->queue === 'whatsapp';
+        });
+        $this->assertDatabaseCount('inbound_requests', 0);
     }
 
     public function test_invalid_missing_and_malformed_signatures_are_rejected(): void
@@ -430,6 +602,13 @@ class WhatsAppWebhookTest extends TestCase
         $entry = app(ServiceEntryPointIssuer::class)->issue($rt);
 
         return app(ServiceHandoffIssuer::class)->issue($entry->record)->token;
+    }
+
+    private function entryMessage(Rt $rt, string $message = 'MULAI LAPORAN SIGAP WARGA'): string
+    {
+        app(ServiceEntryPointIssuer::class)->issue($rt);
+
+        return "{$message}\n\nPintu layanan:\n{$rt->code} / {$rt->rw->code}";
     }
 
     private function textPayload(string $messageId, string $sender, string $message): string

@@ -34,6 +34,8 @@ class ServiceEntryPoint extends Model
 
     public function isAvailable(): bool
     {
-        return $this->is_active && $this->revoked_at === null && $this->rt?->is_active === true;
+        return $this->is_active
+            && $this->revoked_at === null
+            && $this->rt?->isAvailableForService() === true;
     }
 }

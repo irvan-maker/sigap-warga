@@ -10,9 +10,11 @@ class ReportAttachmentController extends Controller
 {
     public function show(ReportAttachment $attachment): StreamedResponse
     {
-        abort_unless(Storage::disk('public')->exists($attachment->path), 404);
+        $disk = $attachment->disk ?: 'public';
 
-        return Storage::disk('public')->response(
+        abort_unless(Storage::disk($disk)->exists($attachment->path), 404);
+
+        return Storage::disk($disk)->response(
             $attachment->path,
             $attachment->original_name,
             [

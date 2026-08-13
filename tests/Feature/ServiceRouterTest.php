@@ -126,13 +126,18 @@ class ServiceRouterTest extends TestCase
         );
     }
 
-    public function test_territory_confirmation_required_is_blocked(): void
+    public function test_report_territory_conflict_routes_to_safe_domicile_intake(): void
     {
         [$identityRt, $entryRt] = $this->createDifferentTerritories();
         $citizen = $this->createCitizen($identityRt);
         $decision = $this->route($this->interpret('jalan depan rumah rusak', $citizen, entryRt: $entryRt));
 
-        $this->assertBlockedFor($decision, RoutingReadinessReason::TERRITORY_CONFIRMATION_REQUIRED);
+        $this->assertRoutable(
+            $decision,
+            ServiceRouteTarget::REPORT_SERVICE,
+            ServiceRoutingReason::ROUTED_TO_REPORT,
+        );
+        $this->assertTrue($decision->serviceTerritoryDecision->preferredRt?->is($identityRt));
     }
 
     public function test_invalid_intent_urgency_is_blocked(): void

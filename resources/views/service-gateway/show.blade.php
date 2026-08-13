@@ -14,37 +14,41 @@
 
     <section class="card shadow-sm border-0">
         <div class="card-body p-4">
-            <h2 class="h5">Pilih kebutuhan Anda</h2>
-            <p class="text-secondary">Semua pilihan masuk melalui gateway yang sama. Aturan layanan tetap disesuaikan dengan kebutuhan warga.</p>
+            <span class="badge text-bg-success mb-3">Laporan Cepat · Pilot Aktif</span>
+            <div class="alert alert-success" role="status">
+                <strong>QR resmi dan aktif.</strong><br>
+                Pintu layanan: {{ $entryPoint->rt->code }} / {{ $entryPoint->rt->rw->code }}
+            </div>
+            <h2 class="h5">Mulai melalui WhatsApp</h2>
+            <p class="text-secondary">Setelah pesan pembuka dikirim, SIGAP WARGA akan menyapa dan Anda dapat menjelaskan laporan dengan bahasa sehari-hari.</p>
 
             <form method="POST" action="{{ route('service-gateway.whatsapp', ['entryToken' => $entryToken]) }}">
                 @csrf
-                <div class="row g-2 mb-4">
-                    @foreach([
-                        'report' => 'Laporan',
-                        'information' => 'Informasi',
-                        'letter' => 'Surat',
-                        'aspiration' => 'Aspirasi',
-                        'emergency' => 'Darurat',
-                    ] as $value => $label)
-                        <div class="col-6 col-md-4">
-                            <input class="btn-check" type="radio" name="service" id="service-{{ $value }}" value="{{ $value }}" @checked(old('service', 'report') === $value)>
-                            <label class="btn btn-outline-primary w-100" for="service-{{ $value }}">{{ $label }}</label>
-                        </div>
-                    @endforeach
+                <div class="form-check text-start mb-3">
+                    <input class="form-check-input @error('privacy_acknowledged') is-invalid @enderror" type="checkbox" value="1" id="privacy_acknowledged" name="privacy_acknowledged" required>
+                    <label class="form-check-label" for="privacy_acknowledged">Saya telah membaca <a href="{{ route('public.privacy') }}" target="_blank" rel="noopener noreferrer">informasi privasi</a> dan akan mengirimkan data yang diperlukan untuk penanganan laporan.</label>
+                    @error('privacy_acknowledged')<div class="invalid-feedback">Baca dan setujui informasi penggunaan data sebelum melanjutkan.</div>@enderror
                 </div>
-
-                @error('service')
-                    <p class="text-danger small">{{ $message }}</p>
-                @enderror
-
-                <button class="btn btn-success btn-lg w-100" type="submit">Lanjutkan melalui WhatsApp</button>
+                <button class="btn btn-success btn-lg w-100" type="submit"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>Buka WhatsApp</button>
             </form>
+
+            <a class="btn btn-outline-primary btn-lg w-100 mt-3" href="{{ route('tracking.index') }}">
+                <i class="bi bi-search me-2" aria-hidden="true"></i>Cek Status Laporan
+            </a>
+
+            <hr class="my-4">
+            <div class="d-flex flex-wrap gap-2" aria-label="Status modul lain">
+                    @if(config('modules.census.enabled'))<span class="badge text-bg-light">Sensus · Prototype</span>@endif
+                    @if(config('modules.posyandu.enabled'))<span class="badge text-bg-light">Posyandu · Prototype</span>@endif
+                    @if(config('modules.letters.enabled'))<span class="badge text-bg-light">Persuratan · Prototype</span>@endif
+                <span class="badge text-bg-light">Darurat · Safety prototype</span>
+            </div>
         </div>
     </section>
 
     <p class="alert alert-warning mt-4 mb-0">
-        Wilayah ini merupakan pintu layanan. Lokasi kejadian dapat berbeda dan akan diklarifikasi bila diperlukan.
+        Layanan ini gratis. SIGAP WARGA tidak pernah meminta OTP, PIN, password, atau transfer uang.
+        Wilayah ini merupakan pintu layanan; lokasi kejadian dapat berbeda dan akan diklarifikasi bila diperlukan.
     </p>
 </main>
 @endsection

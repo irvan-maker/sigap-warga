@@ -71,6 +71,9 @@ final class CreateCitizenReportService
                 description: trim($command->description),
                 reportedAt: $command->reportedAt,
                 inboundRequest: $inboundRequest,
+                entryTerritory: $command->entryRt,
+                category: $command->category,
+                priority: $command->priority,
             );
 
             $this->lifecyclePolicy->assertCanTransition(

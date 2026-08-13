@@ -232,6 +232,7 @@ class RtReportDashboardTest extends TestCase
 
         $this->actingAs($user)->patch(route('rt.reports.status.update', $report), [
             'status' => ReportStatus::REJECTED->value,
+            'public_note' => 'Laporan ditolak karena bukan layanan pemerintah wilayah.',
         ]);
 
         $this->assertSame(ReportStatus::REJECTED, $report->fresh()->status);
@@ -244,6 +245,7 @@ class RtReportDashboardTest extends TestCase
 
         $this->actingAs($user)->patch(route('rt.reports.status.update', $report), [
             'status' => ReportStatus::COMPLETED->value,
+            'public_note' => 'Perbaikan telah selesai dilaksanakan.',
         ]);
 
         $this->assertSame(ReportStatus::COMPLETED, $report->fresh()->status);
@@ -258,6 +260,7 @@ class RtReportDashboardTest extends TestCase
             ->from(route('rt.reports.show', $report))
             ->patch(route('rt.reports.status.update', $report), [
                 'status' => ReportStatus::COMPLETED->value,
+                'public_note' => 'Penanganan dinyatakan selesai.',
             ])->assertRedirect(route('rt.reports.show', $report))
             ->assertSessionHasErrors('status');
 

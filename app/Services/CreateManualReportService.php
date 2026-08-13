@@ -68,7 +68,7 @@ class CreateManualReportService
                 foreach ($data['photos'] ?? [] as $photo) {
                     $extension = strtolower($photo->extension());
                     $storedName = Str::uuid()->toString().'.'.$extension;
-                    $path = $photo->storeAs("reports/{$report->id}", $storedName, 'public');
+                    $path = $photo->storeAs("reports/{$report->id}", $storedName, 'local');
 
                     if ($path === false) {
                         throw new RuntimeException('Failed to store report attachment.');
@@ -85,13 +85,14 @@ class CreateManualReportService
                         'path' => $path,
                         'mime_type' => $photo->getMimeType() ?: 'application/octet-stream',
                         'size' => $photo->getSize(),
+                        'disk' => 'local',
                     ]);
                 }
 
                 return $report;
             }, 3);
         } catch (Throwable $exception) {
-            Storage::disk('public')->delete($storedPaths);
+            Storage::disk('local')->delete($storedPaths);
 
             throw $exception;
         }

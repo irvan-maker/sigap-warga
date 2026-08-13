@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\ProcessTrustedInboundEvent;
+use App\Jobs\ProcessWhatsAppInboundEvent;
 use App\Services\WhatsAppWebhookParser;
 use App\Services\WhatsAppWebhookSignatureVerifier;
-use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use JsonException;
@@ -36,7 +35,6 @@ final class WhatsAppWebhookController extends Controller
         Request $request,
         WhatsAppWebhookSignatureVerifier $signatureVerifier,
         WhatsAppWebhookParser $parser,
-        ProcessTrustedInboundEvent $processor,
     ): Response {
         $rawBody = $request->getContent();
 
@@ -61,13 +59,11 @@ final class WhatsAppWebhookController extends Controller
             $result = $parser->parse($payload);
 
             foreach ($result->events as $event) {
-                try {
-                    $processor->process($event);
-                } catch (DomainException) {
-                    // A signed but invalid message is acknowledged without trust leakage.
-                }
+                dispatch(ProcessWhatsAppInboundEvent::fromEvent($event));
             }
-        } catch (Throwable) {
+        } catch (Throwable $throwable) {
+            report($throwable);
+
             return response('', 500);
         }
 
@@ -76,7 +72,29 @@ final class WhatsAppWebhookController extends Controller
 
     private function metaQuery(Request $request, string $name): ?string
     {
-        $value = $request->query($name) ?? $request->query(str_replace('.', '_', $name));
+        $values = [];
+
+        foreach (explode('&', (string) $request->server('QUERY_STRING', '')) as $parameter) {
+            if ($parameter === '') {
+                continue;
+            }
+
+            [$rawKey, $rawValue] = array_pad(explode('=', $parameter, 2), 2, '');
+
+            if (urldecode($rawKey) === $name) {
+                $values[] = urldecode($rawValue);
+            }
+        }
+
+        if (count($values) > 1) {
+            return null;
+        }
+
+        if ($values !== []) {
+            return $values[0];
+        }
+
+        $value = $request->query(str_replace('.', '_', $name));
 
         return is_string($value) ? $value : null;
     }

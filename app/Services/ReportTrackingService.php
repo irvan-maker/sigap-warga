@@ -12,10 +12,10 @@ class ReportTrackingService
     {
         return Report::query()
             ->with([
-                'attachments',
+                'attachments' => fn (HasMany $query) => $query->where('is_public', true),
                 'histories' => function (HasMany $query): void {
                     $query
-                        ->select(['id', 'report_id', 'old_status', 'new_status', 'note', 'created_at'])
+                        ->select(['id', 'report_id', 'old_status', 'new_status', 'public_note', 'created_at'])
                         ->oldest('created_at')
                         ->oldest('id');
                 },

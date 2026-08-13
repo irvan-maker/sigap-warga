@@ -22,10 +22,10 @@ final class InboundRequestLifecyclePolicy
                 InboundRequestStatus::PENDING_ACTION,
                 InboundRequestStatus::FAILED,
             ],
+            InboundRequestStatus::FAILED => [InboundRequestStatus::PROCESSING],
             InboundRequestStatus::SUCCEEDED,
             InboundRequestStatus::BLOCKED,
-            InboundRequestStatus::PENDING_ACTION,
-            InboundRequestStatus::FAILED => [],
+            InboundRequestStatus::PENDING_ACTION => [],
         };
 
         if (! in_array($to, $allowed, true)) {

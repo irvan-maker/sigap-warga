@@ -15,6 +15,7 @@ final class WhatsAppWebhookParser
 {
     public function __construct(
         private readonly WhatsAppHandoffMarkerParser $handoffMarkerParser,
+        private readonly WhatsAppEntryReferenceParser $entryReferenceParser,
     ) {}
 
     /**
@@ -85,7 +86,8 @@ final class WhatsAppWebhookParser
             return null;
         }
 
-        $marker = $this->handoffMarkerParser->extract($body);
+        $entryReference = $this->entryReferenceParser->extract($body);
+        $marker = $this->handoffMarkerParser->extract($entryReference->message);
 
         return new TrustedInboundEvent(
             source: InboundSource::META_WHATSAPP,
@@ -97,6 +99,8 @@ final class WhatsAppWebhookParser
             incidentRt: null,
             sourceNamespace: $this->sourceNamespace($phoneNumberId),
             handoffToken: $marker->token,
+            claimedEntryRtCode: $entryReference->rtCode,
+            claimedEntryRwCode: $entryReference->rwCode,
         );
     }
 

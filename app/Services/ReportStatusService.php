@@ -22,6 +22,7 @@ class ReportStatusService
             ReportStatus::COMPLETED,
             ReportStatus::REJECTED,
         ],
+        ReportStatus::FORWARDED->value => [],
         ReportStatus::COMPLETED->value => [],
         ReportStatus::REJECTED->value => [],
     ];
@@ -39,8 +40,9 @@ class ReportStatusService
         ReportStatus $newStatus,
         ?User $actor = null,
         ?string $note = null,
+        ?string $publicNote = null,
     ): Report {
-        return DB::transaction(function () use ($report, $newStatus, $actor, $note): Report {
+        return DB::transaction(function () use ($report, $newStatus, $actor, $note, $publicNote): Report {
             $lockedReport = Report::query()
                 ->lockForUpdate()
                 ->findOrFail($report->getKey());
@@ -53,12 +55,20 @@ class ReportStatusService
                 );
             }
 
-            $lockedReport->update(['status' => $newStatus]);
+            $attributes = ['status' => $newStatus];
+
+            if ($newStatus === ReportStatus::PROCESSING && $actor !== null) {
+                $attributes['assigned_user_id'] = $actor->getKey();
+                $attributes['acknowledged_at'] = $lockedReport->acknowledged_at ?? now();
+            }
+
+            $lockedReport->update($attributes);
             $lockedReport->histories()->create([
                 'user_id' => $actor?->getKey(),
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
                 'note' => $note,
+                'public_note' => $publicNote,
             ]);
 
             return $lockedReport;

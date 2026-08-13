@@ -42,6 +42,8 @@ final class ProcessTrustedInboundEvent
         private readonly CreateCitizenReportService $createCitizenReportService,
         private readonly InboundRequestLifecyclePolicy $lifecyclePolicy,
         private readonly ServiceHandoffConsumer $serviceHandoffConsumer,
+        private readonly WhatsAppEntryReferenceResolver $entryReferenceResolver,
+        private readonly ReportClassifier $reportClassifier,
     ) {}
 
     public function process(TrustedInboundEvent $event): TrustedInboundProcessingResult
@@ -70,6 +72,17 @@ final class ProcessTrustedInboundEvent
                 $entryRt = $this->serviceHandoffConsumer->consume(
                     $event->handoffToken,
                     $inboundRequest,
+                );
+
+                if ($entryRt !== null) {
+                    $event = $event->withEntryRt($entryRt);
+                }
+            }
+
+            if ($event->entryRt === null && $event->handoffToken === null) {
+                $entryRt = $this->entryReferenceResolver->resolve(
+                    $event->claimedEntryRtCode,
+                    $event->claimedEntryRwCode,
                 );
 
                 if ($entryRt !== null) {
@@ -126,10 +139,17 @@ final class ProcessTrustedInboundEvent
                 new CreateCitizenReportCommand(
                     requester: $citizen,
                     routingDecision: $routing,
-                    title: 'Laporan Warga',
+                    title: $this->reportClassifier->category(
+                        $understanding->ruleBasedResolution->matchedRule,
+                    )->label(),
                     description: $message,
                     reportedAt: $event->receivedAt,
                     inboundRequest: $inboundRequest,
+                    category: $this->reportClassifier->category(
+                        $understanding->ruleBasedResolution->matchedRule,
+                    ),
+                    priority: $this->reportClassifier->priority($routing->urgency),
+                    entryRt: $event->entryRt,
                 ),
             );
 
@@ -215,7 +235,9 @@ final class ProcessTrustedInboundEvent
                 ->lockForUpdate()
                 ->findOrFail($inboundRequest->getKey());
 
-            if ($locked->status !== InboundRequestStatus::RECEIVED) {
+            $canRetryFailure = $locked->status === InboundRequestStatus::FAILED;
+
+            if ($locked->status !== InboundRequestStatus::RECEIVED && ! $canRetryFailure) {
                 return $this->durableResult($locked);
             }
 
@@ -226,7 +248,7 @@ final class ProcessTrustedInboundEvent
 
             $claimed = InboundRequest::query()
                 ->whereKey($locked->getKey())
-                ->where('status', InboundRequestStatus::RECEIVED->value)
+                ->where('status', $locked->status->value)
                 ->update([
                     'status' => InboundRequestStatus::PROCESSING->value,
                     'attempt_count' => $locked->attempt_count + 1,

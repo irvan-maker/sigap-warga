@@ -86,7 +86,7 @@ class ServiceUnderstandingOrchestratorTest extends TestCase
         $this->assertDatabaseCount('reports', 0);
     }
 
-    public function test_unclarified_pre_intent_territory_conflict_cannot_proceed(): void
+    public function test_report_pre_intent_conflict_can_proceed_at_domicile_intake(): void
     {
         [$identityRt, $entryRt] = $this->createDifferentTerritories();
         $this->createCitizen($identityRt);
@@ -100,7 +100,9 @@ class ServiceUnderstandingOrchestratorTest extends TestCase
 
         $this->assertSame(ContextReadinessStatus::TERRITORY_CONFLICT, $understanding->contextResult->guidance->readinessStatus);
         $this->assertFalse($understanding->isTerritoryConflictClarifiedByIncident());
-        $this->assertFalse($understanding->canProceedToRouting());
+        $this->assertTrue($understanding->isTerritoryConflictAcceptedAtDomicile());
+        $this->assertTrue($understanding->serviceTerritoryDecision->preferredRt?->is($identityRt));
+        $this->assertTrue($understanding->canProceedToRouting());
     }
 
     public function test_invalid_intent_urgency_combination_cannot_proceed(): void

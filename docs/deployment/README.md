@@ -19,7 +19,7 @@ Gunakan bersama:
 | Documentation checkpoint | `599b284` — `docs: add deployment and production readiness pack` |
 | Application checkpoint | `6399531` — `feat: add WhatsApp inbound webhook adapter` |
 | Public target | `https://sigap.cloud.uym.ac.id` |
-| Current full regression baseline | `465 tests`, `2,050 assertions`, **PASS**; PHP `8.3.30`, PHPUnit `12.5.33`; diverifikasi setelah adapter `6399531` berada dalam history dan sebelum/bersamaan dengan documentation checkpoint `599b284` |
+| Current full regression baseline | `513 tests`, `2,333 assertions`, **PASS** setelah sprint hardening; wajib dijalankan ulang dari commit release candidate |
 | Release requirement | Baseline current dapat dipakai untuk checkpoint dokumentasi ini; jika deployment commit berubah, full regression harus PASS kembali terhadap commit yang benar-benar akan dideploy |
 
 Jangan mencatat commit deployment baru sebelum commit tersebut ada dan dipilih sebagai release candidate.
@@ -60,7 +60,7 @@ Git repository atau reproducible build artifact
 - `redis`, `memcached`, `pcntl`, atau `posix` hanya bila cache/queue/worker terkait dipilih.
 - `gd`, `imagick`, atau `gmagick` bila PDF/image processing memerlukannya.
 - Cloud filesystem dependencies hanya bila storage non-local dipilih.
-- Cron/scheduler dan persistent queue worker hanya jika future application path menggunakannya; current webhook path masih synchronous.
+- Cron/scheduler dan persistent queue worker wajib tersedia; webhook memproses event melalui queue `whatsapp` dan cleanup runtime dijadwalkan.
 
 ### Recommended
 
@@ -110,20 +110,7 @@ Jangan menetapkan `chmod`, owner/group, atau web-server directive sebelum topolo
 
 ## Current Limitations
 
-WhatsApp REPORT belum E2E-ready karena webhook adapter belum membawa trusted `entryRt` atau `incidentRt`.
-
-Current safe behavior:
-
-```text
-REPORT without trusted territory
-  -> service territory requirement not satisfied
-  -> BLOCKED
-  -> no Report
-```
-
-Ini adalah safety boundary, bukan bug. Domicile Citizen, sender phone, atau Meta `phone_number_id` tidak boleh diasumsikan sebagai lokasi insiden.
-
-Current adapter juga hanya memproses inbound text. Outbound acknowledgement, media ingest, operator queue, dan emergency handoff belum tersedia.
+Adapter hanya memproses text. QR portal memberikan referensi pintu masuk yang dapat dibaca manusia, bukan bukti kriptografis scan. Nomor tak dikenal tetap diblokir. Warga dikenal yang memindai QR berbeda diterima melalui RT domisili dan harus menuliskan lokasi kejadian. Media ingest, live location, dashboard delivery receipt Meta, notifikasi petugas multi-kanal, dan emergency dispatch belum tersedia.
 
 ## Deployment Model Decision
 

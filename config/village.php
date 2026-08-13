@@ -10,6 +10,7 @@ return [
     'office_address' => env('VILLAGE_OFFICE_ADDRESS'),
     'service_hours' => env('VILLAGE_SERVICE_HOURS', 'Senin–Jumat, 08.00–15.00 WIB'),
     'contact_phone' => env('VILLAGE_CONTACT_PHONE'),
+    'emergency_contact' => env('VILLAGE_EMERGENCY_CONTACT'),
     'email' => env('VILLAGE_EMAIL'),
     'signatory_name' => env('VILLAGE_SIGNATORY_NAME', 'Sekretaris Desa'),
     'signatory_position' => env('VILLAGE_SIGNATORY_POSITION', 'Sekretaris Desa'),

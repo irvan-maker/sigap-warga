@@ -42,7 +42,8 @@ class RoutingReadinessDiagnoser
         CitizenServiceUnderstanding $understanding,
     ): ?RoutingReadinessReason {
         if ($understanding->isContextReady()
-            || $understanding->isTerritoryConflictClarifiedByIncident()) {
+            || $understanding->isTerritoryConflictClarifiedByIncident()
+            || $understanding->isTerritoryConflictAcceptedAtDomicile()) {
             return null;
         }
 

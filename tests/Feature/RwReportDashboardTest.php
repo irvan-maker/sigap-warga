@@ -87,8 +87,7 @@ class RwReportDashboardTest extends TestCase
             ->assertOk()
             ->assertViewHas('total', 3)
             ->assertViewHas('activeRtCount', 1)
-            ->assertViewHas('totalsByStatus', fn ($totals): bool =>
-                $totals[ReportStatus::NEW->value] === 1
+            ->assertViewHas('totalsByStatus', fn ($totals): bool => $totals[ReportStatus::NEW->value] === 1
                 && $totals[ReportStatus::PROCESSING->value] === 0
                 && $totals[ReportStatus::COMPLETED->value] === 1
                 && $totals[ReportStatus::REJECTED->value] === 1
@@ -106,8 +105,7 @@ class RwReportDashboardTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('rw.dashboard'))
-            ->assertViewHas('totalsByRt', fn ($totals): bool =>
-                $totals[$firstRt->id] === 2 && $totals[$secondRt->id] === 1
+            ->assertViewHas('totalsByRt', fn ($totals): bool => $totals[$firstRt->id] === 2 && $totals[$secondRt->id] === 1
             );
     }
 
@@ -183,7 +181,7 @@ class RwReportDashboardTest extends TestCase
                 && $reports->lastPage() === 2);
     }
 
-    public function test_report_detail_is_read_only(): void
+    public function test_report_detail_is_read_only_until_rw_becomes_the_active_handler(): void
     {
         [$rw, $user] = $this->createRwUser();
         $report = $this->createReport($this->createRt($rw), [
@@ -198,11 +196,12 @@ class RwReportDashboardTest extends TestCase
             ->assertSee($report->title)
             ->assertSee($report->description)
             ->assertSee('Riwayat Status')
+            ->assertSee('Penanganan Wilayah')
             ->assertDontSee('Ubah Status')
             ->assertDontSee('Simpan Status');
     }
 
-    public function test_no_status_update_route_is_available_to_rw(): void
+    public function test_rw_cannot_update_a_report_before_it_is_forwarded_to_rw(): void
     {
         [$rw, $user] = $this->createRwUser();
         $report = $this->createReport($this->createRt($rw));
@@ -210,7 +209,7 @@ class RwReportDashboardTest extends TestCase
         $this->actingAs($user)
             ->patch("/rw/reports/{$report->id}/status", [
                 'status' => ReportStatus::PROCESSING->value,
-            ])->assertNotFound();
+            ])->assertForbidden();
 
         $this->assertSame(ReportStatus::NEW, $report->fresh()->status);
     }
@@ -231,7 +230,7 @@ class RwReportDashboardTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $attributes
+     * @param  array<string, mixed>  $attributes
      */
     private function createReport(Rt $rt, array $attributes = []): Report
     {

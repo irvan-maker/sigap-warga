@@ -106,6 +106,7 @@ Reference commands:
 ```text
 php artisan migrate:status
 php artisan migrate --force
+php artisan pilot:readiness --public
 ```
 
 **EXPECTED RESULT**
@@ -263,34 +264,27 @@ Stop dan jangan aktifkan Meta callback bila invalid signature diterima, valid si
 
 **INPUT**
 
-- Controlled known dan/atau unknown WhatsApp sender.
-- REPORT-intent text payload dengan stable Meta message ID.
-- Tidak ada trusted entry/incident territory.
+- Nomor warga uji yang terdaftar pada RT pilot dan satu nomor tidak terdaftar.
+- QR gateway aktif, REPORT-intent text, dan stable Meta message ID.
 
 **ACTION**
 
-- Kirim valid signed REPORT payload.
-- Periksa durable inbound record dan absence of Report.
-- Kirim ulang payload dengan provider identity yang sama.
+- Scan QR, akui informasi privasi, kirim pesan pembuka, lalu kirim laporan text.
+- Periksa receipt, tiket, wilayah intake, deadline SLA, dan balasan nomor tiket.
+- Kirim ulang provider message ID yang sama dan uji QR berbeda dari domisili.
 
 **EXPECTED RESULT**
 
 ```text
-InboundRequest exists once
-service_target = REPORT_SERVICE
-status = BLOCKED
-processing_reason = TERRITORY_REQUIRED
-no Report created
-duplicate delivery creates no duplicate receipt or Report
+known sender + active QR -> one SUCCEEDED receipt and one Report
+duplicate provider message -> no duplicate receipt or Report
+different QR -> domicile unchanged; intake begins at domicile RT
+unknown sender -> BLOCKED; no Citizen or Report is created automatically
 ```
-
-Untuk unknown sender, eligibility dapat memerlukan identity sekaligus territory; catat exact safe reason sesuai domain result. Acceptance invariant tetap: satu receipt, `BLOCKED`, dan tidak ada Report.
-
-Jangan mengharapkan Report creation sebelum trusted territory milestone.
 
 **STOP CONDITION**
 
-Stop jika Report tercipta tanpa trusted territory, Citizen dibuat otomatis, domicile berubah, duplicate receipt/Report tercipta, atau request tidak meninggalkan auditable safe state.
+Stop jika signature invalid diterima, unknown sender membuat Citizen/Report, domisili berubah, duplicate receipt/Report tercipta, queue gagal tanpa observabilitas, atau balasan tiket tidak terkirim setelah retry.
 
 ## 11. Post-Deploy Observation
 
@@ -301,6 +295,7 @@ Stop jika Report tercipta tanpa trusted territory, Citizen dibuat otomatis, domi
 **ACTION**
 
 - Pantau HTTP errors, webhook latency, duplicate deliveries, inbound lifecycle, DB locks, disk usage, attachment persistence, dan unexpected secret/payload logging.
+- Pantau `jobs`/`failed_jobs`, jalankan queue worker untuk queue `whatsapp,default`, dan pastikan scheduler aktif.
 - Catat release commit, migration state, test evidence, dan known limitations.
 
 **EXPECTED RESULT**

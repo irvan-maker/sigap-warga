@@ -13,10 +13,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'path',
     'mime_type',
     'size',
+    'disk',
+    'is_public',
 ])]
 class ReportAttachment extends Model
 {
     public const UPDATED_AT = null;
+
+    protected function casts(): array
+    {
+        return ['is_public' => 'boolean'];
+    }
 
     /**
      * @return BelongsTo<Report, $this>

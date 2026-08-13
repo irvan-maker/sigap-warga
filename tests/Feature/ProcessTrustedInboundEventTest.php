@@ -42,7 +42,7 @@ class ProcessTrustedInboundEventTest extends TestCase
         $this->assertSame(TrustedInboundProcessingOutcome::REPORT_CREATED, $result->outcome);
         $this->assertSame(InboundRequestStatus::SUCCEEDED, $result->inboundRequest->status);
         $this->assertSame(ServiceRouteTarget::REPORT_SERVICE, $result->routingDecision?->target);
-        $this->assertSame('Laporan Warga', $result->report?->title);
+        $this->assertSame('Jalan rusak', $result->report?->title);
         $this->assertSame('jalan rusak', $result->report?->description);
         $this->assertSame($result->inboundRequest->id, $result->report?->inbound_request_id);
     }
@@ -282,12 +282,12 @@ class ProcessTrustedInboundEventTest extends TestCase
         $this->assertDatabaseCount('report_histories', 0);
     }
 
-    public function test_failed_request_is_not_automatically_retried_on_duplicate(): void
+    public function test_failed_request_can_be_retried_with_the_same_durable_receipt(): void
     {
         $event = $this->event('event-failed-duplicate', '6281234567890', 'jalan rusak');
         $interpreter = $this->mock(CitizenRequestInterpreter::class);
         $interpreter->shouldReceive('interpret')
-            ->once()
+            ->twice()
             ->andThrow(new RuntimeException('technical failure'));
 
         $first = $this->process($event);
@@ -296,7 +296,7 @@ class ProcessTrustedInboundEventTest extends TestCase
         $this->assertSame(TrustedInboundProcessingOutcome::FAILED, $duplicate->outcome);
         $this->assertSame(InboundRequestStatus::FAILED, $duplicate->inboundRequest->status);
         $this->assertSame($first->inboundRequest->correlation_id, $duplicate->inboundRequest->correlation_id);
-        $this->assertSame(1, $duplicate->inboundRequest->attempt_count);
+        $this->assertSame(2, $duplicate->inboundRequest->attempt_count);
         $this->assertDatabaseCount('reports', 0);
     }
 

@@ -48,7 +48,8 @@ class VillageLetterController extends Controller
         $data = $this->validateData($request);
         $citizen = Citizen::query()->whereKey($data['citizen_id'])->where('rt_id', $request->user()->rt_id)->firstOrFail();
         $letter = DB::transaction(function () use ($data, $request, $citizen) {
-            $letter = VillageLetter::query()->create([...$data, 'rt_id' => $citizen->rt_id, 'submitted_by' => $request->user()->id, 'status' => LetterStatus::DRAFT]);
+            $letterType = LetterType::from($data['letter_type']);
+            $letter = VillageLetter::query()->create([...$data, 'required_approval_level' => $letterType->requiredApprovalLevel(), 'rt_id' => $citizen->rt_id, 'submitted_by' => $request->user()->id, 'status' => LetterStatus::DRAFT]);
             $letter->histories()->create(['user_id' => $request->user()->id, 'old_status' => null, 'new_status' => LetterStatus::DRAFT]);
 
             return $letter;
@@ -77,7 +78,8 @@ class VillageLetterController extends Controller
         Gate::authorize('update', $letter);
         $data = $this->validateData($request);
         abort_unless(Citizen::query()->whereKey($data['citizen_id'])->where('rt_id', $request->user()->rt_id)->exists(), 403);
-        $letter->update($data);
+        $letterType = LetterType::from($data['letter_type']);
+        $letter->update([...$data, 'required_approval_level' => $letterType->requiredApprovalLevel()]);
 
         return redirect()->route('rt.letters.show', $letter)->with('status', 'Draft surat berhasil diperbarui.');
     }

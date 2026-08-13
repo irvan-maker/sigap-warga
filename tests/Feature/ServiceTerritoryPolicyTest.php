@@ -87,7 +87,7 @@ class ServiceTerritoryPolicyTest extends TestCase
         $this->assertNull($decision->preferredSource);
     }
 
-    public function test_report_falls_back_to_entry_but_not_identity_territory(): void
+    public function test_report_uses_domicile_for_conflict_entry_for_anonymous_and_not_identity_alone(): void
     {
         [$identityRt, $entryRt] = $this->createDifferentTerritories();
 
@@ -98,8 +98,12 @@ class ServiceTerritoryPolicyTest extends TestCase
         $identityOnlyDecision = $this->decide(CitizenIntent::REPORT, new TerritoryCandidates(
             identityRt: $identityRt,
         ));
+        $entryOnlyDecision = $this->decide(CitizenIntent::REPORT, new TerritoryCandidates(
+            entryRt: $entryRt,
+        ));
 
-        $this->assertResolvedFrom($entryDecision, $entryRt, TerritoryPurpose::ENTRY);
+        $this->assertResolvedFrom($entryDecision, $identityRt, TerritoryPurpose::IDENTITY);
+        $this->assertResolvedFrom($entryOnlyDecision, $entryRt, TerritoryPurpose::ENTRY);
         $this->assertSame(ServiceTerritoryStatus::UNRESOLVED, $identityOnlyDecision->status);
         $this->assertNull($identityOnlyDecision->preferredRt);
     }
