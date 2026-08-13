@@ -81,6 +81,10 @@ Checklist ini mencatat nama konfigurasi dan acceptance criteria tanpa nilai secr
 - [ ] `WHATSAPP_WEBHOOK_VERIFY_TOKEN` diprovision tanpa dicatat di dokumentasi/log
 - [ ] `WHATSAPP_APP_SECRET` diprovision tanpa dicatat di dokumentasi/log
 - [ ] `WHATSAPP_SOURCE_NAMESPACE` unik dan stabil untuk environment/account
+- [ ] `WHATSAPP_WABA_ID` sama dengan akun bisnis WhatsApp yang disubscribe
+- [ ] `WHATSAPP_PHONE_NUMBER_ID` sama dengan nomor layanan yang menerima webhook
+- [ ] `WHATSAPP_ACCESS_TOKEN` memiliki izin `whatsapp_business_messaging` dan `whatsapp_business_management`
+- [ ] `APP_URL` berisi origin saja, contoh `https://sigap.cloud.uym.ac.id`, tanpa path dashboard
 - [ ] Meta app, WABA/test number, dan callback ownership dikonfirmasi
 - [ ] Raw request body dipertahankan
 - [ ] `X-Hub-Signature-256` diteruskan ke Laravel

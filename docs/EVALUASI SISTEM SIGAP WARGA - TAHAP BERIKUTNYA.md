@@ -160,7 +160,7 @@ Fokus pengembangan berikutnya harus pada stabilitas laporan cepat dan kemampuan 
 
 ## Bukti Verifikasi Engineering
 
-- Full regression terbaru: **513 tests, 2.333 assertions, PASS** setelah hardening pilot.
+- Full regression terbaru: **517 tests, 2.350 assertions, PASS** setelah hardening pilot, isolasi akun Meta, dan penyatuan dashboard.
 - Local setup dan QR: **11 tests, 81 assertions, PASS**.
 - Composer manifest valid.
 - Formatting changed PHP files lulus.

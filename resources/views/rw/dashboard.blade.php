@@ -1,20 +1,91 @@
 @extends('layouts.app')
+
 @section('title', 'Dashboard RW - SIGAP WARGA')
+
 @section('content')
-<nav class="navbar bg-white border-bottom sticky-top" aria-label="Navigasi utama"><div class="container"><a class="navbar-brand fw-bold text-primary" href="{{ route('rw.dashboard') }}"><i class="bi bi-buildings me-2"></i>SIGAP WARGA <span class="text-secondary fw-normal">· RW</span></a><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-outline-danger btn-sm" type="submit"><i class="bi bi-box-arrow-right me-1"></i>Keluar</button></form></div></nav>
-<main id="main-content" class="container app-main">
-    <header class="dashboard-hero card border-0 overflow-hidden position-relative text-white mb-4"><div class="card-body position-relative p-4 p-lg-5" style="z-index:1"><p class="text-white-75 text-uppercase small fw-bold mb-2">Dashboard pelayanan wilayah</p><h1 class="display-6 fw-bold mb-2">Ringkasan RW</h1><p class="text-white-75 mb-0">Pantau laporan, administrasi warga, dan koordinasi seluruh RT dalam satu layar.</p></div></header>
-    <section class="card border-0 shadow-sm mb-4"><div class="card-body d-flex flex-wrap justify-content-between gap-3"><div><h2 class="h5">Status Modul</h2><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-success">Laporan Cepat · PILOT</span><span class="badge text-bg-warning">Sensus · PROTOTYPE</span><span class="badge text-bg-warning">Posyandu · AGREGAT</span><span class="badge text-bg-warning">Persuratan · PROTOTYPE</span></div></div><div class="text-end"><div class="text-secondary small">Kunjungan Posyandu bulan ini</div><strong class="h4">{{ number_format($posyanduMonthlyVisitCount) }}</strong><div class="small text-secondary">Tidak memuat catatan kesehatan individual</div></div></div></section>
+@php
+    $user = auth()->user();
+    $navigation = [
+        ['label' => 'Dashboard', 'url' => route('rw.dashboard'), 'icon' => 'bi-grid-1x2', 'active' => true],
+        ['label' => 'Laporan', 'url' => '#daftar-laporan', 'icon' => 'bi-inbox'],
+        ['label' => 'Wilayah RT', 'url' => route('rw.rts.index'), 'icon' => 'bi-diagram-3'],
+        ['label' => 'Warga', 'url' => route('rw.citizens.index'), 'icon' => 'bi-people'],
+        ['label' => 'Kartu Keluarga', 'url' => route('rw.family-cards.index'), 'icon' => 'bi-card-heading'],
+        ['label' => 'Surat', 'url' => route('rw.letters.index'), 'icon' => 'bi-envelope-check'],
+    ];
+@endphp
 
-    <section class="mb-4" aria-labelledby="rw-kpi"><div class="d-flex justify-content-between align-items-end mb-3"><div><p class="section-eyebrow mb-1">Kinerja wilayah</p><h2 id="rw-kpi" class="h4 section-title mb-0">Indikator Utama</h2></div></div><div class="row g-3"><div class="col-6 col-lg"><div class="card h-100"><div class="card-body"><span class="icon-box mb-3"><i class="bi bi-inbox"></i></span><div class="text-secondary small">Total Laporan</div><div class="fs-2 fw-bold">{{ $total }}</div></div></div></div>@foreach(\App\Enums\ReportStatus::cases() as $status)<div class="col-6 col-lg"><div class="card h-100"><div class="card-body"><div class="text-secondary small">{{ $status->value }}</div><div class="fs-2 fw-bold">{{ $totalsByStatus[$status->value] }}</div></div></div></div>@endforeach<div class="col-6 col-lg"><div class="card h-100"><div class="card-body"><div class="text-secondary small">RT Aktif</div><div class="fs-2 fw-bold">{{ $activeRtCount }}</div></div></div></div></div></section>
+<div class="dashboard-workspace">
+    <x-dashboard.topbar :home-url="route('rw.dashboard')" role-label="Dashboard RW" :context="$user->rw?->code ?? 'Wilayah RW'" :links="$navigation" />
 
-    <section class="mb-4" aria-labelledby="rw-actions"><p class="section-eyebrow mb-1">Navigasi layanan</p><h2 id="rw-actions" class="h4 section-title mb-3">Aksi Cepat</h2><div class="row g-3"><div class="col-sm-6 col-xl-3"><a class="card h-100 text-decoration-none" href="{{ route('rw.rts.index') }}"><span class="card-body d-flex gap-3"><span class="icon-box"><i class="bi bi-diagram-3"></i></span><span><strong class="d-block">Kelola RT</strong><small class="text-secondary">Struktur wilayah</small></span></span></a></div><div class="col-sm-6 col-xl-3"><a class="card h-100 text-decoration-none" href="{{ route('rw.letters.index') }}"><span class="card-body d-flex gap-3"><span class="icon-box"><i class="bi bi-envelope-check"></i></span><span><strong class="d-block">Verifikasi Surat</strong><small class="text-secondary">{{ $letterCount }} menunggu</small></span></span></a></div><div class="col-sm-6 col-xl-3"><a class="card h-100 text-decoration-none" href="{{ route('rw.citizens.index') }}"><span class="card-body d-flex gap-3"><span class="icon-box"><i class="bi bi-people"></i></span><span><strong class="d-block">Monitoring Warga</strong><small class="text-secondary">{{ $activeCitizenCount }} aktif</small></span></span></a></div><div class="col-sm-6 col-xl-3"><a class="card h-100 text-decoration-none" href="{{ route('rw.family-cards.index') }}"><span class="card-body d-flex gap-3"><span class="icon-box"><i class="bi bi-card-heading"></i></span><span><strong class="d-block">Monitoring KK</strong><small class="text-secondary">{{ $activeFamilyCardCount }} aktif</small></span></span></a></div></div></section>
+    <main id="main-content" class="container dashboard-main">
+        <x-dashboard.hero badge="Dashboard RW" title="Koordinasi wilayah dalam satu layar" description="Pantau laporan dari seluruh RT, tindak lanjut eskalasi, dan layanan administrasi warga." icon="bi-diagram-3">
+            <x-slot:meta><small class="d-block mb-1">Wilayah tugas</small><strong class="d-block h5 mb-1">{{ $user->rw?->code ?? 'RW belum tersedia' }}</strong><span class="small text-white-50">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</span></x-slot:meta>
+        </x-dashboard.hero>
 
-    <section class="card action-panel border-0 mb-4" aria-labelledby="rw-attention"><div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-3"><div><p class="section-eyebrow mb-1">Tindak lanjut</p><h2 id="rw-attention" class="h4 section-title mb-1">Perlu Perhatian</h2><p class="text-secondary mb-0">{{ $letterCount }} pengajuan surat perlu ditinjau oleh petugas RW.</p></div><a class="btn btn-warning" href="{{ route('rw.letters.index') }}"><i class="bi bi-exclamation-circle me-1"></i>Tinjau Surat</a></div></section>
+        <section class="module-strip" aria-label="Status modul sistem">
+            <div class="module-strip-copy"><span class="module-strip-icon"><i class="bi bi-boxes" aria-hidden="true"></i></span><div><strong class="d-block">Fokus layanan RW</strong><small class="text-secondary">Koordinasi laporan cepat dan pemantauan lintas RT.</small></div></div>
+            <div class="module-pills"><span class="module-pill module-pill-active">Laporan Cepat · PILOT</span><span class="module-pill module-pill-prototype">Sensus · PROTOTYPE</span><span class="module-pill module-pill-prototype">Posyandu · AGREGAT</span><span class="module-pill module-pill-prototype">Persuratan · PROTOTYPE</span></div>
+        </section>
 
-    <section class="card border-0 mb-4" aria-labelledby="rw-latest"><div class="card-header bg-white p-4 border-0"><div class="d-flex flex-wrap justify-content-between align-items-end gap-3"><div><p class="section-eyebrow mb-1">Aktivitas terbaru</p><h2 id="rw-latest" class="h4 section-title mb-0">Laporan Terbaru</h2></div><form method="GET" action="{{ route('rw.dashboard') }}" class="row g-2"><div class="col-sm-auto"><select name="rt_id" class="form-select" aria-label="Filter RT"><option value="">Semua RT</option>@foreach($rts as $rt)<option value="{{ $rt->id }}" @selected((int) request('rt_id') === $rt->id)>{{ $rt->code }}</option>@endforeach</select></div><div class="col-sm-auto"><select name="status" class="form-select" aria-label="Filter status"><option value="">Semua status</option>@foreach(\App\Enums\ReportStatus::cases() as $status)<option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->value }}</option>@endforeach</select></div><div class="col-sm-auto"><input name="search" value="{{ request('search') }}" class="form-control" placeholder="Tiket, warga, atau judul" aria-label="Cari laporan"></div><div class="col-sm-auto"><button class="btn btn-primary" type="submit"><i class="bi bi-search"></i><span class="visually-hidden">Terapkan filter</span></button></div></form></div></div><div class="table-responsive"><table class="table table-hover table-sticky align-middle mb-0"><thead><tr><th>Tiket</th><th>RT</th><th>Warga</th><th>Judul</th><th>Status</th><th><span class="visually-hidden">Aksi</span></th></tr></thead><tbody>@forelse($reports as $report)@php($url=route('rw.reports.show',$report))<tr data-row-url="{{ $url }}"><td class="fw-semibold">{{ $report->ticket_number }}</td><td>{{ $report->rt->code }}</td><td>{{ $report->citizen->name }}</td><td>{{ $report->title }}</td><td><span class="badge badge-status text-bg-{{ $report->status->bootstrapColor() }}">{{ $report->status->value }}</span></td><td><a class="btn btn-outline-primary btn-sm" href="{{ $url }}" aria-label="Detail {{ $report->ticket_number }}"><i class="bi bi-chevron-right"></i></a></td></tr>@empty<tr><td colspan="6"><div class="empty-state"><span class="empty-state-icon"><i class="bi bi-clipboard-check"></i></span><h3 class="h5">Belum ada laporan</h3><p class="text-secondary mb-3">Aktivitas laporan terbaru akan tampil di sini.</p><a class="btn btn-outline-primary" href="{{ route('rw.dashboard') }}">Reset Filter</a></div></td></tr>@endforelse</tbody></table></div>@if($reports->hasPages())<div class="card-footer bg-white p-3">{{ $reports->links('pagination::bootstrap-5') }}</div>@endif</section>
+        <section class="dashboard-section" aria-labelledby="rw-kpi">
+            <x-dashboard.section-heading eyebrow="Kinerja wilayah" title="Indikator Utama" description="Angka penting untuk menentukan pekerjaan hari ini." heading-id="rw-kpi" />
+            <div class="row g-3">
+                <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="Total Laporan" :value="number_format($total)" helper="Seluruh RT dalam RW" icon="bi-inbox" tone="primary" href="#daftar-laporan" /></div>
+                <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="Laporan Baru" :value="number_format($totalsByStatus[\App\Enums\ReportStatus::NEW->value])" helper="Perlu dipantau" icon="bi-bell" tone="warning" href="#daftar-laporan" /></div>
+                <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="RT Aktif" :value="number_format($activeRtCount)" helper="Di bawah wilayah RW" icon="bi-geo-alt" tone="success" :href="route('rw.rts.index')" /></div>
+                <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="Warga Aktif" :value="number_format($activeCitizenCount)" helper="Data lintas RT" icon="bi-people" tone="info" :href="route('rw.citizens.index')" /></div>
+            </div>
+        </section>
 
-    <section class="card border-0" aria-labelledby="rw-stats"><div class="card-body p-4"><p class="section-eyebrow mb-1">Statistik</p><h2 id="rw-stats" class="h4 section-title mb-3">Total Laporan per RT</h2><div class="row g-3">@forelse($rts as $rt)<div class="col-sm-6 col-lg-4"><div class="border rounded-3 p-3 h-100"><div class="text-secondary">{{ $rt->code }} · {{ $rt->name }}</div><div class="fs-3 fw-bold">{{ $totalsByRt[$rt->id] }}</div><small class="text-secondary">laporan tercatat</small></div></div>@empty<div class="col-12"><div class="empty-state"><span class="empty-state-icon"><i class="bi bi-diagram-3"></i></span><h3 class="h5">Belum ada data RT</h3><p class="text-secondary">Tambahkan RT untuk melihat statistik wilayah.</p><a class="btn btn-primary" href="{{ route('rw.rts.create') }}">Tambah RT</a></div></div>@endforelse</div></div></section>
-    @include('analytics.rw')
-</main>
+        <section class="dashboard-section" aria-labelledby="rw-actions">
+            <x-dashboard.section-heading eyebrow="Navigasi layanan" title="Aksi Cepat" description="Akses tugas wilayah tanpa mencari menu berulang kali." heading-id="rw-actions" />
+            <div class="row g-3">
+                <div class="col-sm-6 col-xl-3"><x-dashboard.action-card :href="route('rw.rts.index')" title="Kelola RT" description="Struktur dan status wilayah" icon="bi-diagram-3" /></div>
+                <div class="col-sm-6 col-xl-3"><x-dashboard.action-card :href="route('rw.letters.index')" title="Verifikasi Surat" description="{{ number_format($letterCount) }} pengajuan tercatat" icon="bi-envelope-check" tone="warning" /></div>
+                <div class="col-sm-6 col-xl-3"><x-dashboard.action-card :href="route('rw.citizens.index')" title="Monitoring Warga" description="{{ number_format($activeCitizenCount) }} warga aktif" icon="bi-people" tone="success" /></div>
+                <div class="col-sm-6 col-xl-3"><x-dashboard.action-card :href="route('rw.family-cards.index')" title="Monitoring KK" description="{{ number_format($activeFamilyCardCount) }} kartu aktif" icon="bi-card-heading" tone="info" /></div>
+            </div>
+        </section>
+
+        @if ($letterCount > 0)
+            <section class="priority-panel dashboard-section d-flex flex-wrap justify-content-between align-items-center gap-3" aria-labelledby="rw-attention">
+                <div><p class="section-eyebrow mb-1">Tindak lanjut</p><h2 id="rw-attention" class="h5 fw-bold mb-1">Perlu Perhatian</h2><p class="text-secondary small mb-0">{{ number_format($letterCount) }} pengajuan surat perlu ditinjau oleh petugas RW.</p></div>
+                <a class="btn btn-warning" href="{{ route('rw.letters.index') }}"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>Tinjau Surat</a>
+            </section>
+        @endif
+
+        <section id="daftar-laporan" class="card dashboard-panel-modern dashboard-section" aria-labelledby="rw-latest">
+            <div class="card-header p-4">
+                <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-end gap-4">
+                    <div><p class="section-eyebrow mb-1">Aktivitas terbaru</p><h2 id="rw-latest" class="h4 section-title mb-1">Laporan Terbaru</h2><p class="small text-secondary mb-0">Hanya laporan dari RT di wilayah RW Anda.</p></div>
+                    <form method="GET" action="{{ route('rw.dashboard') }}" class="row g-2">
+                        <div class="col-sm-auto"><label class="visually-hidden" for="rw-rt-filter">Filter RT</label><select id="rw-rt-filter" name="rt_id" class="form-select"><option value="">Semua RT</option>@foreach($rts as $rt)<option value="{{ $rt->id }}" @selected((int) request('rt_id') === $rt->id)>{{ $rt->code }}</option>@endforeach</select></div>
+                        <div class="col-sm-auto"><label class="visually-hidden" for="rw-status-filter">Filter status</label><select id="rw-status-filter" name="status" class="form-select"><option value="">Semua status</option>@foreach(\App\Enums\ReportStatus::cases() as $status)<option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>@endforeach</select></div>
+                        <div class="col-sm-auto"><label class="visually-hidden" for="rw-search">Cari laporan</label><input id="rw-search" name="search" value="{{ request('search') }}" class="form-control" placeholder="Tiket, warga, atau judul"></div>
+                        <div class="col-sm-auto"><button class="btn btn-primary w-100" type="submit"><i class="bi bi-search me-1" aria-hidden="true"></i>Cari</button></div>
+                    </form>
+                </div>
+            </div>
+            <div class="table-responsive"><table class="table table-hover table-sticky align-middle mb-0"><thead><tr><th>Tiket</th><th>RT</th><th>Warga</th><th>Judul</th><th>Status</th><th><span class="visually-hidden">Aksi</span></th></tr></thead><tbody>
+                @forelse($reports as $report)
+                    @php($url = route('rw.reports.show', $report))
+                    <tr data-row-url="{{ $url }}"><td><a class="fw-semibold text-decoration-none" href="{{ $url }}">{{ $report->ticket_number }}</a></td><td>{{ $report->rt->code }}</td><td>{{ $report->citizen->name }}</td><td>{{ $report->title }}</td><td><span class="badge badge-status text-bg-{{ $report->status->bootstrapColor() }}">{{ $report->status->label() }}</span></td><td><a class="btn btn-outline-primary btn-sm" href="{{ $url }}" aria-label="Detail {{ $report->ticket_number }}"><i class="bi bi-chevron-right" aria-hidden="true"></i></a></td></tr>
+                @empty
+                    <tr><td colspan="6"><div class="empty-state"><span class="empty-state-icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span><h3 class="h5">Belum ada laporan</h3><p class="text-secondary mb-3">Aktivitas laporan terbaru akan tampil di sini.</p><a class="btn btn-outline-primary" href="{{ route('rw.dashboard') }}">Reset Filter</a></div></td></tr>
+                @endforelse
+            </tbody></table></div>
+            @if($reports->hasPages())<div class="card-footer bg-white p-3">{{ $reports->links('pagination::bootstrap-5') }}</div>@endif
+        </section>
+
+        <section class="card dashboard-panel-modern dashboard-section" aria-labelledby="rw-stats">
+            <div class="card-body p-4"><p class="section-eyebrow mb-1">Statistik</p><h2 id="rw-stats" class="h4 section-title mb-3">Total Laporan per RT</h2><div class="row g-3">
+                @forelse($rts as $rt)<div class="col-sm-6 col-lg-4"><div class="citizen-stat"><span class="text-secondary small">{{ $rt->code }} · {{ $rt->name }}</span><strong>{{ number_format($totalsByRt[$rt->id]) }}</strong><small class="text-secondary">laporan tercatat</small></div></div>
+                @empty<div class="col-12"><div class="empty-state"><span class="empty-state-icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span><h3 class="h5">Belum ada data RT</h3><p class="text-secondary">Tambahkan RT untuk melihat statistik wilayah.</p><a class="btn btn-primary" href="{{ route('rw.rts.create') }}">Tambah RT</a></div></div>@endforelse
+            </div></div>
+        </section>
+
+        @include('analytics.rw')
+    </main>
+</div>
 @endsection

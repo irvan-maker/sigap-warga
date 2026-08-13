@@ -858,44 +858,17 @@ Hal ini mengurangi risiko webhook dianggap gagal karena proses terlalu lama.
 15. Tahapan Konfigurasi Webhook
 15.1 Membuat endpoint
 Backend menyediakan dua metode:
-GET  /api/webhook/whatsapp
-POST /api/webhook/whatsapp
+GET  /webhooks/whatsapp
+POST /webhooks/whatsapp
 GET digunakan untuk verifikasi webhook.
 POST digunakan untuk menerima event.
 15.2 Verifikasi webhook
-Saat webhook didaftarkan, Meta mengirimkan parameter verifikasi.
-Contoh logika:
-public function verify(Request $request)
-{
-    $verifyToken = config('services.whatsapp.verify_token');
-
-    if (
-        $request->get('hub_mode') === 'subscribe' &&
-        $request->get('hub_verify_token') === $verifyToken
-    ) {
-        return response($request->get('hub_challenge'), 200);
-    }
-
-    return response('Verification failed', 403);
-}
-Setelah endpoint dibuat, URL callback dan token verifikasi dimasukkan melalui halaman konfigurasi WhatsApp pada Meta App Dashboard.
+Saat webhook didaftarkan, Meta mengirim parameter hub.mode, hub.verify_token, dan hub.challenge. Sistem hanya mengembalikan challenge ketika mode bernilai subscribe dan verify token cocok secara constant-time dengan WHATSAPP_WEBHOOK_VERIFY_TOKEN. Parameter ganda, token kosong, mode lain, atau challenge kosong ditolak dengan HTTP 403.
+Callback yang dimasukkan di Meta harus memakai HTTPS dan sama persis dengan https://<domain-resmi>/webhooks/whatsapp. APP_URL hanya berisi origin domain, tidak boleh ditambah /kelurahan/dashboard.
 15.3 Menerima pesan
-Contoh struktur penerimaan sederhana:
-public function receive(Request $request)
-{
-    $payload = $request->all();
-
-    WebhookLog::create([
-        'event_type' => 'whatsapp_message',
-        'payload' => json_encode($payload),
-        'processing_status' => 'pending',
-        'received_at' => now(),
-    ]);
-
-    ProcessWhatsAppWebhook::dispatch($payload);
-
-    return response()->json(['status' => 'accepted'], 200);
-}
+POST webhook wajib memverifikasi X-Hub-Signature-256 terhadap raw request body menggunakan WHATSAPP_APP_SECRET sebelum JSON dibaca. Signature hilang, salah format, atau tidak cocok ditolak dengan HTTP 403. JSON rusak ditolak dengan HTTP 400.
+Setelah signature valid, adapter hanya menerima object whatsapp_business_account, WABA ID yang sama dengan WHATSAPP_WABA_ID, Phone Number ID yang sama dengan WHATSAPP_PHONE_NUMBER_ID, field messages, dan pesan bertipe text. Status delivery dan tipe media belum diproses pada pilot.
+Raw payload, signature, access token, isi pesan, dan nomor telepon tidak boleh disimpan dalam tabel log webhook. Event yang sudah dinormalisasi dikirim ke queue whatsapp sebagai encrypted job. Webhook mengembalikan EVENT_RECEIVED setelah event berhasil dimasukkan ke antrean.
 15.4 Pemrosesan pesan
 Sistem membaca:
 •	ID pesan.
@@ -903,20 +876,15 @@ Sistem membaca:
 •	Isi pesan.
 •	Jenis pesan.
 •	Waktu pesan.
-•	ID media.
-•	Status pengiriman.
 Kemudian sistem memeriksa:
 Apakah pesan sudah pernah diproses?
 Apakah pengirim sudah memiliki sesi aktif?
-Apakah pengirim sedang membuat laporan?
-Apakah pesan merupakan jawaban menu?
-Apakah pesan merupakan lampiran?
-Apakah pesan merupakan permintaan cek status?
+Apakah warga terdaftar dan aktif?
+Apakah konteks wilayah QR atau sesi 24 jam tersedia?
+Apakah isi memenuhi kategori laporan cepat yang didukung?
+Apakah laporan tetap berada pada wilayah domisili atau perlu koordinasi lokasi kejadian?
 15.5 Mencegah laporan ganda
-Gunakan whatsapp_message_id sebagai nilai unik.
-Apabila ID pesan sudah ada:
-Jangan membuat laporan baru.
-Tandai event sebagai duplikat.
+Gunakan pasangan source namespace dan WhatsApp message ID sebagai identitas unik. Namespace mencakup environment dan Phone Number ID agar identitas provider tidak bertabrakan. Apabila event yang sama dikirim ulang, sistem menggunakan receipt yang sudah ada dan tidak membuat laporan, riwayat, atau nomor tiket kedua.
 16. Alur Percakapan WhatsApp
 Sistem perlu menyimpan tahapan percakapan setiap warga.
 Contoh state:

@@ -42,6 +42,8 @@ class WhatsAppWebhookTest extends TestCase
             'services.whatsapp.app_secret' => self::APP_SECRET,
             'services.whatsapp.webhook_verify_token' => self::VERIFY_TOKEN,
             'services.whatsapp.source_namespace' => 'meta-whatsapp-test',
+            'services.whatsapp.waba_id' => 'waba-001',
+            'services.whatsapp.phone_number_id' => '123456789012345',
         ]);
     }
 
@@ -398,6 +400,25 @@ class WhatsAppWebhookTest extends TestCase
         $this->assertNull($result->events[0]->incidentRt);
     }
 
+    public function test_parser_ignores_events_for_another_waba_or_phone_number(): void
+    {
+        $payload = json_decode(
+            $this->textPayload('wamid.wrong-account', '6281234567890', 'jalan rusak'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        );
+
+        $payload['entry'][0]['id'] = 'waba-lain';
+        $wrongWaba = app(WhatsAppWebhookParser::class)->parse($payload);
+        $this->assertCount(0, $wrongWaba->events);
+
+        $payload['entry'][0]['id'] = config('services.whatsapp.waba_id');
+        $payload['entry'][0]['changes'][0]['value']['metadata']['phone_number_id'] = '999999999999999';
+        $wrongPhone = app(WhatsAppWebhookParser::class)->parse($payload);
+        $this->assertCount(0, $wrongPhone->events);
+    }
+
     public function test_parser_extracts_multiple_text_messages_deterministically(): void
     {
         $payload = json_decode($this->payload([
@@ -636,13 +657,13 @@ class WhatsAppWebhookTest extends TestCase
         return json_encode([
             'object' => 'whatsapp_business_account',
             'entry' => [[
-                'id' => 'waba-001',
+                'id' => config('services.whatsapp.waba_id'),
                 'changes' => [[
                     'value' => array_merge([
                         'messaging_product' => 'whatsapp',
                         'metadata' => [
                             'display_phone_number' => '15550000000',
-                            'phone_number_id' => '123456789012345',
+                            'phone_number_id' => config('services.whatsapp.phone_number_id'),
                         ],
                     ], $value),
                     'field' => 'messages',

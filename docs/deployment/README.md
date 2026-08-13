@@ -10,19 +10,20 @@ Gunakan bersama:
 
 - [Environment Checklist](ENVIRONMENT_CHECKLIST.md)
 - [Operations Runbook](OPERATIONS_RUNBOOK.md)
+- [Panduan Setup Meta WhatsApp](META_WHATSAPP_SETUP.md)
 
 ## Current Deployment Checkpoint
 
 | Item | Checkpoint |
 |---|---|
 | Development branch | `feature/whatsapp-integration` |
-| Release candidate branch | `feature/whatsapp-integration` pada checkpoint `13c1056` |
+| Release candidate branch | `feature/whatsapp-integration`; gunakan commit dan artefak terbaru yang disebut pada handoff deployment |
 | Application hardening checkpoint | `5d00d54` — `feat: stabilize SIGAP WARGA public pilot` |
 | Public target | `https://sigap.cloud.uym.ac.id` |
-| Current full regression baseline | `513 tests`, `2,333 assertions`, **PASS** setelah sprint hardening; wajib dijalankan ulang dari commit release candidate |
+| Current full regression baseline | `517 tests`, `2,350 assertions`, **PASS** setelah hardening pilot, Meta, dan UI; wajib dijalankan ulang dari commit release candidate |
 | Release requirement | Baseline current dapat dipakai untuk checkpoint dokumentasi ini; jika deployment commit berubah, full regression harus PASS kembali terhadap commit yang benar-benar akan dideploy |
 
-Artefak prabuild yang sudah diverifikasi berasal dari `13c1056`; deployment Git dapat memakai checkpoint branch yang lebih baru hanya bila perubahan setelahnya direview dan regression tetap lulus.
+Artefak prabuild dari `13c1056` sudah digantikan oleh perubahan konfigurasi WABA dan UI terpadu. Jangan deploy artefak lama; gunakan ZIP dengan hash commit terbaru dari handoff deployment dan verifikasi checksum-nya.
 
 ## Architecture
 

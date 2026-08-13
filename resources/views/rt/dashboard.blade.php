@@ -7,58 +7,42 @@
         $user = auth()->user();
         $hasActiveFilters = request()->filled('status') || request()->filled('search');
         $recentReports = $reports->take(4);
+        $navigation = [
+            ['label' => 'Dashboard', 'url' => route('rt.dashboard'), 'icon' => 'bi-grid-1x2', 'active' => true],
+            ['label' => 'Laporan', 'url' => '#daftar-laporan', 'icon' => 'bi-inbox'],
+            ['label' => 'Warga', 'url' => route('rt.citizens.index'), 'icon' => 'bi-people'],
+            ['label' => 'Kartu Keluarga', 'url' => route('rt.family-cards.index'), 'icon' => 'bi-card-heading'],
+            ['label' => 'Surat', 'url' => route('rt.letters.index'), 'icon' => 'bi-envelope-check'],
+            ['label' => 'Sensus', 'url' => route('rt.household-census.create'), 'icon' => 'bi-clipboard-data'],
+        ];
     @endphp
 
-    <div class="rt-dashboard min-vh-100">
-        <nav class="navbar bg-white border-bottom sticky-top" aria-label="Navigasi utama">
-            <div class="container py-1">
-                <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-primary" href="{{ route('rt.dashboard') }}">
-                    <span class="brand-mark d-inline-flex align-items-center justify-content-center rounded-3 text-white" aria-hidden="true">SW</span>
-                    <span>SIGAP WARGA</span>
-                </a>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="d-none d-sm-block text-end lh-sm">
-                        <span class="small fw-semibold d-block">{{ $user->name }}</span>
-                        <span class="text-secondary small">Petugas {{ $user->rt?->code ?? 'RT' }}</span>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button class="btn btn-outline-danger btn-sm px-3" type="submit">Keluar</button>
-                    </form>
-                </div>
-            </div>
-        </nav>
+    <div class="dashboard-workspace rt-dashboard">
+        <x-dashboard.topbar :home-url="route('rt.dashboard')" role-label="Dashboard RT" :context="$user->rt?->code ?? 'Wilayah RT'" :links="$navigation" />
 
-        <main class="container py-4 py-lg-5">
-            <header class="dashboard-hero overflow-hidden position-relative rounded-4 p-4 p-lg-5 mb-4 text-white shadow-sm">
-                <div class="position-relative d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-4"><div><span class="badge rounded-pill bg-white bg-opacity-10 border border-white border-opacity-25 px-3 py-2 mb-3">Dashboard RT</span><p class="text-white-50 mb-1">Selamat datang,</p><h1 class="display-6 fw-bold mb-3">{{ $user->name }}</h1><p class="mb-0 text-white-75">Pantau layanan warga dan laksanakan sensus keluarga dalam satu halaman.</p></div><div class="hero-meta rounded-4 p-3 p-lg-4"><div class="small text-white-50 text-uppercase fw-semibold mb-1">Wilayah tugas</div><div class="h5 fw-bold mb-2">{{ $user->rt?->code ?? 'RT belum tersedia' }} · {{ $user->rw?->code ?? 'RW belum tersedia' }}</div><div class="small text-white-75">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</div></div></div>
-            </header>
-            <section class="card border-0 shadow-sm mb-4" aria-labelledby="modules-heading"><div class="card-body"><div class="d-flex flex-wrap justify-content-between align-items-center gap-3"><div><h2 id="modules-heading" class="h5 mb-2">Modul SIGAP WARGA</h2><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-success">Laporan Cepat · PILOT</span><span class="badge text-bg-warning">Sensus · PROTOTYPE</span><span class="badge text-bg-warning">Posyandu · PROTOTYPE</span><span class="badge text-bg-warning">Persuratan · PROTOTYPE</span></div></div>@if($hasPosyanduAssignment)<a class="btn btn-outline-primary" href="{{ route('posyandu.index') }}">Buka Posyandu <span class="badge text-bg-light ms-1">{{ $posyanduMonthlyVisitCount }}</span></a>@endif</div></div></section>
-            <section class="card border-0 shadow-sm mb-4"><div class="card-body"><div class="d-flex flex-wrap justify-content-between align-items-center gap-3"><div><h2 class="h5 mb-1">Pengajuan Surat</h2><div class="d-flex flex-wrap gap-2 small"><span>Draft: {{ $letterCounts['DRAFT'] ?? 0 }}</span><span>Diajukan: {{ $letterCounts['SUBMITTED'] ?? 0 }}</span><span>Diproses: {{ ($letterCounts['RW_REVIEWED'] ?? 0)+($letterCounts['APPROVED'] ?? 0) }}</span><span>Selesai: {{ $letterCounts['ISSUED'] ?? 0 }}</span><span>Ditolak: {{ $letterCounts['REJECTED'] ?? 0 }}</span></div></div><a class="btn btn-primary" href="{{ route('rt.letters.index') }}">Buka Pengajuan Surat</a></div></div></section>
-            <section class="mb-4" aria-labelledby="master-data-heading"><h2 id="master-data-heading" class="h4 fw-bold mb-3">Master Data</h2><div class="row g-3"><div class="col-lg-6"><a class="card navigation-card h-100 text-decoration-none shadow-sm" href="{{ route('rt.household-census.create') }}"><span class="card-body"><strong class="d-block">Sensus Warga</strong><span class="text-secondary">{{ number_format($activeCitizenCount) }} warga aktif</span></span></a></div><div class="col-lg-6"><div class="card h-100 shadow-sm"><div class="card-body"><strong class="d-block mb-2">Kelengkapan Data</strong><div class="d-grid gap-2"><a class="completeness-link" href="{{ route('rt.citizens.index', ['completeness' => 'without_family_card']) }}"><span>Warga tanpa KK</span><span class="badge text-bg-light">{{ $citizensWithoutFamilyCardCount }}</span></a><a class="completeness-link" href="{{ route('rt.citizens.index', ['completeness' => 'without_nik']) }}"><span>Warga tanpa NIK</span><span class="badge text-bg-light">{{ $citizensWithoutNikCount }}</span></a><a class="completeness-link" href="{{ route('rt.family-cards.index', ['completeness' => 'without_head']) }}"><span>KK tanpa kepala keluarga</span><span class="badge text-bg-light">{{ $familyCardsWithoutHeadCount }}</span></a></div></div></div></div></div></section>
-            <h2 class="h4 fw-bold mb-3">Laporan Warga</h2>
-            <section class="mb-4" aria-labelledby="kpi-heading">
-                <div class="d-flex justify-content-between align-items-end mb-3">
-                    <div>
-                        <p class="section-eyebrow mb-1">Ikhtisar</p>
-                        <h2 id="kpi-heading" class="h4 fw-bold mb-0">Kinerja Laporan</h2>
-                    </div>
-                    <span class="text-secondary small d-none d-sm-inline">Diperbarui hari ini</span>
+        <main id="main-content" class="container dashboard-main">
+            <x-dashboard.hero badge="Dashboard RT" title="Selamat datang, {{ $user->name }}" description="Tindak lanjuti laporan warga, jaga kualitas data, dan kelola layanan wilayah dari satu ruang kerja." icon="bi-geo-alt">
+                <x-slot:meta><small class="d-block mb-1">Wilayah tugas</small><strong class="d-block h5 mb-1">{{ $user->rt?->code ?? 'RT belum tersedia' }} · {{ $user->rw?->code ?? 'RW belum tersedia' }}</strong><span class="small text-white-50">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</span></x-slot:meta>
+            </x-dashboard.hero>
+
+            <section class="module-strip" aria-label="Status modul sistem">
+                <div class="module-strip-copy"><span class="module-strip-icon"><i class="bi bi-boxes" aria-hidden="true"></i></span><div><strong class="d-block">Fokus layanan RT</strong><small class="text-secondary">Laporan cepat menjadi layanan utama dalam tahap pilot.</small></div></div>
+                <div class="module-pills"><span class="module-pill module-pill-active">Laporan Cepat · PILOT</span><span class="module-pill module-pill-prototype">Sensus · PROTOTYPE</span><span class="module-pill module-pill-prototype">Posyandu · PROTOTYPE</span><span class="module-pill module-pill-prototype">Persuratan · PROTOTYPE</span></div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="master-data-heading">
+                <x-dashboard.section-heading eyebrow="Operasional wilayah" title="Data dan Layanan Warga" description="Akses data utama dan lihat bagian yang masih perlu dilengkapi." heading-id="master-data-heading" />
+                <div class="row g-3">
+                    <div class="col-lg-6"><div class="d-grid gap-3"><x-dashboard.action-card :href="route('rt.household-census.create')" title="Sensus Warga" description="{{ number_format($activeCitizenCount) }} warga aktif" icon="bi-clipboard-data" /><x-dashboard.action-card :href="route('rt.letters.index')" title="Pengajuan Surat" description="{{ number_format($letterCounts['SUBMITTED'] ?? 0) }} menunggu proses" icon="bi-envelope-check" tone="warning" />@if($hasPosyanduAssignment)<x-dashboard.action-card :href="route('posyandu.index')" title="Posyandu" description="{{ number_format($posyanduMonthlyVisitCount) }} kunjungan bulan ini" icon="bi-heart-pulse" tone="success" />@endif</div></div>
+                    <div class="col-lg-6"><div class="card dashboard-panel-modern h-100"><div class="card-body p-3"><strong class="d-block mb-2">Kelengkapan Data</strong><div class="d-grid gap-2"><a class="completeness-link" href="{{ route('rt.citizens.index', ['completeness' => 'without_family_card']) }}"><span>Warga tanpa KK</span><span class="badge text-bg-light">{{ $citizensWithoutFamilyCardCount }}</span></a><a class="completeness-link" href="{{ route('rt.citizens.index', ['completeness' => 'without_nik']) }}"><span>Warga tanpa NIK</span><span class="badge text-bg-light">{{ $citizensWithoutNikCount }}</span></a><a class="completeness-link" href="{{ route('rt.family-cards.index', ['completeness' => 'without_head']) }}"><span>KK tanpa kepala keluarga</span><span class="badge text-bg-light">{{ $familyCardsWithoutHeadCount }}</span></a></div></div></div></div>
                 </div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="kpi-heading">
+                <x-dashboard.section-heading eyebrow="Laporan warga" title="Kinerja Laporan" description="Status penanganan laporan yang masuk ke wilayah RT Anda." heading-id="kpi-heading" />
                 <div class="row g-3">
                     <div class="col-sm-6 col-xl">
-                        <div class="card metric-card metric-card-total h-100 border-0 shadow-sm">
-                            <div class="card-body p-4">
-                                <div class="d-flex justify-content-between align-items-start gap-3">
-                                    <div>
-                                        <div class="text-secondary small text-uppercase fw-semibold">Total Laporan</div>
-                                        <div class="display-6 fw-bold mt-2 mb-1">{{ number_format($total) }}</div>
-                                        <div class="text-secondary small">Seluruh laporan wilayah</div>
-                                    </div>
-                                    <span class="metric-icon bg-primary-subtle text-primary" aria-hidden="true">#</span>
-                                </div>
-                            </div>
-                        </div>
+                        <x-dashboard.metric label="Total Laporan" :value="number_format($total)" helper="Seluruh laporan wilayah" icon="bi-inbox" tone="primary" href="#daftar-laporan" />
                     </div>
                     @foreach (\App\Enums\ReportStatus::cases() as $status)
                         @php
@@ -66,7 +50,7 @@
                             $percentage = $total > 0 ? ($statusTotal / $total) * 100 : 0;
                         @endphp
                         <div class="col-sm-6 col-xl">
-                            <div class="card metric-card h-100 border-0 shadow-sm">
+                            <div class="card dashboard-panel-modern h-100">
                                 <div class="card-body p-4">
                                     <div class="d-flex justify-content-between align-items-start gap-2">
                                         <div>

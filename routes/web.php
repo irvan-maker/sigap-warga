@@ -23,6 +23,7 @@ use App\Http\Controllers\RwReportController;
 use App\Http\Controllers\RwRtController;
 use App\Http\Controllers\ServiceGatewayController;
 use App\Http\Controllers\VillageLetterController;
+use App\Http\Controllers\WhatsAppIntegrationController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -69,6 +70,8 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', AdminDashboardController::class)->name('dashboard');
+    Route::get('/admin/integrations/whatsapp', WhatsAppIntegrationController::class)
+        ->name('admin.whatsapp-integration.index');
     Route::get('/admin/reports', [AdminReportController::class, 'index'])
         ->name('admin.reports.index');
     Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users.index');

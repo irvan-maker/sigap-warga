@@ -31,6 +31,12 @@ final class WhatsAppWebhookParser
         $ignoredCount = 0;
 
         foreach ($this->arrays($payload['entry'] ?? null) as $entry) {
+            if (! $this->matchesConfiguredAccount($entry['id'] ?? null, 'waba_id')) {
+                $ignoredCount++;
+
+                continue;
+            }
+
             foreach ($this->arrays($entry['changes'] ?? null) as $change) {
                 if (($change['field'] ?? null) !== 'messages' || ! is_array($change['value'] ?? null)) {
                     $ignoredCount++;
@@ -42,7 +48,7 @@ final class WhatsAppWebhookParser
                 $phoneNumberId = $value['metadata']['phone_number_id'] ?? null;
                 $messages = $this->arrays($value['messages'] ?? null);
 
-                if (! is_string($phoneNumberId) || trim($phoneNumberId) === '') {
+                if (! $this->matchesConfiguredAccount($phoneNumberId, 'phone_number_id')) {
                     $ignoredCount += max(1, count($messages));
 
                     continue;
@@ -66,6 +72,17 @@ final class WhatsAppWebhookParser
         }
 
         return new WhatsAppInboundAdapterResult($events, $ignoredCount);
+    }
+
+    private function matchesConfiguredAccount(mixed $payloadId, string $configKey): bool
+    {
+        $configuredId = config("services.whatsapp.{$configKey}");
+
+        if (! is_string($configuredId) || trim($configuredId) === '') {
+            throw new DomainException("WhatsApp {$configKey} is not configured.");
+        }
+
+        return is_string($payloadId) && hash_equals(trim($configuredId), trim($payloadId));
     }
 
     /**

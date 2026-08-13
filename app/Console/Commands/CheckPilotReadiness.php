@@ -66,12 +66,19 @@ final class CheckPilotReadiness extends Command
             $this->check('APP_ENV production', app()->environment('production'));
             $this->check('APP_DEBUG nonaktif', config('app.debug') === false);
             $this->check('APP_URL HTTPS', str_starts_with((string) config('app.url'), 'https://'));
+            $this->check('APP_URL berupa origin tanpa path', $this->validAppOrigin());
             $this->check('Session terenkripsi', config('session.encrypt') === true);
             $this->check('Cookie session Secure', config('session.secure') === true);
             $this->check('WhatsApp outbound aktif', config('services.whatsapp.outbound_enabled') === true);
-            $this->check('WhatsApp verify token tersedia', $this->configured('webhook_verify_token'));
+            $this->check('WhatsApp verify token kuat', $this->strongVerifyToken());
             $this->check('WhatsApp App Secret tersedia', $this->configured('app_secret'));
-            $this->check('WhatsApp Phone Number ID tersedia', $this->configured('phone_number_id'));
+            $this->check('WhatsApp source namespace tersedia', $this->configured('source_namespace'));
+            $this->check(
+                'Nomor layanan WhatsApp valid',
+                preg_match('/\A62\d{8,13}\z/', (string) config('services.whatsapp.public_number')) === 1,
+            );
+            $this->check('WhatsApp WABA ID tersedia', $this->validNumericId('waba_id'));
+            $this->check('WhatsApp Phone Number ID valid', $this->validNumericId('phone_number_id'));
             $this->check('WhatsApp Access Token tersedia', $this->configured('access_token'));
             $this->check(
                 'Versi Graph API valid',
@@ -106,5 +113,29 @@ final class CheckPilotReadiness extends Command
         $value = config("services.whatsapp.{$key}");
 
         return is_string($value) && trim($value) !== '';
+    }
+
+    private function validNumericId(string $key): bool
+    {
+        return preg_match('/\A\d{5,32}\z/', (string) config("services.whatsapp.{$key}")) === 1;
+    }
+
+    private function strongVerifyToken(): bool
+    {
+        $token = config('services.whatsapp.webhook_verify_token');
+
+        return is_string($token) && strlen(trim($token)) >= 32;
+    }
+
+    private function validAppOrigin(): bool
+    {
+        $url = parse_url((string) config('app.url'));
+
+        return is_array($url)
+            && ($url['scheme'] ?? null) === 'https'
+            && is_string($url['host'] ?? null)
+            && ! isset($url['query'])
+            && ! isset($url['fragment'])
+            && in_array($url['path'] ?? '', ['', '/'], true);
     }
 }

@@ -59,7 +59,7 @@ Artefak lokal:
 - halaman cetak tiga QR: `storage/app/private/pilot/rw-pilot-01/CETAK-QR.html`;
 - backup sebelum migration: `storage/app/backups/sigap_warga-pre-pilot-20260813-115520.sql`.
 - backup sebelum hardening: `storage/app/backups/sigap-warga-pre-stabilization-20260813-154839.sql`.
-- release candidate remote: branch `feature/whatsapp-integration`, application checkpoint `5d00d54`, builder checkpoint `13c1056`.
+- branch rilis: `feature/whatsapp-integration`; gunakan hanya artefak terbaru yang dibuat setelah pembaruan pusat integrasi WhatsApp dan UI terpadu. Artefak checkpoint `13c1056` sudah digantikan.
 
 Untuk uji pada komputer yang sama, jalankan `start-sigap-warga.bat`. Untuk scan memakai ponsel, jalankan `start-sigap-warga-pilot-lan.bat`. Peluncur pilot LAN akan:
 
@@ -85,6 +85,7 @@ WHATSAPP_WEBHOOK_VERIFY_TOKEN=<random-secret-for-verification>
 WHATSAPP_APP_SECRET=<meta-app-secret>
 WHATSAPP_SOURCE_NAMESPACE=meta-whatsapp-pilot
 WHATSAPP_PUBLIC_NUMBER=<digits-only-e164>
+WHATSAPP_WABA_ID=<meta-whatsapp-business-account-id>
 WHATSAPP_PHONE_NUMBER_ID=<meta-phone-number-id>
 WHATSAPP_ACCESS_TOKEN=<meta-access-token>
 WHATSAPP_GRAPH_VERSION=<supported-meta-graph-version>
@@ -115,6 +116,8 @@ Aktifkan `WHATSAPP_OUTBOUND_ENABLED=true` hanya setelah endpoint inbound, nomor 
 
 ## Menghubungkan Meta WhatsApp
 
+Untuk panduan klik demi klik dan pemetaan istilah Meta, baca [Panduan Setup Meta WhatsApp](deployment/META_WHATSAPP_SETUP.md). Setelah aplikasi terpasang, Super Admin juga dapat membuka **Dashboard → WhatsApp** untuk melihat status aman tanpa menampilkan secret.
+
 Gunakan callback publik HTTPS berikut:
 
 ```text
@@ -122,9 +125,9 @@ GET/POST https://domain-pilot.example/webhooks/whatsapp
 ```
 
 - Verify token pada Meta harus sama dengan `WHATSAPP_WEBHOOK_VERIFY_TOKEN`.
-- Subscribe event pesan untuk WhatsApp Business Account/nomor yang digunakan.
+- Pastikan App tersubscribe ke `WHATSAPP_WABA_ID` dan field webhook `messages` aktif.
 - App secret harus sama dengan `WHATSAPP_APP_SECRET`; aplikasi memverifikasi `X-Hub-Signature-256` dari raw body.
-- `WHATSAPP_PUBLIC_NUMBER` adalah nomor yang dibuka oleh QR, sedangkan `WHATSAPP_PHONE_NUMBER_ID` adalah ID internal Meta untuk endpoint pengiriman.
+- `WHATSAPP_PUBLIC_NUMBER` adalah nomor yang dibuka oleh QR, `WHATSAPP_WABA_ID` adalah ID akun bisnis WhatsApp, dan `WHATSAPP_PHONE_NUMBER_ID` adalah ID internal nomor untuk menerima serta mengirim pesan.
 - Uji GET challenge, signed POST valid, signature salah, satu inbound text, dan satu outbound text sebelum mencetak QR publik.
 
 ## Menerbitkan tiga QR
@@ -207,4 +210,4 @@ vendor/bin/pint --dirty
 git diff --check
 ```
 
-Baseline implementasi ini: **513 tests, 2.333 assertions, PASS** pada PHP 8.3.30 setelah hardening pilot. Ulangi pengujian setelah merge/deploy dan catat commit yang benar-benar terpasang.
+Baseline implementasi ini: **517 tests, 2.350 assertions, PASS** pada PHP 8.3.30 setelah hardening pilot, isolasi akun Meta, dan penyatuan dashboard. Ulangi pengujian setelah merge/deploy dan catat commit yang benar-benar terpasang.

@@ -7,71 +7,41 @@
         $officer = auth()->user();
         $reportDetailRoute = $officer->isSystemAdmin() ? 'reports.show' : 'kelurahan.reports.show';
         $canManageRws = $officer->isSystemAdmin() || $officer->isVillageSecretary();
+        $navigation = [
+            ['label' => 'Dashboard', 'url' => route('kelurahan.dashboard'), 'icon' => 'bi-grid-1x2', 'active' => true],
+            ['label' => 'Laporan', 'url' => route('kelurahan.reports.index').'#laporan', 'icon' => 'bi-inbox'],
+            ['label' => 'Wilayah', 'url' => route('kelurahan.rws.index'), 'icon' => 'bi-diagram-3'],
+            ['label' => 'Warga', 'url' => route('kelurahan.citizens.index'), 'icon' => 'bi-people'],
+            ['label' => 'Kartu Keluarga', 'url' => route('kelurahan.family-cards.index'), 'icon' => 'bi-card-heading'],
+            ['label' => 'Surat', 'url' => route('kelurahan.letters.index'), 'icon' => 'bi-envelope-check'],
+        ];
     @endphp
 
-    <div class="kelurahan-dashboard min-vh-100">
-        <nav class="navbar bg-white border-bottom sticky-top" aria-label="Navigasi utama">
-            <div class="container py-1">
-                <a class="navbar-brand fw-bold text-primary" href="{{ route('kelurahan.dashboard') }}">SIGAP WARGA</a>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="d-none d-sm-block text-end lh-sm">
-                        <span class="small fw-semibold d-block">{{ $officer->name }}</span>
-                        <span class="text-secondary small">{{ $officer->position?->label() }}</span>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button class="btn btn-outline-danger btn-sm" type="submit">Keluar</button>
-                    </form>
-                </div>
-            </div>
-        </nav>
+    <div class="dashboard-workspace kelurahan-dashboard">
+        <x-dashboard.topbar :home-url="route('kelurahan.dashboard')" role-label="Dashboard Kelurahan" :context="$officer->position?->label() ?? 'Petugas Kelurahan'" :links="$navigation" />
 
-        <main class="container py-4">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-4">
-                    <li class="breadcrumb-item active" aria-current="page">Dashboard Kelurahan</li>
-                </ol>
-            </nav>
+        <main id="main-content" class="container dashboard-main">
+            <x-dashboard.hero badge="Layanan aktif" title="Selamat datang, {{ $officer->name }}" description="Pusat pemantauan laporan warga, koordinasi wilayah, dan operasional {{ config('village.name') }}." icon="bi-buildings">
+                <x-slot:meta><small class="d-block mb-1">{{ $officer->position?->label() }}</small><strong class="d-block">{{ config('village.name') }}</strong><span class="small text-white-50">{{ now()->timezone('Asia/Jakarta')->locale('id')->isoFormat('dddd, D MMMM Y') }}</span></x-slot:meta>
+            </x-dashboard.hero>
 
-            <header class="kelurahan-hero rounded-4 p-4 p-lg-5 mb-4 text-white shadow-sm">
-                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-4">
-                    <div>
-                        <span class="badge rounded-pill bg-white bg-opacity-10 border border-white border-opacity-25 px-3 py-2 mb-3">Layanan aktif</span>
-                        <p class="text-white-50 mb-1">{{ config('village.name') }}</p>
-                        <h1 class="h2 fw-bold mb-2">Selamat datang, {{ $officer->name }}</h1>
-                        <p class="mb-0 text-white-75">{{ $officer->position?->label() }} · Pusat pemantauan laporan warga dan operasional wilayah desa.</p>
-                    </div>
-                    <div class="hero-meta rounded-3 p-3">
-                        <span class="small text-white-50 d-block">Hari ini</span>
-                        <strong>{{ now()->timezone('Asia/Jakarta')->locale('id')->isoFormat('dddd, D MMMM Y') }}</strong>
-                    </div>
-                </div>
-            </header>
-            <section class="card border-0 shadow-sm mb-4"><div class="card-body d-flex flex-wrap justify-content-between gap-3"><div><h2 class="h5">Status Modul</h2><div class="d-flex flex-wrap gap-2"><span class="badge text-bg-success">Laporan Cepat · PILOT</span><span class="badge text-bg-warning">Sensus · PROTOTYPE</span><span class="badge text-bg-warning">Posyandu · AGREGAT</span><span class="badge text-bg-warning">Persuratan · PROTOTYPE</span></div></div><div class="text-end"><div class="text-secondary small">Kunjungan Posyandu bulan ini</div><strong class="h4">{{ number_format($posyanduMonthlyVisitCount) }}</strong><div class="small text-secondary">Data individual hanya untuk petugas yang ditugaskan</div></div></div></section>
+            <section class="module-strip" aria-label="Status modul sistem">
+                <div class="module-strip-copy"><span class="module-strip-icon"><i class="bi bi-boxes" aria-hidden="true"></i></span><div><strong class="d-block">Tahap Uji Lokal</strong><small class="text-secondary">Kelurahan memantau agregat dan eskalasi dari wilayah.</small></div></div>
+                <div class="module-pills"><span class="module-pill module-pill-active">Laporan Cepat · PILOT</span><span class="module-pill module-pill-prototype">Sensus · PROTOTYPE</span><span class="module-pill module-pill-prototype">Posyandu · AGREGAT {{ number_format($posyanduMonthlyVisitCount) }}</span><span class="module-pill module-pill-prototype">Persuratan · PROTOTYPE</span></div>
+            </section>
 
-            <section class="mb-4" aria-labelledby="kpi-heading">
-                <div class="mb-3">
-                    <p class="section-eyebrow mb-1">Layanan warga</p>
-                    <h2 id="kpi-heading" class="h4 fw-bold mb-0">Ringkasan Laporan</h2>
-                </div>
+            <section class="dashboard-section" aria-labelledby="kpi-heading">
+                <x-dashboard.section-heading eyebrow="Layanan warga" title="Ringkasan Laporan" description="Cakupan data dan pekerjaan pada tingkat kelurahan." heading-id="kpi-heading" />
                 <div class="row g-3 mb-3">
-                    <div class="col-sm-6 col-xl-3"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.letters.index') }}"><span class="card-body p-4 d-flex flex-column"><span class="text-secondary small mb-1">Administrasi Surat</span><strong class="fs-3 text-body">{{ number_format($letterCount) }}</strong><small class="text-secondary mt-auto pt-2">Pengajuan tercatat</small></span></a></div>
-                    <div class="col-sm-6 col-xl-3"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.citizens.index') }}"><span class="card-body p-4 d-flex flex-column"><span class="text-secondary small mb-1">Warga Aktif</span><strong class="fs-3 text-body">{{ number_format($activeCitizenCount) }}</strong><small class="text-secondary mt-auto pt-2">Lihat data warga</small></span></a></div>
-                    <div class="col-sm-6 col-xl-3"><a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.family-cards.index') }}"><span class="card-body p-4 d-flex flex-column"><span class="text-secondary small mb-1">KK Aktif</span><strong class="fs-3 text-body">{{ number_format($activeFamilyCardCount) }}</strong><small class="text-secondary mt-auto pt-2">Lihat data KK</small></span></a></div>
-                    <div class="col-sm-6 col-xl-3">
-                        <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.reports.index') }}#laporan">
-                            <span class="card-body p-4 d-flex flex-column">
-                                <span class="text-secondary small mb-1">Total Laporan</span>
-                                <strong class="fs-3 text-body">{{ number_format($total) }}</strong>
-                                <small class="text-primary mt-auto pt-2">Lihat seluruh laporan</small>
-                            </span>
-                        </a>
-                    </div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="Total Laporan" :value="number_format($total)" helper="Seluruh wilayah" icon="bi-inbox" tone="primary" :href="route('kelurahan.reports.index').'#laporan'" /></div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="Administrasi Surat" :value="number_format($letterCount)" helper="Pengajuan tercatat" icon="bi-envelope-check" tone="warning" :href="route('kelurahan.letters.index')" /></div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="Warga Aktif" :value="number_format($activeCitizenCount)" helper="Data warga" icon="bi-people" tone="success" :href="route('kelurahan.citizens.index')" /></div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="KK Aktif" :value="number_format($activeFamilyCardCount)" helper="Data keluarga" icon="bi-card-heading" tone="info" :href="route('kelurahan.family-cards.index')" /></div>
                 </div>
                 <div class="row g-3">
                     @foreach (\App\Enums\ReportStatus::cases() as $status)
                         <div class="col-6 col-md-3">
-                            <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.reports.index', ['status' => $status->value]) }}#laporan">
+                            <a class="card dashboard-panel-modern h-100 text-decoration-none" href="{{ route('kelurahan.reports.index', ['status' => $status->value]) }}#laporan">
                                 <span class="card-body p-3 d-flex flex-column">
                                     <span class="text-secondary small mb-1">{{ $status->label() }}</span>
                                     <strong class="fs-4 text-body">{{ number_format($totalsByStatus[$status->value]) }}</strong>
@@ -83,27 +53,18 @@
                 </div>
             </section>
 
-            <section class="mb-4" aria-labelledby="actions-heading">
-                <div class="mb-3">
-                    <p class="section-eyebrow mb-1">Operasional</p>
-                    <h2 id="actions-heading" class="h4 fw-bold mb-0">Aksi Cepat</h2>
-                </div>
+            <section class="dashboard-section" aria-labelledby="actions-heading">
+                <x-dashboard.section-heading eyebrow="Operasional" title="Aksi Cepat" description="Menu disesuaikan dengan kewenangan petugas yang sedang masuk." heading-id="actions-heading" />
                 <div class="row g-3">
                     <div class="col-sm-6 col-xl-4">
-                        <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('admin.reports.index') }}">
-                            <span class="card-body p-4"><strong class="text-body d-block mb-1">Kelola Laporan</strong><small class="text-secondary">{{ $officer->isVillageHead() ? 'Pantau seluruh laporan warga' : 'Cari dan tindak lanjuti laporan warga' }}</small></span>
-                        </a>
+                        <x-dashboard.action-card :href="route('admin.reports.index')" title="Kelola Laporan" :description="$officer->isVillageHead() ? 'Pantau seluruh laporan warga' : 'Cari dan tindak lanjuti laporan warga'" icon="bi-inbox" />
                     </div>
                     <div class="col-sm-6 col-xl-4">
-                        <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('kelurahan.rws.index') }}">
-                            <span class="card-body p-4"><strong class="text-body d-block mb-1">{{ $officer->isVillageHead() ? 'Lihat RW' : 'Kelola RW' }}</strong><small class="text-secondary">{{ $officer->isVillageHead() ? 'Lihat struktur wilayah RW' : 'Atur data dan status wilayah RW' }}</small></span>
-                        </a>
+                        <x-dashboard.action-card :href="route('kelurahan.rws.index')" :title="$officer->isVillageHead() ? 'Lihat RW' : 'Kelola RW'" :description="$officer->isVillageHead() ? 'Lihat struktur wilayah RW' : 'Atur data dan status wilayah RW'" icon="bi-diagram-3" tone="success" />
                     </div>
                     @if ($officer->isSystemAdmin() || $officer->isVillageSecretary())
                         <div class="col-sm-6 col-xl-4">
-                            <a class="card navigation-card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('admin.users.index') }}">
-                                <span class="card-body p-4"><strong class="text-body d-block mb-1">Kelola Akun Petugas</strong><small class="text-secondary">Atur akun dan penempatan petugas</small></span>
-                            </a>
+                            <x-dashboard.action-card :href="route('admin.users.index')" title="Kelola Akun Petugas" description="Atur akun dan penempatan petugas" icon="bi-people" tone="warning" />
                         </div>
                     @endif
                 </div>
