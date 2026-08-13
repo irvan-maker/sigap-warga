@@ -49,7 +49,10 @@ Reference commands:
 git status
 git rev-parse HEAD
 composer validate --no-check-publish
+powershell -ExecutionPolicy Bypass -File scripts/build-release.ps1
 ```
+
+Script artefak menghasilkan ZIP prabuild dan checksum SHA-256 di `storage/app/releases/`. Artefak tidak memuat `.env`, data lokal, log, backup, `node_modules`, atau `public/hot`; secret tetap diprovision langsung oleh hosting.
 
 **EXPECTED RESULT**
 
