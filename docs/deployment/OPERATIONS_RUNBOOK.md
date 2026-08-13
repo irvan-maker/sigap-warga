@@ -204,6 +204,24 @@ Semua cache command berhasil dan membaca production configuration.
 
 Stop bila serialization/cache gagal, route tidak dapat dicache, config salah, atau compiled views tidak writable.
 
+## 6A. Queue Worker dan Scheduler
+
+**ACTION**
+
+- Jalankan queue worker persisten melalui supervisor/service manager hosting.
+- Jalankan scheduler setiap menit melalui cron atau fasilitas scheduler hosting.
+
+Reference commands:
+
+```text
+php artisan queue:work --queue=whatsapp,default --tries=3 --backoff=5 --timeout=60
+* * * * * php /path/to/artisan schedule:run
+```
+
+**STOP CONDITION**
+
+Jangan aktifkan callback Meta jika worker tidak persisten, scheduler tidak berjalan, atau `failed_jobs` belum dapat dipantau.
+
 ## 7. Health Check
 
 **INPUT**
