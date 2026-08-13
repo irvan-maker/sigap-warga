@@ -13,7 +13,7 @@ README ini adalah **single source of truth** untuk checkpoint engineering, batas
 | Item | Bukti aktual |
 |---|---|
 | Branch | `feature/whatsapp-integration` |
-| Base commit | `f4daf2e` — `feat: add trusted QR service handoff`; perubahan implementasi pilot berikutnya masih berada di worktree |
+| Release candidate | `13c1056` — hardening pilot, runtime queue, dokumentasi, dan builder artefak sudah berada di branch remote; worktree bersih |
 | Fase | **Pilot 1 RW / 3 RT**: laporan cepat menjadi modul utama; sensus, Posyandu, dan persuratan ditandai prototype |
 | Verified runtime | PHP `8.3.30`; Laravel Framework `13.23.0`; PHPUnit `12.5.33` (verifikasi manual maintainer) |
 | Manifest contract | PHP `^8.3`, Laravel `^13.8`, PHPUnit `^12.5.12`; Vite `^8.0.0` |

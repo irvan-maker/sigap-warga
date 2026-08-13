@@ -58,6 +58,8 @@ Artefak lokal:
 - akun dan password sementara: `storage/app/private/pilot/rw-pilot-01/AKUN-PILOT.txt`;
 - halaman cetak tiga QR: `storage/app/private/pilot/rw-pilot-01/CETAK-QR.html`;
 - backup sebelum migration: `storage/app/backups/sigap_warga-pre-pilot-20260813-115520.sql`.
+- backup sebelum hardening: `storage/app/backups/sigap-warga-pre-stabilization-20260813-154839.sql`.
+- release candidate remote: branch `feature/whatsapp-integration`, application checkpoint `5d00d54`, builder checkpoint `13c1056`.
 
 Untuk uji pada komputer yang sama, jalankan `start-sigap-warga.bat`. Untuk scan memakai ponsel, jalankan `start-sigap-warga-pilot-lan.bat`. Peluncur pilot LAN akan:
 

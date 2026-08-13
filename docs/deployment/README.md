@@ -16,13 +16,13 @@ Gunakan bersama:
 | Item | Checkpoint |
 |---|---|
 | Development branch | `feature/whatsapp-integration` |
-| Documentation checkpoint | `599b284` — `docs: add deployment and production readiness pack` |
-| Application checkpoint | `6399531` — `feat: add WhatsApp inbound webhook adapter` |
+| Release candidate branch | `feature/whatsapp-integration` pada checkpoint `13c1056` |
+| Application hardening checkpoint | `5d00d54` — `feat: stabilize SIGAP WARGA public pilot` |
 | Public target | `https://sigap.cloud.uym.ac.id` |
 | Current full regression baseline | `513 tests`, `2,333 assertions`, **PASS** setelah sprint hardening; wajib dijalankan ulang dari commit release candidate |
 | Release requirement | Baseline current dapat dipakai untuk checkpoint dokumentasi ini; jika deployment commit berubah, full regression harus PASS kembali terhadap commit yang benar-benar akan dideploy |
 
-Jangan mencatat commit deployment baru sebelum commit tersebut ada dan dipilih sebagai release candidate.
+Artefak prabuild yang sudah diverifikasi berasal dari `13c1056`; deployment Git dapat memakai checkpoint branch yang lebih baru hanya bila perubahan setelahnya direview dan regression tetap lulus.
 
 ## Architecture
 
