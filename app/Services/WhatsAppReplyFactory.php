@@ -62,7 +62,7 @@ final class WhatsAppReplyFactory
             ServiceEligibilityReason::TERRITORY_REQUIRED,
             ServiceEligibilityReason::IDENTITY_AND_TERRITORY_REQUIRED,
         ], true)) {
-            return 'Konteks wilayah belum dapat diverifikasi. Silakan pindai ulang QR resmi di wilayah Anda.';
+            return 'Baik, laporan Anda sudah kami terima. Untuk meneruskan laporan ke petugas yang tepat, mohon kirim RT dan RW lokasi kejadian.';
         }
 
         if ($result->outcome === TrustedInboundProcessingOutcome::NON_REPORT_SERVICE) {

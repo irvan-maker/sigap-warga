@@ -71,6 +71,7 @@ final class ProcessWhatsAppInboundEvent implements ShouldBeEncrypted, ShouldQueu
         $event = $this->event();
 
         try {
+            if ($conversations->hasInvalidPendingLocation($event)) {                 if (config("services.whatsapp.outbound_enabled") === true) {                     SendWhatsAppText::dispatch(                         $event->senderPhone,                         "RT dan RW tersebut belum ditemukan dalam wilayah layanan SIGAP WARGA. Mohon periksa kembali RT dan RW lokasi kejadian.",                     );                 }                  return;             }              $event = $conversations->resumePendingLocation($event);
             $event = $conversations->applyActiveContext($event);
             $result = $processor->process($event);
             $conversations->remember($event, $result);
