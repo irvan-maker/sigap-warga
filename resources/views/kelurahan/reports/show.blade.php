@@ -9,7 +9,7 @@
         @error('workflow')<div class="alert alert-danger">{{ $message }}</div>@enderror
         <div class="d-flex justify-content-between gap-3 mb-4"><div><p class="text-secondary mb-1">Nomor tiket</p><h1 class="h2">{{ $report->ticket_number }}</h1></div><span class="badge text-bg-primary align-self-start fs-6">{{ $report->status->value }}</span></div>
         <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><dl class="row mb-0">
-            <dt class="col-sm-4">Warga</dt><dd class="col-sm-8">{{ $report->citizen->name }}</dd>
+            <dt class="col-sm-4">Warga</dt><dd class="col-sm-8">{{ $report->citizen?->name ?? 'Pelapor umum' }}</dd>
             <dt class="col-sm-4">RW</dt><dd class="col-sm-8">{{ $report->rt->rw->code }} — {{ $report->rt->rw->name }}</dd>
             <dt class="col-sm-4">RT</dt><dd class="col-sm-8">{{ $report->rt->code }} — {{ $report->rt->name }}</dd>
             <dt class="col-sm-4">Judul</dt><dd class="col-sm-8">{{ $report->title }}</dd>

@@ -22,7 +22,7 @@ final class CreateReportRecordService
     ) {}
 
     public function create(
-        Citizen $citizen,
+        ?Citizen $citizen,
         Rt $serviceTerritory,
         string $title,
         string $description,
@@ -40,7 +40,7 @@ final class CreateReportRecordService
 
         return Report::query()->create([
             'ticket_number' => $this->ticketNumberGenerator->generate(),
-            'citizen_id' => $citizen->getKey(),
+            'citizen_id' => $citizen?->getKey(),
             'rt_id' => $serviceTerritory->getKey(),
             'title' => $title,
             'description' => $description,

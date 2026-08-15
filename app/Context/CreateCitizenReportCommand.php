@@ -17,7 +17,7 @@ use DateTimeImmutable;
 final readonly class CreateCitizenReportCommand
 {
     public function __construct(
-        public Citizen $requester,
+        public ?Citizen $requester,
         public ServiceRoutingDecision $routingDecision,
         public string $title,
         public string $description,

@@ -162,7 +162,7 @@
                             <thead><tr><th>Tiket</th><th>RW</th><th>RT</th><th>Warga</th><th>Judul</th><th>Status</th><th><span class="visually-hidden">Aksi</span></th></tr></thead>
                             <tbody>
                                 @forelse ($reports as $report)
-                                    <tr class="interactive-row" tabindex="0" data-row-url="{{ route($reportDetailRoute, $report) }}"><td>{{ $report->ticket_number }}</td><td>{{ $report->rt->rw->code }}</td><td>{{ $report->rt->code }}</td><td>{{ $report->citizen->name }}</td><td>{{ $report->title }}</td><td><span class="badge text-bg-{{ $report->status->bootstrapColor() }}">{{ $report->status->label() }}</span></td><td><a class="btn btn-outline-primary btn-sm" href="{{ route($reportDetailRoute, $report) }}" target="_blank" rel="noopener">Detail</a></td></tr>
+                                    <tr class="interactive-row" tabindex="0" data-row-url="{{ route($reportDetailRoute, $report) }}"><td>{{ $report->ticket_number }}</td><td>{{ $report->rt->rw->code }}</td><td>{{ $report->rt->code }}</td><td>{{ $report->citizen?->name ?? 'Pelapor umum' }}</td><td>{{ $report->title }}</td><td><span class="badge text-bg-{{ $report->status->bootstrapColor() }}">{{ $report->status->label() }}</span></td><td><a class="btn btn-outline-primary btn-sm" href="{{ route($reportDetailRoute, $report) }}" target="_blank" rel="noopener">Detail</a></td></tr>
                                 @empty
                                     <tr><td colspan="7" class="text-center text-secondary py-5">Belum ada laporan yang sesuai dengan filter.</td></tr>
                                 @endforelse

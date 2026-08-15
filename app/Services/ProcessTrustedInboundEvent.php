@@ -131,10 +131,6 @@ final class ProcessTrustedInboundEvent
 
             $citizen = $understanding->serviceUnderstanding->contextResult->context->citizen;
 
-            if ($citizen === null) {
-                throw new DomainException('A routed report requires an existing citizen.');
-            }
-
             $report = $this->createCitizenReportService->create(
                 new CreateCitizenReportCommand(
                     requester: $citizen,

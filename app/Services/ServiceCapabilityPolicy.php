@@ -34,7 +34,7 @@ final class ServiceCapabilityPolicy
             ServiceRouteTarget::REPORT_SERVICE => new ServiceCapability(
                 routeTarget: $target,
                 actionType: ServiceActionType::CREATE_CASE,
-                identityRequirement: CapabilityRequirement::REQUIRED,
+                identityRequirement: CapabilityRequirement::OPTIONAL,
                 serviceTerritoryRequirement: CapabilityRequirement::REQUIRED,
                 humanOversight: HumanOversightRequirement::VERIFICATION,
             ),

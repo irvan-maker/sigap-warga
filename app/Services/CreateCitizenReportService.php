@@ -100,8 +100,8 @@ final class CreateCitizenReportService
             throw new DomainException('Only routable NORMAL or HIGH reports may use report execution.');
         }
 
-        if (! $command->requester->exists || ! $command->requester->is_active) {
-            throw new DomainException('An existing active citizen is required to create a report.');
+        if ($command->requester !== null && (! $command->requester->exists || ! $command->requester->is_active)) {
+            throw new DomainException('An inactive or invalid citizen cannot create a report.');
         }
 
         $territory = $routing->serviceTerritoryDecision;
