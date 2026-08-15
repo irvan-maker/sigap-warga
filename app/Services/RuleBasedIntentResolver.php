@@ -99,6 +99,14 @@ class RuleBasedIntentResolver
             }
         }
 
+        if (
+            in_array(IntentRule::REPORT_ROAD_DAMAGE, array_column($rules, 0), true)
+            && preg_match('/\bjalan(?:\s+[\p{L}\p{N}]+){0,8}\s+(?:rusak|berlubang|retak|ambles)\b/u', $message, $matches) === 1
+            && preg_match('/\b(?:tidak|bukan|nggak|gak|ga|enggak|belum)\s+(?:rusak|berlubang|retak|ambles)\b/u', $message) !== 1
+        ) {
+            return [IntentRule::REPORT_ROAD_DAMAGE, trim($matches[0])];
+        }
+
         return null;
     }
 

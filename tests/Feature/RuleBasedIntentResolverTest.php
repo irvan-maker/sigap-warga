@@ -58,6 +58,7 @@ class RuleBasedIntentResolverTest extends TestCase
     public static function normalReportMessages(): iterable
     {
         yield 'damaged road' => ['jalan rusak'];
+        yield 'damaged road with location context' => ['jalan di depan Pos RT 03 rusak dan berlubang'];
         yield 'street light' => ['lampu jalan mati'];
         yield 'garbage' => ['sampah menumpuk'];
     }
