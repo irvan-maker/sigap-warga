@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Detail Laporan Kelurahan - SIGAP WARGA')
+@section('title', 'Detail Laporan Desa - SIGAP WARGA')
 
 @section('content')
     <main class="container py-5" style="max-width: 900px;">
@@ -23,7 +23,7 @@
             <form method="POST" action="{{ route('kelurahan.reports.acknowledge', $report) }}" class="card border-0 shadow-sm mb-4"><div class="card-body p-4">
                 @csrf
                 <h2 class="h4">Terima Disposisi</h2>
-                <p class="text-secondary">Konfirmasi bahwa kelurahan telah menerima tanggung jawab laporan.</p>
+                <p class="text-secondary">Konfirmasi bahwa desa telah menerima tanggung jawab laporan.</p>
                 <button class="btn btn-success" type="submit">Terima dan Mulai Proses</button>
             </div></form>
         @endif
