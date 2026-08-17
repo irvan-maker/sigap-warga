@@ -148,6 +148,11 @@ Route::middleware(['auth', 'role.rw'])
         Route::get('/rts/{rt}/edit', [RwRtController::class, 'edit'])->name('rts.edit');
         Route::put('/rts/{rt}', [RwRtController::class, 'update'])->name('rts.update');
         Route::patch('/rts/{rt}/status', [RwRtController::class, 'toggleActive'])->name('rts.status.toggle');
+        Route::get('/rts/{rt}/officers', [\App\Http\Controllers\RwRtOfficerController::class, 'index'])->name('rts.officers.index');
+        Route::post('/rts/{rt}/officers', [\App\Http\Controllers\RwRtOfficerController::class, 'store'])->name('rts.officers.store');
+        Route::put('/rts/{rt}/officers/{officer}', [\App\Http\Controllers\RwRtOfficerController::class, 'update'])->name('rts.officers.update');
+        Route::patch('/rts/{rt}/officers/{officer}/status', [\App\Http\Controllers\RwRtOfficerController::class, 'toggleActive'])->name('rts.officers.status.toggle');
+        Route::patch('/rts/{rt}/officers/{officer}/password', [\App\Http\Controllers\RwRtOfficerController::class, 'resetPassword'])->name('rts.officers.password.reset');
         Route::get('/reports/{report}', [RwReportController::class, 'show'])->name('reports.show');
         Route::post('/reports/{report}/acknowledge', [RwReportController::class, 'acknowledge'])->name('reports.acknowledge');
         Route::post('/reports/{report}/forward', [RwReportController::class, 'forward'])->name('reports.forward');
