@@ -23,12 +23,18 @@ class SaveManagedRtRequest extends FormRequest
         return [
             'code' => ['required', 'string', 'max:255', Rule::unique('rts', 'code')->where('rw_id', $this->user()->rw_id)->ignore($rt instanceof Rt ? $rt : null)],
             'name' => ['required', 'string', 'max:255'],
-            'whatsapp_number' => ['nullable', 'string', 'max:30'],
+            'whatsapp_number' => ['nullable', 'string', 'max:30', 'required_if:report_notification_enabled,1'],
+            'report_notification_enabled' => ['required', 'boolean'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        $this->merge(['code' => strtoupper(trim((string) $this->input('code'))), 'name' => trim((string) $this->input('name')), 'whatsapp_number' => trim((string) $this->input('whatsapp_number')) ?: null]);
+        $this->merge([
+            'code' => strtoupper(trim((string) $this->input('code'))),
+            'name' => trim((string) $this->input('name')),
+            'whatsapp_number' => trim((string) $this->input('whatsapp_number')) ?: null,
+            'report_notification_enabled' => $this->boolean('report_notification_enabled'),
+        ]);
     }
 }

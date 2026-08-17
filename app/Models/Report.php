@@ -6,6 +6,7 @@ use App\Enums\ReportCategory;
 use App\Enums\ReportHandlingLevel;
 use App\Enums\ReportPriority;
 use App\Enums\ReportStatus;
+use App\Jobs\SendRtNewReportNotification;
 use Database\Factories\ReportFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
@@ -73,6 +75,8 @@ class Report extends Model
                 'new_status' => ReportStatus::NEW,
                 'public_note' => 'Laporan diterima dan menunggu pemeriksaan petugas.',
             ]);
+
+            DB::afterCommit(fn () => SendRtNewReportNotification::dispatch($report->getKey()));
         });
 
         static::deleting(function (Report $report): void {
