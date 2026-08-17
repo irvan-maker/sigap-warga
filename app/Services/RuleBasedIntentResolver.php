@@ -43,10 +43,38 @@ class RuleBasedIntentResolver
             [CitizenIntent::REPORT, UrgencyLevel::NORMAL, $this->normalReportRules()],
         ];
 
+        $hasExplicitReportIntent = $this->hasExplicitReportIntent($message);
+
         foreach ($families as [$intent, $urgency, $rules]) {
+            if ($intent === CitizenIntent::REPORT
+                && $urgency === UrgencyLevel::NORMAL
+                && ! $hasExplicitReportIntent) {
+                continue;
+            }
+
             if ($match = $this->findMatch($message, $rules)) {
                 return $this->result($intent, $urgency, $incidentRt, ...$match);
             }
+        }
+
+        if ($this->looksLikeHighPriorityReport($message)) {
+            return $this->result(
+                CitizenIntent::REPORT,
+                UrgencyLevel::HIGH,
+                $incidentRt,
+                IntentRule::UNKNOWN_NO_MATCH,
+                null,
+            );
+        }
+
+        if ($hasExplicitReportIntent) {
+            return $this->result(
+                CitizenIntent::REPORT,
+                UrgencyLevel::NORMAL,
+                $incidentRt,
+                IntentRule::UNKNOWN_NO_MATCH,
+                null,
+            );
         }
 
         return $this->result(
@@ -107,7 +135,37 @@ class RuleBasedIntentResolver
             return [IntentRule::REPORT_ROAD_DAMAGE, trim($matches[0])];
         }
 
+        if (
+            in_array(IntentRule::REPORT_STREET_LIGHT, array_column($rules, 0), true)
+            && preg_match('/\b(?:lampu|pju|penerangan)(?:\s+[\p{L}\p{N}]+){0,12}\s+(?:mati|padam|rusak|tidak menyala|gak menyala|ga menyala|nggak menyala|enggak menyala)\b/u', $message, $matches) === 1
+        ) {
+            return [IntentRule::REPORT_STREET_LIGHT, trim($matches[0])];
+        }
+
         return null;
+    }
+
+    private function looksLikeHighPriorityReport(string $message): bool
+    {
+        if (preg_match(
+            '/\b(?:pemerkosaan|perkosaan|pelecehan seksual|kekerasan seksual|pencabulan|kdrt|penganiayaan|penyerangan|penusukan|ditusuk|ditikam|pembunuhan|perampokan|begal|pencurian|orang hilang)\b/u',
+            $message,
+        ) === 1) {
+            return true;
+        }
+
+        return preg_match(
+            '/\b(?:jembatan(?:\s+[\p{L}\p{N}]+){0,4}\s+(?:putus|ambruk|roboh)|(?:akses|jalan)(?:\s+[\p{L}\p{N}]+){0,4}\s+(?:tertutup|terputus|tidak bisa dilalui|gak bisa dilalui|ga bisa dilalui|nggak bisa dilalui|enggak bisa dilalui)|longsor(?:\s+[\p{L}\p{N}]+){0,5}\s+(?:menutup|menutupi)(?:\s+(?:jalan|akses))?|pohon(?:\s+[\p{L}\p{N}]+){0,4}\s+tumbang(?:\s+[\p{L}\p{N}]+){0,4}\s+(?:menutup|menutupi)(?:\s+(?:jalan|akses))?|tiang\s+listrik(?:\s+[\p{L}\p{N}]+){0,4}\s+(?:hampir\s+roboh|roboh))\b/u',
+            $message,
+        ) === 1;
+    }
+
+    private function hasExplicitReportIntent(string $message): bool
+    {
+        return preg_match(
+            '/\b(?:lapor|laporan|melapor|melaporkan)\b/u',
+            $message,
+        ) === 1;
     }
 
     private function isNegatedNearPhrase(string $message, string $phrase): bool

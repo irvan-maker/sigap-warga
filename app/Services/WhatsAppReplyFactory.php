@@ -112,8 +112,9 @@ final class WhatsAppReplyFactory
         }
 
         if ($context?->citizen === null) {
-            return $reply.'Nomor WhatsApp ini belum terhubung dengan data warga aktif. '
-                .'Silakan hubungi petugas RT untuk verifikasi sebelum membuat laporan.';
+            return $reply."Nomor WhatsApp ini belum terhubung dengan data warga aktif, tetapi Anda tetap dapat membuat laporan sebagai tamu.\n"
+                ."Silakan tuliskan laporan dan lokasi kejadiannya.\n"
+                .'Apa yang bisa saya bantu?';
         }
 
         if ($context->hasTerritoryConflict()) {
