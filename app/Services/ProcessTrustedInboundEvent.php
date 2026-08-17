@@ -35,6 +35,7 @@ final class ProcessTrustedInboundEvent
 
     public function __construct(
         private readonly ReceiveInboundRequestService $receiveInboundRequestService,
+        private readonly ReporterPhoneHasher $reporterPhoneHasher,
         private readonly PhoneNumberNormalizer $phoneNumberNormalizer,
         private readonly CitizenRequestInterpreter $citizenRequestInterpreter,
         private readonly ServiceEligibilityPolicy $serviceEligibilityPolicy,
@@ -68,6 +69,10 @@ final class ProcessTrustedInboundEvent
         $routing = null;
 
         try {
+            $inboundRequest->forceFill([
+                'sender_phone_hash' => $this->reporterPhoneHasher->hash($event->senderPhone),
+            ])->save();
+
             if ($event->entryRt === null && $event->handoffToken !== null) {
                 $entryRt = $this->serviceHandoffConsumer->consume(
                     $event->handoffToken,

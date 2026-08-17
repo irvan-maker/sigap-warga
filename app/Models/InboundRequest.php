@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'source',
+    'sender_phone_hash',
     'external_event_id',
     'correlation_id',
     'status',
@@ -27,6 +28,7 @@ class InboundRequest extends Model
     /** @var list<string> */
     protected $hidden = [
         'external_event_id',
+        'sender_phone_hash',
         'correlation_id',
         'last_error_code',
     ];
