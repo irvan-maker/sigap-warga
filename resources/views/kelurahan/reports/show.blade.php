@@ -30,8 +30,6 @@
 
         @include('reports.partials.status-form', ['statusRoute' => route('kelurahan.reports.status.update', $report)])
 
-        <div class="card border-0 shadow-sm"><div class="card-body p-4"><h2 class="h4">Riwayat Status</h2><ol class="list-group list-group-numbered">
-            @foreach ($histories as $history)<li class="list-group-item"><strong>{{ $history->new_status->value }}</strong><span class="text-secondary small ms-2">{{ $history->created_at->format('d-m-Y H:i') }}</span>@if ($history->note)<p class="mb-0 mt-2">{{ $history->note }}</p>@endif</li>@endforeach
-        </ol></div></div>
+        @include('reports.partials.status-history')
     </main>
 @endsection

@@ -21,8 +21,9 @@ final class ReportWorkflowService
         ReportHandlingLevel $targetLevel,
         string $reason,
         ?Rt $targetRt = null,
+        ?string $publicNote = null,
     ): ReportDisposition {
-        return DB::transaction(function () use ($report, $actor, $targetLevel, $reason, $targetRt): ReportDisposition {
+        return DB::transaction(function () use ($report, $actor, $targetLevel, $reason, $targetRt, $publicNote): ReportDisposition {
             $locked = Report::query()->lockForUpdate()->findOrFail($report->getKey());
             $this->assertCanManage($locked, $actor);
 
@@ -64,7 +65,9 @@ final class ReportWorkflowService
                     $targetLevel->label(),
                     trim($reason),
                 ),
-                'public_note' => 'Laporan diteruskan kepada tingkat penanganan berikutnya.',
+                'public_note' => filled($publicNote)
+                    ? trim((string) $publicNote)
+                    : 'Laporan telah diverifikasi dan diteruskan kepada tingkat penanganan berikutnya.',
             ]);
 
             return $disposition;

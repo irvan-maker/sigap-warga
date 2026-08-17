@@ -48,6 +48,17 @@ class ReportStatusService
                 ->findOrFail($report->getKey());
 
             $oldStatus = $lockedReport->status;
+            $publicNote = is_string($publicNote) ? trim($publicNote) : null;
+
+            if (in_array($newStatus, [ReportStatus::COMPLETED, ReportStatus::REJECTED], true)
+                && blank($publicNote)) {
+                throw new DomainException('Pembaruan untuk warga wajib diisi saat laporan diselesaikan atau tidak dapat ditindaklanjuti.');
+            }
+
+            $publicNote ??= match ($newStatus) {
+                ReportStatus::PROCESSING => 'Laporan telah diverifikasi petugas dan sedang ditindaklanjuti.',
+                default => null,
+            };
 
             if (! in_array($newStatus, $this->allowedTransitions($oldStatus), true)) {
                 throw new DomainException(

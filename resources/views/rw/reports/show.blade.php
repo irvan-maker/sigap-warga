@@ -41,9 +41,10 @@
                 <h2 class="h4">Teruskan Laporan</h2>
                 <form method="POST" action="{{ route('rw.reports.forward', $report) }}">
                     @csrf
-                    <div class="mb-3"><label for="target_level" class="form-label">Tujuan</label><select id="target_level" name="target_level" class="form-select" required><option value="KELURAHAN">Kelurahan</option><option value="RT">RT lain dalam RW ini</option></select></div>
+                    <div class="mb-3"><label for="target_level" class="form-label">Tujuan</label><select id="target_level" name="target_level" class="form-select" required><option value="KELURAHAN">Desa</option><option value="RT">RT lain dalam RW ini</option></select></div>
                     <div class="mb-3"><label for="target_rt_id" class="form-label">RT tujuan (wajib jika memilih RT)</label><select id="target_rt_id" name="target_rt_id" class="form-select"><option value="">Pilih RT</option>@foreach($targetRts as $rt)<option value="{{ $rt->id }}">{{ $rt->code }} — {{ $rt->name }}</option>@endforeach</select></div>
-                    <div class="mb-3"><label for="reason" class="form-label">Alasan disposisi</label><textarea id="reason" name="reason" rows="3" class="form-control @error('reason') is-invalid @enderror" required>{{ old('reason') }}</textarea>@error('reason')<div class="invalid-feedback">{{ $message }}</div>@enderror</div>
+                    <div class="mb-3"><label for="reason" class="form-label">Alasan disposisi internal</label><textarea id="reason" name="reason" rows="3" class="form-control @error('reason') is-invalid @enderror" required>{{ old('reason') }}</textarea><div class="form-text">Hanya dilihat petugas untuk kebutuhan koordinasi.</div>@error('reason')<div class="invalid-feedback">{{ $message }}</div>@enderror</div>
+                    <div class="mb-3"><label for="forward_public_note" class="form-label">Pembaruan untuk warga</label><textarea id="forward_public_note" name="public_note" rows="3" class="form-control @error('public_note') is-invalid @enderror" required>{{ old('public_note', 'Laporan telah diverifikasi dan diteruskan ke tingkat penanganan berikutnya untuk tindak lanjut.') }}</textarea><div class="form-text">Akan tampil pada halaman lacak laporan. Jangan cantumkan informasi internal atau sensitif.</div>@error('public_note')<div class="invalid-feedback">{{ $message }}</div>@enderror</div>
                     <button class="btn btn-outline-primary" type="submit">Teruskan</button>
                 </form>
             </div></section>
@@ -51,17 +52,6 @@
 
         @include('reports.partials.status-form', ['statusRoute' => route('rw.reports.status.update', $report)])
 
-        <div class="card border-0 shadow-sm"><div class="card-body p-4">
-            <h2 class="h4">Riwayat Status</h2>
-            <ol class="list-group list-group-numbered">
-                @foreach ($histories as $history)
-                    <li class="list-group-item">
-                        <strong>{{ $history->new_status->value }}</strong>
-                        <span class="text-secondary small ms-2">{{ $history->created_at->format('d-m-Y H:i') }}</span>
-                        @if ($history->note)<p class="mb-0 mt-2">{{ $history->note }}</p>@endif
-                    </li>
-                @endforeach
-            </ol>
-        </div></div>
+        @include('reports.partials.status-history')
     </main>
 @endsection

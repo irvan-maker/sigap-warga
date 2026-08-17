@@ -136,12 +136,18 @@ class RtReportController extends Controller
         Report $report,
         ReportWorkflowService $workflow,
     ): RedirectResponse {
+        $publicUpdate = $request->validate([
+            'public_note' => ['required', 'string', 'max:2000'],
+        ])['public_note'];
+
         try {
             $workflow->forward(
                 $report,
                 $request->user(),
                 ReportHandlingLevel::from($request->validated('target_level')),
                 $request->validated('reason'),
+                null,
+                $publicUpdate,
             );
         } catch (DomainException $exception) {
             throw ValidationException::withMessages(['reason' => $exception->getMessage()]);

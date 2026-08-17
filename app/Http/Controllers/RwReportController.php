@@ -161,6 +161,9 @@ class RwReportController extends Controller
         ReportWorkflowService $workflow,
     ): RedirectResponse {
         $validated = $request->validated();
+        $publicUpdate = $request->validate([
+            'public_note' => ['required', 'string', 'max:2000'],
+        ])['public_note'];
         $targetRt = isset($validated['target_rt_id'])
             ? Rt::query()->find($validated['target_rt_id'])
             : null;
@@ -171,6 +174,7 @@ class RwReportController extends Controller
             ReportHandlingLevel::from($validated['target_level']),
             $validated['reason'],
             $targetRt,
+            $publicUpdate,
         ));
 
         return redirect()->route('rw.reports.show', $report)
