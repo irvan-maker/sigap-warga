@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard Kelurahan - SIGAP WARGA')
+@section('title', 'Dashboard Desa - SIGAP WARGA')
 
 @section('content')
     @php
@@ -18,7 +18,7 @@
     @endphp
 
     <div class="dashboard-workspace kelurahan-dashboard">
-        <x-dashboard.topbar :home-url="route('kelurahan.dashboard')" role-label="Dashboard Kelurahan" :context="$officer->position?->label() ?? 'Petugas Kelurahan'" :links="$navigation" />
+        <x-dashboard.topbar :home-url="route('kelurahan.dashboard')" role-label="Dashboard Desa" :context="$officer->position?->label() ?? 'Petugas Desa'" :links="$navigation" />
 
         <main id="main-content" class="container dashboard-main">
             <x-dashboard.hero badge="Layanan aktif" title="Selamat datang, {{ $officer->name }}" description="Pusat pemantauan laporan warga, koordinasi wilayah, dan operasional {{ config('village.name') }}." icon="bi-buildings">
@@ -26,12 +26,12 @@
             </x-dashboard.hero>
 
             <section class="module-strip" aria-label="Status modul sistem">
-                <div class="module-strip-copy"><span class="module-strip-icon"><i class="bi bi-boxes" aria-hidden="true"></i></span><div><strong class="d-block">Tahap Uji Lokal</strong><small class="text-secondary">Kelurahan memantau agregat dan eskalasi dari wilayah.</small></div></div>
+                <div class="module-strip-copy"><span class="module-strip-icon"><i class="bi bi-boxes" aria-hidden="true"></i></span><div><strong class="d-block">Tahap Uji Lokal</strong><small class="text-secondary">Desa memantau agregat dan eskalasi dari wilayah.</small></div></div>
                 <div class="module-pills"><span class="module-pill module-pill-active">Laporan Cepat · PILOT</span><span class="module-pill module-pill-prototype">Sensus · PROTOTYPE</span><span class="module-pill module-pill-prototype">Posyandu · AGREGAT {{ number_format($posyanduMonthlyVisitCount) }}</span><span class="module-pill module-pill-prototype">Persuratan · PROTOTYPE</span></div>
             </section>
 
             <section class="dashboard-section" aria-labelledby="kpi-heading">
-                <x-dashboard.section-heading eyebrow="Layanan warga" title="Ringkasan Laporan" description="Cakupan data dan pekerjaan pada tingkat kelurahan." heading-id="kpi-heading" />
+                <x-dashboard.section-heading eyebrow="Layanan warga" title="Ringkasan Laporan" description="Cakupan data dan pekerjaan pada tingkat desa." heading-id="kpi-heading" />
                 <div class="row g-3 mb-3">
                     <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="Total Laporan" :value="number_format($total)" helper="Seluruh wilayah" icon="bi-inbox" tone="primary" :href="route('kelurahan.reports.index').'#laporan'" /></div>
                     <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="Administrasi Surat" :value="number_format($letterCount)" helper="Pengajuan tercatat" icon="bi-envelope-check" tone="warning" :href="route('kelurahan.letters.index')" /></div>
