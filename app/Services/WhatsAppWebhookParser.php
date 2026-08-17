@@ -6,6 +6,7 @@ use App\Context\TrustedInboundEvent;
 use App\Context\WhatsAppInboundAdapterResult;
 use App\Enums\InboundSource;
 use DateTimeImmutable;
+use DateTimeZone;
 use DomainException;
 
 /**
@@ -141,7 +142,7 @@ final class WhatsAppWebhookParser
     private function receivedAt(mixed $timestamp): DateTimeImmutable
     {
         if (is_string($timestamp) && ctype_digit($timestamp)) {
-            return new DateTimeImmutable('@'.$timestamp);
+            return (new DateTimeImmutable('@'.$timestamp))->setTimezone(new DateTimeZone((string) config('app.timezone', 'Asia/Jakarta')));
         }
 
         return new DateTimeImmutable;
