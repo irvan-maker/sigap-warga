@@ -3,214 +3,219 @@
 @section('title', 'Dashboard RT - SIGAP WARGA')
 
 @section('content')
-    @php
-        $user = auth()->user();
-        $hasActiveFilters = request()->filled('status') || request()->filled('search');
-        $recentReports = $reports->take(4);
-        $navigation = [
-            ['label' => 'Dashboard', 'url' => route('rt.dashboard'), 'icon' => 'bi-grid-1x2', 'active' => true],
-            ['label' => 'Laporan', 'url' => '#daftar-laporan', 'icon' => 'bi-inbox'],
-            ['label' => 'Warga', 'url' => route('rt.citizens.index'), 'icon' => 'bi-people'],
-            ['label' => 'Kartu Keluarga', 'url' => route('rt.family-cards.index'), 'icon' => 'bi-card-heading'],
-            ['label' => 'Surat', 'url' => route('rt.letters.index'), 'icon' => 'bi-envelope-check'],
-            ['label' => 'Sensus', 'url' => route('rt.household-census.create'), 'icon' => 'bi-clipboard-data'],
-        ];
-    @endphp
+@php
+    $user = auth()->user();
+    $hasActiveFilters = request()->filled('status') || request()->filled('search');
+    $statusCases = collect(\App\Enums\ReportStatus::cases());
+    $newCount = (int) ($totalsByStatus[\App\Enums\ReportStatus::NEW->value] ?? 0);
+    $processingCount = (int) ($totalsByStatus[\App\Enums\ReportStatus::PROCESSING->value] ?? 0);
+    $forwardedCount = (int) ($totalsByStatus[\App\Enums\ReportStatus::FORWARDED->value] ?? 0);
+    $completedCount = (int) ($totalsByStatus[\App\Enums\ReportStatus::COMPLETED->value] ?? 0);
+    $rejectedCount = (int) ($totalsByStatus[\App\Enums\ReportStatus::REJECTED->value] ?? 0);
+    $attentionCount = $newCount + $forwardedCount;
+    $latestReports = $reports->getCollection()->take(5);
+    $actionReports = $reports->getCollection()->filter(fn ($report) => in_array($report->status, [\App\Enums\ReportStatus::NEW, \App\Enums\ReportStatus::PROCESSING, \App\Enums\ReportStatus::FORWARDED], true))->take(5);
 
-    <div class="dashboard-workspace rt-dashboard">
-        <x-dashboard.topbar :home-url="route('rt.dashboard')" role-label="Dashboard RT" :context="$user->rt?->code ?? 'Wilayah RT'" :links="$navigation" />
+    $navigation = [
+        ['label' => 'Dashboard', 'url' => route('rt.dashboard'), 'icon' => 'bi-grid-1x2', 'active' => true],
+        ['label' => 'Laporan', 'url' => '#antrean-laporan', 'icon' => 'bi-inbox'],
+        ['label' => 'Warga', 'url' => route('rt.citizens.index'), 'icon' => 'bi-people'],
+        ['label' => 'Kartu Keluarga', 'url' => route('rt.family-cards.index'), 'icon' => 'bi-card-heading'],
+        ['label' => 'Surat', 'url' => route('rt.letters.index'), 'icon' => 'bi-envelope-check'],
+        ['label' => 'Sensus', 'url' => route('rt.household-census.create'), 'icon' => 'bi-clipboard-data'],
+    ];
 
-        <main id="main-content" class="container dashboard-main">
-            <x-dashboard.hero badge="Dashboard RT" title="Selamat datang, {{ $user->name }}" description="Tindak lanjuti laporan warga, jaga kualitas data, dan kelola layanan wilayah dari satu ruang kerja." icon="bi-geo-alt">
-                <x-slot:meta><small class="d-block mb-1">Wilayah tugas</small><strong class="d-block h5 mb-1">{{ $user->rt?->code ?? 'RT belum tersedia' }} · {{ $user->rw?->code ?? 'RW belum tersedia' }}</strong><span class="small text-white-50">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</span></x-slot:meta>
-            </x-dashboard.hero>
+    $sectionNavigation = [
+        ['group' => 'Ringkasan', 'label' => 'Statistik Utama', 'target' => 'rt-statistik', 'icon' => 'bi-bar-chart'],
+        ['group' => 'Perlu tindakan', 'label' => 'Menunggu Verifikasi', 'target' => 'rt-tindakan', 'icon' => 'bi-patch-exclamation'],
+        ['group' => 'Eskalasi', 'label' => 'Diteruskan ke RW', 'target' => 'rt-eskalasi', 'icon' => 'bi-arrow-up-right'],
+        ['group' => 'Operasional', 'label' => 'Aksi Cepat RT', 'target' => 'rt-operasional', 'icon' => 'bi-lightning-charge'],
+        ['group' => 'Aktivitas', 'label' => 'Laporan Terbaru', 'target' => 'rt-terbaru', 'icon' => 'bi-clock-history'],
+        ['group' => 'Progres penanganan', 'label' => 'Status Laporan', 'target' => 'rt-status', 'icon' => 'bi-list-check'],
+        ['group' => 'Data wilayah', 'label' => 'Kesiapan Data RT', 'target' => 'rt-kinerja', 'icon' => 'bi-speedometer2'],
+    ];
+@endphp
 
-            <section class="module-strip" aria-label="Status modul sistem">
-                <div class="module-strip-copy"><span class="module-strip-icon"><i class="bi bi-boxes" aria-hidden="true"></i></span><div><strong class="d-block">Fokus layanan RT</strong><small class="text-secondary">Laporan cepat menjadi layanan utama dalam tahap pilot.</small></div></div>
-                <div class="module-pills"><span class="module-pill module-pill-active">Laporan Cepat · PILOT</span><span class="module-pill module-pill-prototype">Sensus · PROTOTYPE</span><span class="module-pill module-pill-prototype">Posyandu · PROTOTYPE</span><span class="module-pill module-pill-prototype">Persuratan · PROTOTYPE</span></div>
-            </section>
+<x-dashboard.role-dashboard-styles />
 
-            <section class="dashboard-section" aria-labelledby="master-data-heading">
-                <x-dashboard.section-heading eyebrow="Operasional wilayah" title="Data dan Layanan Warga" description="Akses data utama dan lihat bagian yang masih perlu dilengkapi." heading-id="master-data-heading" />
-                <div class="row g-3">
-                    <div class="col-lg-6"><div class="d-grid gap-3"><x-dashboard.action-card :href="route('rt.household-census.create')" title="Sensus Warga" description="{{ number_format($activeCitizenCount) }} warga aktif" icon="bi-clipboard-data" /><x-dashboard.action-card :href="route('rt.letters.index')" title="Pengajuan Surat" description="{{ number_format($letterCounts['SUBMITTED'] ?? 0) }} menunggu proses" icon="bi-envelope-check" tone="warning" />@if($hasPosyanduAssignment)<x-dashboard.action-card :href="route('posyandu.index')" title="Posyandu" description="{{ number_format($posyanduMonthlyVisitCount) }} kunjungan bulan ini" icon="bi-heart-pulse" tone="success" />@endif</div></div>
-                    <div class="col-lg-6"><div class="card dashboard-panel-modern h-100"><div class="card-body p-3"><strong class="d-block mb-2">Kelengkapan Data</strong><div class="d-grid gap-2"><a class="completeness-link" href="{{ route('rt.citizens.index', ['completeness' => 'without_family_card']) }}"><span>Warga tanpa KK</span><span class="badge text-bg-light">{{ $citizensWithoutFamilyCardCount }}</span></a><a class="completeness-link" href="{{ route('rt.citizens.index', ['completeness' => 'without_nik']) }}"><span>Warga tanpa NIK</span><span class="badge text-bg-light">{{ $citizensWithoutNikCount }}</span></a><a class="completeness-link" href="{{ route('rt.family-cards.index', ['completeness' => 'without_head']) }}"><span>KK tanpa kepala keluarga</span><span class="badge text-bg-light">{{ $familyCardsWithoutHeadCount }}</span></a></div></div></div></div>
+<div class="dashboard-workspace rt-dashboard">
+    <x-dashboard.topbar :home-url="route('rt.dashboard')" role-label="Dashboard RT" :context="$user->rt?->code ?? 'Wilayah RT'" :links="$navigation" />
+
+    <div class="role-dashboard-shell">
+        <x-dashboard.section-sidebar
+            :items="$sectionNavigation"
+            theme="green"
+            title="Dashboard Sections"
+            footer-label="Periode Data"
+            :footer-value="now()->locale('id')->isoFormat('D MMMM Y')"
+        />
+
+        <main id="main-content" class="role-dashboard-content">
+            <header class="role-dashboard-heading">
+                <div>
+                    <h1>RT Dashboard</h1>
+                    <p>Ringkasan laporan dan aktivitas {{ $user->rt?->code ?? 'RT' }} · {{ $user->rw?->code ?? 'RW' }}.</p>
+                </div>
+                <span class="role-date-chip"><i class="bi bi-calendar3" aria-hidden="true"></i>{{ now()->locale('id')->isoFormat('D MMMM Y') }}</span>
+            </header>
+
+            <section id="rt-statistik" class="role-section" aria-labelledby="rt-statistik-heading">
+                <div class="role-section-titlebar"><div><span class="eyebrow">Ringkasan</span><h2 id="rt-statistik-heading">Statistik Utama</h2><p>Angka inti untuk melihat antrean kerja RT tanpa membuka banyak halaman.</p></div></div>
+                <div class="role-kpi-grid">
+                    <div class="role-kpi-card"><span class="role-kpi-icon bg-success-subtle text-success"><i class="bi bi-inbox"></i></span><div class="role-kpi-copy"><small>Total Laporan</small><strong>{{ number_format($total) }}</strong><span>Seluruh laporan wilayah RT</span></div></div>
+                    <div class="role-kpi-card"><span class="role-kpi-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-patch-exclamation"></i></span><div class="role-kpi-copy"><small>Menunggu Verifikasi</small><strong>{{ number_format($newCount) }}</strong><span>Perlu diperiksa petugas</span></div></div>
+                    <div class="role-kpi-card"><span class="role-kpi-icon bg-primary-subtle text-primary"><i class="bi bi-clock-history"></i></span><div class="role-kpi-copy"><small>Sedang Diproses</small><strong>{{ number_format($processingCount) }}</strong><span>Dalam penanganan</span></div></div>
+                    <div class="role-kpi-card"><span class="role-kpi-icon bg-success-subtle text-success"><i class="bi bi-check2-circle"></i></span><div class="role-kpi-copy"><small>Selesai</small><strong>{{ number_format($completedCount) }}</strong><span>Sudah dituntaskan</span></div></div>
+                    <div class="role-kpi-card"><span class="role-kpi-icon bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle"></i></span><div class="role-kpi-copy"><small>Perlu Perhatian</small><strong>{{ number_format($attentionCount) }}</strong><span>Baru + diteruskan</span></div></div>
                 </div>
             </section>
 
-            <section class="dashboard-section" aria-labelledby="kpi-heading">
-                <x-dashboard.section-heading eyebrow="Laporan warga" title="Kinerja Laporan" description="Status penanganan laporan yang masuk ke wilayah RT Anda." heading-id="kpi-heading" />
-                <div class="row g-3">
-                    <div class="col-sm-6 col-xl">
-                        <x-dashboard.metric label="Total Laporan" :value="number_format($total)" helper="Seluruh laporan wilayah" icon="bi-inbox" tone="primary" href="#daftar-laporan" />
+            <section id="rt-tindakan" class="role-section" aria-labelledby="rt-tindakan-heading">
+                <div class="role-section-titlebar"><div><span class="eyebrow">Perlu tindakan</span><h2 id="rt-tindakan-heading">Menunggu Verifikasi</h2><p>Laporan aktif ditempatkan di atas agar petugas langsung melihat pekerjaan yang perlu ditangani.</p></div><a href="#antrean-laporan">Lihat semua</a></div>
+                <div class="role-panel">
+                    <div class="compact-report-list">
+                        @forelse ($actionReports as $report)
+                            <a class="compact-report-item" href="{{ route('rt.reports.show', $report) }}">
+                                <span class="compact-report-icon"><i class="bi bi-exclamation-circle"></i></span>
+                                <span class="compact-report-copy"><strong>{{ $report->ticket_number }} · {{ $report->title }}</strong><span>{{ $report->citizen?->name ?? 'Pelapor umum' }} · {{ $report->category?->label() ?? 'Lainnya' }}</span></span>
+                                <span class="compact-report-meta"><time>{{ $report->reported_at?->format('H:i') ?? '—' }}</time><span class="badge rounded-pill text-bg-{{ $report->status->bootstrapColor() }}">{{ $report->status->label() }}</span></span>
+                            </a>
+                        @empty
+                            <div class="empty-compact-role">Tidak ada laporan aktif yang perlu tindakan dari halaman saat ini.</div>
+                        @endforelse
                     </div>
-                    @foreach (\App\Enums\ReportStatus::cases() as $status)
-                        @php
-                            $statusTotal = $totalsByStatus[$status->value];
-                            $percentage = $total > 0 ? ($statusTotal / $total) * 100 : 0;
-                        @endphp
-                        <div class="col-sm-6 col-xl">
-                            <div class="card dashboard-panel-modern h-100">
-                                <div class="card-body p-4">
-                                    <div class="d-flex justify-content-between align-items-start gap-2">
-                                        <div>
-                                            <div class="text-secondary small text-uppercase fw-semibold">{{ $status->label() }}</div>
-                                            <div class="display-6 fw-bold mt-2 mb-1">{{ number_format($statusTotal) }}</div>
-                                            <div class="text-secondary small">{{ number_format($percentage, 1) }}% dari total</div>
-                                        </div>
-                                        <span class="metric-icon bg-{{ $status->bootstrapColor() }}-subtle text-{{ $status->bootstrapColor() }}" aria-hidden="true">{{ $status->initial() }}</span>
-                                    </div>
-                                    <div class="progress mt-3" role="progressbar" aria-label="Persentase laporan {{ $status->label() }}" aria-valuenow="{{ $percentage }}" aria-valuemin="0" aria-valuemax="100">
-                                        <div class="progress-bar bg-{{ $status->bootstrapColor() }}" style="width: {{ $percentage }}%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
                 </div>
             </section>
 
-            <div class="row g-4 mb-4">
-                <div class="col-lg-4">
-                    <section class="card dashboard-panel h-100 border-0 shadow-sm" aria-labelledby="region-heading">
-                        <div class="card-body p-4">
-                            <p class="section-eyebrow mb-1">Profil area</p>
-                            <h2 id="region-heading" class="h5 fw-bold mb-4">Informasi Wilayah</h2>
-                            <dl class="mb-0">
-                                <div class="region-row d-flex justify-content-between gap-3 py-3 border-bottom">
-                                    <dt class="text-secondary fw-normal">Nama RT</dt>
-                                    <dd class="fw-semibold text-end mb-0">{{ $user->rt?->name ?? 'Belum tersedia' }}</dd>
-                                </div>
-                                <div class="region-row d-flex justify-content-between gap-3 py-3 border-bottom">
-                                    <dt class="text-secondary fw-normal">Kode RT</dt>
-                                    <dd class="fw-semibold text-end mb-0">{{ $user->rt?->code ?? '—' }}</dd>
-                                </div>
-                                <div class="region-row d-flex justify-content-between gap-3 py-3">
-                                    <dt class="text-secondary fw-normal">Wilayah RW</dt>
-                                    <dd class="fw-semibold text-end mb-0">{{ $user->rw?->name ?? $user->rw?->code ?? 'Belum tersedia' }}</dd>
-                                </div>
-                            </dl>
-                        </div>
-                    </section>
+            <section id="rt-eskalasi" class="role-section" aria-labelledby="rt-eskalasi-heading">
+                <div class="role-section-titlebar"><div><span class="eyebrow">Eskalasi</span><h2 id="rt-eskalasi-heading">Eskalasi ke RW</h2><p>Pantau laporan yang perlu atau sudah diteruskan ketika penanganan melampaui kewenangan RT.</p></div></div>
+                <div class="attention-panel">
+                    <div class="attention-metrics">
+                        <div class="attention-stat"><i class="bi bi-arrow-up-right-circle"></i><div><strong>{{ number_format($forwardedCount) }}</strong><span>Diteruskan ke RW</span></div></div>
+                        <div class="attention-stat"><i class="bi bi-patch-exclamation"></i><div><strong>{{ number_format($newCount) }}</strong><span>Menunggu verifikasi</span></div></div>
+                        <div class="attention-stat"><i class="bi bi-x-circle"></i><div><strong>{{ number_format($rejectedCount) }}</strong><span>Ditolak</span></div></div>
+                    </div>
+                    <a class="btn btn-sm btn-outline-danger" href="#antrean-laporan">Buka antrean</a>
                 </div>
+            </section>
 
-                <div class="col-lg-4">
-                    <section class="card dashboard-panel h-100 border-0 shadow-sm" aria-labelledby="actions-heading">
-                        <div class="card-body p-4">
-                            <p class="section-eyebrow mb-1">Navigasi</p>
-                            <h2 id="actions-heading" class="h5 fw-bold mb-4">Aksi Cepat</h2>
-                            <div class="d-grid gap-3">
-                                <a class="quick-action d-flex align-items-center gap-3 rounded-3 border p-3 text-decoration-none" href="#daftar-laporan">
-                                    <span class="quick-action-icon bg-primary-subtle text-primary" aria-hidden="true">01</span>
-                                    <span><strong class="d-block text-body">Kelola laporan</strong><small class="text-secondary">Tinjau laporan warga terbaru</small></span>
-                                </a>
-                                <a class="quick-action d-flex align-items-center gap-3 rounded-3 border p-3 text-decoration-none" href="{{ route('tracking.index') }}">
-                                    <span class="quick-action-icon bg-warning-subtle text-warning-emphasis" aria-hidden="true">02</span>
-                                    <span><strong class="d-block text-body">Lacak tiket</strong><small class="text-secondary">Periksa progres berdasarkan tiket</small></span>
-                                </a>
-                            </div>
+            <section id="rt-operasional" class="role-section" aria-labelledby="rt-operasional-heading">
+                <div class="role-section-titlebar"><div><span class="eyebrow">Operasional</span><h2 id="rt-operasional-heading">Aksi Cepat RT</h2><p>Aksi yang paling sering dipakai petugas ditempatkan sebelum bagian analitik.</p></div></div>
+                <div class="role-panel">
+                    <div class="role-panel-body">
+                        <div class="quick-actions-row">
+                            <a class="quick-action-chip" href="#antrean-laporan"><i class="bi bi-check2-square text-warning"></i>Verifikasi Laporan</a>
+                            <a class="quick-action-chip" href="{{ route('rt.citizens.index') }}"><i class="bi bi-people text-success"></i>Data Warga</a>
+                            <a class="quick-action-chip" href="{{ route('rt.letters.index') }}"><i class="bi bi-envelope-check text-primary"></i>Pengajuan Surat</a>
+                            <a class="quick-action-chip" href="{{ route('rt.household-census.create') }}"><i class="bi bi-clipboard-data text-info"></i>Sensus Warga</a>
                         </div>
-                    </section>
+                    </div>
                 </div>
+            </section>
 
-                <div class="col-lg-4">
-                    <section class="card dashboard-panel h-100 border-0 shadow-sm" aria-labelledby="activity-heading">
-                        <div class="card-body p-4">
-                            <p class="section-eyebrow mb-1">Pembaruan wilayah</p>
-                            <h2 id="activity-heading" class="h5 fw-bold mb-4">Aktivitas Terbaru</h2>
-                            @forelse ($recentReports as $report)
-                                <a class="activity-item d-flex gap-3 text-decoration-none {{ $loop->last ? '' : 'mb-3 pb-3 border-bottom' }}" href="{{ route('rt.reports.show', $report) }}">
-                                    <span class="activity-dot bg-{{ $report->status->bootstrapColor() }} mt-2 flex-shrink-0" aria-hidden="true"></span>
-                                    <span class="min-w-0">
-                                        <strong class="d-block text-body text-truncate">{{ $report->title }}</strong>
-                                        <small class="text-secondary d-block text-truncate">{{ $report->ticket_number }} · {{ $report->status->label() }}</small>
-                                        <small class="text-secondary">{{ $report->reported_at?->locale('id')->diffForHumans() ?? 'Waktu belum tersedia' }}</small>
-                                    </span>
-                                </a>
+            <section id="rt-terbaru" class="role-section" aria-labelledby="rt-terbaru-heading">
+                <div class="role-section-titlebar"><div><span class="eyebrow">Aktivitas</span><h2 id="rt-terbaru-heading">Laporan Terbaru</h2><p>Lima laporan terbaru untuk menjaga konteks aktivitas warga sebelum melihat ringkasan status.</p></div><a href="#antrean-laporan">Lihat semua</a></div>
+                <div class="role-panel">
+                    <div class="compact-report-list">
+                        @forelse ($latestReports as $report)
+                            <a class="compact-report-item" href="{{ route('rt.reports.show', $report) }}">
+                                <span class="compact-report-icon"><i class="bi bi-file-earmark-text"></i></span>
+                                <span class="compact-report-copy"><strong>{{ $report->ticket_number }} · {{ $report->title }}</strong><span>{{ $report->citizen?->name ?? 'Pelapor umum' }} · {{ $report->category?->label() ?? 'Lainnya' }}</span></span>
+                                <span class="compact-report-meta"><time>{{ $report->reported_at?->format('d/m H:i') ?? '—' }}</time><span class="badge rounded-pill text-bg-{{ $report->status->bootstrapColor() }}">{{ $report->status->label() }}</span></span>
+                            </a>
+                        @empty
+                            <div class="empty-compact-role">Belum ada laporan warga.</div>
+                        @endforelse
+                    </div>
+                </div>
+            </section>
+
+            <section id="rt-status" class="role-section" aria-labelledby="rt-status-heading">
+                <div class="role-section-titlebar"><div><span class="eyebrow">Progres penanganan</span><h2 id="rt-status-heading">Status Laporan {{ $user->rt?->code ?? 'RT' }}</h2><p>Ringkasan status ditempatkan setelah antrean dan aksi agar tidak menggeser fokus operasional petugas.</p></div></div>
+                <div class="role-panel">
+                    <div class="role-panel-body status-donut-wrap">
+                        <div class="status-chart"><canvas id="rtStatusDashboardChart" role="img" aria-label="Distribusi status laporan RT"></canvas></div>
+                        <div class="status-legend">
+                            @foreach ($statusCases as $status)
+                                @php($count = (int) ($totalsByStatus[$status->value] ?? 0))
+                                <div class="status-legend-row"><span class="status-legend-dot bg-{{ $status->bootstrapColor() }}"></span><span>{{ $status->label() }}</span><strong>{{ number_format($count) }}</strong></div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="rt-kinerja" class="role-section" aria-labelledby="rt-kinerja-heading">
+                <div class="role-section-titlebar"><div><span class="eyebrow">Data wilayah</span><h2 id="rt-kinerja-heading">Kesiapan Data RT</h2><p>Data administrasi tetap tersedia, tetapi ditempatkan setelah pekerjaan laporan selesai dibaca.</p></div></div>
+                <div class="role-panel">
+                    <div class="role-panel-body">
+                        <div class="distribution-list">
+                            @foreach ([
+                                ['label' => 'Warga aktif', 'value' => $activeCitizenCount, 'max' => max(1, $activeCitizenCount), 'green' => true],
+                                ['label' => 'KK aktif', 'value' => $activeFamilyCardCount, 'max' => max(1, $activeCitizenCount), 'green' => true],
+                                ['label' => 'Warga tanpa NIK', 'value' => $citizensWithoutNikCount, 'max' => max(1, $activeCitizenCount), 'green' => false],
+                                ['label' => 'Warga tanpa KK', 'value' => $citizensWithoutFamilyCardCount, 'max' => max(1, $activeCitizenCount), 'green' => false],
+                                ['label' => 'KK tanpa kepala', 'value' => $familyCardsWithoutHeadCount, 'max' => max(1, $activeFamilyCardCount), 'green' => false],
+                            ] as $row)
+                                <div class="distribution-row" style="grid-template-columns: 110px minmax(0,1fr) 28px">
+                                    <strong>{{ $row['label'] }}</strong>
+                                    <div class="distribution-track"><div class="distribution-fill {{ $row['green'] ? 'green' : '' }}" style="width: {{ min(100, ($row['value'] / $row['max']) * 100) }}%"></div></div>
+                                    <span class="text-end">{{ $row['value'] }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="antrean-laporan" class="role-section role-panel" aria-labelledby="rt-antrean-heading">
+                <div class="role-panel-header"><div><h3 id="rt-antrean-heading">Antrean Laporan</h3><span class="small text-secondary">Menampilkan {{ $reports->firstItem() ?? 0 }}–{{ $reports->lastItem() ?? 0 }} dari {{ $reports->total() }} laporan.</span></div></div>
+                <div class="role-filter-panel">
+                    <form method="GET" action="{{ route('rt.dashboard') }}" class="row g-2 align-items-center">
+                        <div class="col-md-3"><select name="status" class="form-select" aria-label="Filter status"><option value="">Semua status</option>@foreach($statusCases as $status)<option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>@endforeach</select></div>
+                        <div class="col-md"><input name="search" value="{{ request('search') }}" class="form-control" placeholder="Cari tiket, warga, atau judul"></div>
+                        <div class="col-auto"><button class="btn btn-success" type="submit"><i class="bi bi-search me-1"></i>Cari</button></div>
+                        @if($hasActiveFilters)<div class="col-auto"><a class="btn btn-outline-secondary" href="{{ route('rt.dashboard') }}#antrean-laporan">Reset</a></div>@endif
+                    </form>
+                </div>
+                <div class="table-responsive">
+                    <table class="table compact-table table-hover align-middle mb-0">
+                        <thead><tr><th class="ps-3">Tiket</th><th>Pelapor</th><th>Judul</th><th>Kategori</th><th>Status</th><th>Waktu</th><th class="text-end pe-3">Aksi</th></tr></thead>
+                        <tbody>
+                            @forelse($reports as $report)
+                                <tr><td class="ps-3 fw-semibold">{{ $report->ticket_number }}</td><td>{{ $report->citizen?->name ?? 'Pelapor umum' }}</td><td style="min-width: 15rem">{{ $report->title }}</td><td>{{ $report->category?->label() ?? 'Lainnya' }}</td><td><span class="badge rounded-pill text-bg-{{ $report->status->bootstrapColor() }}">{{ $report->status->label() }}</span></td><td class="text-nowrap">{{ $report->reported_at?->format('d/m H:i') ?? '—' }}</td><td class="text-end pe-3"><a class="btn btn-sm btn-outline-success" href="{{ route('rt.reports.show', $report) }}">Detail</a></td></tr>
                             @empty
-                                <div class="empty-compact text-center py-4">
-                                    <div class="empty-icon mx-auto mb-3" aria-hidden="true">✓</div>
-                                    <h3 class="h6 fw-bold">Belum ada aktivitas</h3>
-                                    <p class="small text-secondary mb-0">Aktivitas laporan terbaru akan ditampilkan di panel ini.</p>
-                                </div>
+                                <tr><td colspan="7"><div class="empty-compact-role">{{ $hasActiveFilters ? 'Tidak ada laporan yang cocok dengan filter.' : 'Belum ada laporan warga.' }}</div></td></tr>
                             @endforelse
-                        </div>
-                    </section>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-
-            <section id="daftar-laporan" class="card dashboard-panel border-0 shadow-sm" aria-labelledby="reports-heading">
-                <div class="card-header bg-white border-0 p-4 p-lg-5 pb-lg-3">
-                    <div class="d-flex flex-column flex-xl-row justify-content-between gap-4">
-                        <div>
-                            <p class="section-eyebrow mb-1">Data operasional</p>
-                            <h2 id="reports-heading" class="h4 fw-bold mb-1">Daftar Laporan</h2>
-                            <p class="text-secondary small mb-0">Menampilkan {{ $reports->firstItem() ?? 0 }}–{{ $reports->lastItem() ?? 0 }} dari {{ $reports->total() }} laporan.</p>
-                        </div>
-                        <form method="GET" action="{{ route('rt.dashboard') }}" class="row g-2 align-items-end">
-                            <div class="col-12 col-sm-auto">
-                                <label for="status" class="form-label small fw-semibold">Status</label>
-                                <select id="status" name="status" class="form-select">
-                                    <option value="">Semua status</option>
-                                    @foreach (\App\Enums\ReportStatus::cases() as $status)
-                                        <option value="{{ $status->value }}" @selected(request('status') === $status->value)>{{ $status->label() }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-12 col-sm">
-                                <label for="search" class="form-label small fw-semibold">Pencarian</label>
-                                <input id="search" name="search" value="{{ request('search') }}" class="form-control" placeholder="Tiket, warga, atau judul">
-                            </div>
-                            <div class="col-auto"><button class="btn btn-primary" type="submit">Terapkan</button></div>
-                            @if ($hasActiveFilters)
-                                <div class="col-auto"><a class="btn btn-outline-secondary" href="{{ route('rt.dashboard') }}">Reset</a></div>
-                            @endif
-                        </form>
-                    </div>
-                </div>
-
-                <div class="card-body p-0 pt-3">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr><th class="ps-4 ps-lg-5">Tiket</th><th>Warga</th><th>Judul</th><th>Status</th><th>Tanggal</th><th class="pe-4 pe-lg-5 text-end">Aksi</th></tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($reports as $report)
-                                    <tr>
-                                        <td class="ps-4 ps-lg-5 fw-semibold text-nowrap">{{ $report->ticket_number }}</td>
-                                        <td>{{ $report->citizen?->name ?? 'Data warga tidak tersedia' }}</td>
-                                        <td class="text-break" style="min-width: 14rem">{{ $report->title }}</td>
-                                        <td><span class="badge rounded-pill text-bg-{{ $report->status->bootstrapColor() }} px-3 py-2">{{ $report->status->label() }}</span></td>
-                                        <td class="text-nowrap">{{ $report->reported_at?->format('d M Y, H:i') ?? '—' }}</td>
-                                        <td class="pe-4 pe-lg-5 text-end"><a class="btn btn-outline-primary btn-sm text-nowrap" href="{{ route('rt.reports.show', $report) }}">Lihat detail</a></td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center px-4 py-5">
-                                            <div class="empty-table mx-auto py-3">
-                                                <div class="empty-icon mx-auto mb-3" aria-hidden="true">{{ $hasActiveFilters ? '?' : '✓' }}</div>
-                                                <h3 class="h5 fw-bold">{{ $hasActiveFilters ? 'Laporan tidak ditemukan' : 'Belum ada laporan warga' }}</h3>
-                                                <p class="text-secondary {{ $hasActiveFilters ? 'mb-3' : 'mb-0' }}">{{ $hasActiveFilters ? 'Tidak ada data yang cocok. Coba gunakan kata kunci lain atau pilih status berbeda.' : 'Belum ada laporan warga yang perlu ditindaklanjuti. Laporan baru akan tersedia di sini setelah dicatat oleh Administrator.' }}</p>
-                                                @if ($hasActiveFilters)
-                                                    <a class="btn btn-outline-primary btn-sm" href="{{ route('rt.dashboard') }}">Hapus semua filter</a>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    @if ($reports->hasPages())
-                        <div class="border-top px-4 px-lg-5 pt-3">
-                            {{ $reports->links('pagination::bootstrap-5') }}
-                        </div>
-                    @endif
-                </div>
+                @if($reports->hasPages())<div class="border-top px-3 pt-3">{{ $reports->links('pagination::bootstrap-5') }}</div>@endif
             </section>
-            @include('analytics.rt')
         </main>
     </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.Chart === 'undefined') return;
+    const canvas = document.getElementById('rtStatusDashboardChart');
+    if (!canvas) return;
+
+    new window.Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: @json($statusCases->map(fn($status) => $status->label())->values()),
+            datasets: [{
+                data: @json($statusCases->map(fn($status) => (int) ($totalsByStatus[$status->value] ?? 0))->values()),
+                backgroundColor: ['#f4b740','#2f7dd3','#7b61c9','#21a66b','#d85a63'],
+                borderColor: '#fff', borderWidth: 3,
+            }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false } } },
+    });
+});
+</script>
+@endpush

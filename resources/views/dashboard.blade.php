@@ -12,12 +12,32 @@
             ['label' => 'QR Wilayah', 'url' => route('admin.service-entry-points.index'), 'icon' => 'bi-qr-code'],
             ['label' => 'WhatsApp', 'url' => route('admin.whatsapp-integration.index'), 'icon' => 'bi-whatsapp'],
         ];
+        $sectionNavigation = [
+            ['group' => 'Cakupan layanan', 'label' => 'Statistik Utama', 'target' => 'coverage-heading', 'icon' => 'bi-bar-chart'],
+            ['group' => 'Progres penanganan', 'label' => 'Status Laporan', 'target' => 'status-heading', 'icon' => 'bi-list-check'],
+            ['group' => 'Operasional', 'label' => 'Aksi Cepat Administrator', 'target' => 'admin-actions-heading', 'icon' => 'bi-lightning-charge'],
+            ['group' => 'Lintas wilayah', 'label' => 'Laporan Terbaru', 'target' => 'laporan-terbaru', 'icon' => 'bi-file-earmark-text'],
+            ['group' => 'Analitik laporan', 'label' => 'Tren dan Distribusi', 'target' => 'analytics-heading', 'icon' => 'bi-graph-up-arrow'],
+            ['group' => 'Sebaran layanan', 'label' => 'Ringkasan Laporan per RT', 'target' => 'ringkasan-wilayah', 'icon' => 'bi-geo-alt'],
+            ['group' => 'Kinerja wilayah', 'label' => 'Ranking RT', 'target' => 'ranking-title', 'icon' => 'bi-trophy'],
+        ];
     @endphp
+
+    <x-dashboard.role-dashboard-styles />
 
     <div class="dashboard-workspace admin-dashboard">
         <x-dashboard.topbar :home-url="route('dashboard')" role-label="Super Admin" context="Pusat kendali sistem" :links="$navigation" />
 
-        <main id="main-content" class="container dashboard-main">
+        <div class="role-dashboard-shell">
+            <x-dashboard.section-sidebar
+                :items="$sectionNavigation"
+                theme="blue"
+                title="Dashboard Sections"
+                footer-label="Periode Data"
+                :footer-value="now()->locale('id')->isoFormat('D MMMM Y')"
+            />
+
+        <main id="main-content" class="role-dashboard-content dashboard-main">
             <x-dashboard.hero badge="Pusat Kendali" title="Selamat datang, {{ $admin->name }}" description="Pantau kesiapan layanan, cakupan wilayah, dan progres laporan dari satu ruang kerja.">
                 <x-slot:meta><small class="d-block mb-1">Ringkasan sistem</small><strong class="d-block">Dashboard Administrator</strong><span class="small text-white-50">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</span></x-slot:meta>
                 <x-slot:actions><a class="btn btn-light" href="{{ route('admin.whatsapp-integration.index') }}"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>Cek Integrasi WhatsApp</a></x-slot:actions>
@@ -262,6 +282,7 @@
             </div>
             @include('analytics.village')
         </main>
+        </div>
     </div>
 @endsection
 
