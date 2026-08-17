@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\ServiceEntryPoint;
 use App\Services\ServiceEntryPointResolver;
 use App\Services\ServiceHandoffIssuer;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -24,7 +23,7 @@ final class ServiceGatewayController extends Controller
         string $entryToken,
         ServiceEntryPointResolver $resolver,
         ServiceHandoffIssuer $handoffIssuer,
-    ): RedirectResponse {
+    ): View {
         $request->validate(['privacy_acknowledged' => ['accepted']]);
 
         $entryPoint = $this->entryPoint($entryToken, $resolver);
@@ -41,9 +40,12 @@ final class ServiceGatewayController extends Controller
             ."Pintu layanan:\n"
             ."{$entryPoint->rt->code} / {$entryPoint->rt->rw->code}";
 
-        return redirect()->away(
-            'https://wa.me/'.$publicNumber.'?text='.rawurlencode($message)
-        );
+        $whatsappUrl = 'https://wa.me/'.$publicNumber.'?text='.rawurlencode($message);
+
+        return view('service-gateway.whatsapp', [
+            'entryPoint' => $entryPoint,
+            'whatsappUrl' => $whatsappUrl,
+        ]);
     }
 
     private function entryPoint(

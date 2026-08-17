@@ -34,7 +34,7 @@ Route::get('/q/{entryToken}', [ServiceGatewayController::class, 'show'])
     ->middleware('module:quick_report')
     ->name('service-gateway.show');
 Route::post('/q/{entryToken}/whatsapp', [ServiceGatewayController::class, 'whatsapp'])
-    ->middleware(['module:quick_report', 'throttle:10,1'])
+    ->middleware(['module:quick_report', 'throttle:60,1'])
     ->name('service-gateway.whatsapp');
 
 Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])
