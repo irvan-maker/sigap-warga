@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use LogicException;
 
-#[Fillable(['public_tracking_code', 'letter_number', 'letter_type', 'required_approval_level', 'citizen_id', 'rt_id', 'submitted_by', 'reviewed_by_rw', 'approved_by_village', 'approved_by_user_id', 'purpose', 'notes', 'status', 'submitted_at', 'reviewed_at', 'approved_at', 'issued_at', 'is_active'])]
+#[Fillable(['public_tracking_code', 'letter_number', 'letter_type', 'letter_type_id', 'letter_type_version_id', 'required_approval_level', 'citizen_id', 'rt_id', 'submitted_by', 'reviewed_by_rw', 'approved_by_village', 'approved_by_user_id', 'purpose', 'notes', 'status', 'submitted_at', 'reviewed_at', 'approved_at', 'issued_at', 'is_active'])]
 class VillageLetter extends Model
 {
     protected $attributes = [
@@ -69,6 +69,16 @@ class VillageLetter extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by_user_id');
+    }
+
+    public function letterTypeDefinition(): BelongsTo
+    {
+        return $this->belongsTo(LetterTypeDefinition::class, 'letter_type_id');
+    }
+
+    public function letterTypeVersion(): BelongsTo
+    {
+        return $this->belongsTo(LetterTypeVersion::class, 'letter_type_version_id');
     }
 
     public function histories(): HasMany
