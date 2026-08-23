@@ -11,6 +11,11 @@ use App\Http\Controllers\FamilyCardController;
 use App\Http\Controllers\HouseholdCensusController;
 use App\Http\Controllers\KelurahanReportController;
 use App\Http\Controllers\KelurahanRwController;
+use App\Http\Controllers\LetterFieldDefinitionController;
+use App\Http\Controllers\LetterRequirementController;
+use App\Http\Controllers\LetterTypeDefinitionController;
+use App\Http\Controllers\LetterTypeVersionController;
+use App\Http\Controllers\LetterWorkflowStepController;
 use App\Http\Controllers\PosyanduController;
 use App\Http\Controllers\PublicLetterTrackingController;
 use App\Http\Controllers\PublicPortalController;
@@ -194,6 +199,47 @@ Route::middleware(['auth', 'role.kelurahan'])
         Route::resource('family-cards', FamilyCardController::class)->except('destroy')->parameters(['family-cards' => 'familyCard']);
         Route::patch('/family-cards/{familyCard}/status', [FamilyCardController::class, 'toggleActive'])->name('family-cards.status.toggle');
         Route::middleware('module:letters')->group(function (): void {
+            Route::get('/master-jenis-surat', [LetterTypeDefinitionController::class, 'index'])
+                ->name('letter-types.index');
+            Route::get('/master-jenis-surat/create', [LetterTypeDefinitionController::class, 'create'])
+                ->name('letter-types.create');
+            Route::post('/master-jenis-surat', [LetterTypeDefinitionController::class, 'store'])
+                ->name('letter-types.store');
+            Route::get('/master-jenis-surat/{letterType}/edit', [LetterTypeDefinitionController::class, 'edit'])
+                ->name('letter-types.edit');
+            Route::put('/master-jenis-surat/{letterType}', [LetterTypeDefinitionController::class, 'update'])
+                ->name('letter-types.update');
+            Route::post('/master-jenis-surat/{letterType}/versions', [LetterTypeVersionController::class, 'store'])
+                ->name('letter-types.versions.store');
+
+            Route::get('/master-jenis-surat/versions/{letterTypeVersion}', [LetterTypeVersionController::class, 'show'])
+                ->name('letter-type-versions.show');
+            Route::post('/master-jenis-surat/versions/{letterTypeVersion}/publish', [LetterTypeVersionController::class, 'publish'])
+                ->name('letter-type-versions.publish');
+            Route::delete('/master-jenis-surat/versions/{letterTypeVersion}', [LetterTypeVersionController::class, 'destroy'])
+                ->name('letter-type-versions.destroy');
+
+            Route::post('/master-jenis-surat/versions/{letterTypeVersion}/requirements', [LetterRequirementController::class, 'store'])
+                ->name('letter-type-versions.requirements.store');
+            Route::put('/master-jenis-surat/versions/{letterTypeVersion}/requirements/{letterRequirement}', [LetterRequirementController::class, 'update'])
+                ->name('letter-type-versions.requirements.update');
+            Route::delete('/master-jenis-surat/versions/{letterTypeVersion}/requirements/{letterRequirement}', [LetterRequirementController::class, 'destroy'])
+                ->name('letter-type-versions.requirements.destroy');
+
+            Route::post('/master-jenis-surat/versions/{letterTypeVersion}/fields', [LetterFieldDefinitionController::class, 'store'])
+                ->name('letter-type-versions.fields.store');
+            Route::put('/master-jenis-surat/versions/{letterTypeVersion}/fields/{letterFieldDefinition}', [LetterFieldDefinitionController::class, 'update'])
+                ->name('letter-type-versions.fields.update');
+            Route::delete('/master-jenis-surat/versions/{letterTypeVersion}/fields/{letterFieldDefinition}', [LetterFieldDefinitionController::class, 'destroy'])
+                ->name('letter-type-versions.fields.destroy');
+
+            Route::post('/master-jenis-surat/versions/{letterTypeVersion}/workflow', [LetterWorkflowStepController::class, 'store'])
+                ->name('letter-type-versions.workflow.store');
+            Route::put('/master-jenis-surat/versions/{letterTypeVersion}/workflow/{letterWorkflowStep}', [LetterWorkflowStepController::class, 'update'])
+                ->name('letter-type-versions.workflow.update');
+            Route::delete('/master-jenis-surat/versions/{letterTypeVersion}/workflow/{letterWorkflowStep}', [LetterWorkflowStepController::class, 'destroy'])
+                ->name('letter-type-versions.workflow.destroy');
+
             Route::get('/letters', [VillageLetterController::class, 'index'])->name('letters.index');
             Route::get('/letters/{letter}', [VillageLetterController::class, 'show'])->name('letters.show');
             Route::patch('/letters/{letter}/approve', [VillageLetterController::class, 'approve'])->name('letters.approve');

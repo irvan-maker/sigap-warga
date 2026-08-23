@@ -11,6 +11,7 @@
             ['label' => 'Petugas', 'url' => route('admin.users.index'), 'icon' => 'bi-people'],
             ['label' => 'QR Wilayah', 'url' => route('admin.service-entry-points.index'), 'icon' => 'bi-qr-code'],
             ['label' => 'WhatsApp', 'url' => route('admin.whatsapp-integration.index'), 'icon' => 'bi-whatsapp'],
+            ['label' => 'Master Surat', 'url' => route('kelurahan.letter-types.index'), 'icon' => 'bi-sliders'],
         ];
         $sectionNavigation = [
             ['group' => 'Cakupan layanan', 'label' => 'Statistik Utama', 'target' => 'coverage-heading', 'icon' => 'bi-bar-chart'],

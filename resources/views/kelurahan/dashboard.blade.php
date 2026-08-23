@@ -14,6 +14,7 @@
             ['label' => 'Warga', 'url' => route('kelurahan.citizens.index'), 'icon' => 'bi-people'],
             ['label' => 'Kartu Keluarga', 'url' => route('kelurahan.family-cards.index'), 'icon' => 'bi-card-heading'],
             ['label' => 'Surat', 'url' => route('kelurahan.letters.index'), 'icon' => 'bi-envelope-check'],
+            ['label' => 'Master Surat', 'url' => route('kelurahan.letter-types.index'), 'icon' => 'bi-sliders'],
         ];
     @endphp
 
@@ -65,6 +66,9 @@
                     @if ($officer->isSystemAdmin() || $officer->isVillageSecretary())
                         <div class="col-sm-6 col-xl-4">
                             <x-dashboard.action-card :href="route('admin.users.index')" title="Kelola Akun Petugas" description="Atur akun dan penempatan petugas" icon="bi-people" tone="warning" />
+                        </div>
+                        <div class="col-sm-6 col-xl-4">
+                            <x-dashboard.action-card :href="route('kelurahan.letter-types.index')" title="Master Jenis Surat" description="Atur versioned configuration Persuratan" icon="bi-sliders" tone="info" />
                         </div>
                     @endif
                 </div>

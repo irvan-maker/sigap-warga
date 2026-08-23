@@ -120,8 +120,7 @@ class LetterFoundationTest extends TestCase
         $version = LetterTypeVersion::query()->create([
             'letter_type_id' => $definition->id,
             'version' => 1,
-            'status' => LetterTypeVersionStatus::PUBLISHED,
-            'published_at' => now(),
+            'status' => LetterTypeVersionStatus::DRAFT,
             'created_by_user_id' => $rtUser->id,
             'configuration_snapshot' => ['source' => 'foundation-test'],
         ]);
@@ -163,7 +162,7 @@ class LetterFoundationTest extends TestCase
         $this->assertSame(1, $version->version);
         $this->assertSame(10, $earlierStep->sequence);
         $this->assertFalse($earlierStep->is_required);
-        $this->assertSame(LetterTypeVersionStatus::PUBLISHED, $version->status);
+        $this->assertSame(LetterTypeVersionStatus::DRAFT, $version->status);
         $this->assertSame(['source' => 'foundation-test'], $version->configuration_snapshot);
         $this->assertSame(['stage' => 'earlier'], $earlierStep->configuration);
     }
@@ -299,6 +298,7 @@ class LetterFoundationTest extends TestCase
         LetterTypeVersion::query()->create([
             'letter_type_id' => $definition->id,
             'version' => 1,
+            'status' => LetterTypeVersionStatus::PUBLISHED,
         ]);
 
         $this->expectException(QueryException::class);
@@ -306,6 +306,7 @@ class LetterFoundationTest extends TestCase
         LetterTypeVersion::query()->create([
             'letter_type_id' => $definition->id,
             'version' => 1,
+            'status' => LetterTypeVersionStatus::PUBLISHED,
         ]);
     }
 
@@ -367,16 +368,18 @@ class LetterFoundationTest extends TestCase
             'letter_type_id' => $definition->id,
             'version' => 1,
         ]);
-        $secondVersion = LetterTypeVersion::query()->create([
-            'letter_type_id' => $definition->id,
-            'version' => 2,
-        ]);
-
         $firstStep = LetterWorkflowStep::query()->create([
             'letter_type_version_id' => $firstVersion->id,
             'sequence' => 10,
             'action' => 'VERIFY',
             'actor_scope' => 'RT',
+        ]);
+        DB::table('letter_type_versions')
+            ->where('id', $firstVersion->id)
+            ->update(['status' => LetterTypeVersionStatus::PUBLISHED->value]);
+        $secondVersion = LetterTypeVersion::query()->create([
+            'letter_type_id' => $definition->id,
+            'version' => 2,
         ]);
         $secondStep = LetterWorkflowStep::query()->create([
             'letter_type_version_id' => $secondVersion->id,
