@@ -17,6 +17,7 @@ use App\Http\Controllers\LetterTypeDefinitionController;
 use App\Http\Controllers\LetterTypeVersionController;
 use App\Http\Controllers\LetterWorkflowStepController;
 use App\Http\Controllers\PosyanduController;
+use App\Http\Controllers\PublicLetterSubmissionController;
 use App\Http\Controllers\PublicLetterTrackingController;
 use App\Http\Controllers\PublicPortalController;
 use App\Http\Controllers\PublicPrivacyController;
@@ -54,6 +55,15 @@ Route::post('/tracking', [PublicReportTrackingController::class, 'store'])
     ->name('tracking.store');
 
 Route::middleware('module:letters')->group(function (): void {
+    Route::get('/pengajuan-surat', [PublicLetterSubmissionController::class, 'index'])
+        ->name('public.letter-submissions.index');
+    Route::get('/pengajuan-surat/selesai', [PublicLetterSubmissionController::class, 'complete'])
+        ->name('public.letter-submissions.complete');
+    Route::get('/pengajuan-surat/{letterType:code}', [PublicLetterSubmissionController::class, 'create'])
+        ->name('public.letter-submissions.create');
+    Route::post('/pengajuan-surat/{letterType:code}', [PublicLetterSubmissionController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('public.letter-submissions.store');
     Route::get('/lacak-surat', [PublicLetterTrackingController::class, 'index'])
         ->name('letter-tracking.index');
     Route::post('/lacak-surat', [PublicLetterTrackingController::class, 'store'])

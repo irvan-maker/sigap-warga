@@ -36,7 +36,8 @@ class VillageLetterPolicy
 
     public function update(User $user, VillageLetter $letter): bool
     {
-        return $this->view($user, $letter)
+        return ! $letter->isGenericSubmission()
+            && $this->view($user, $letter)
             && $user->role === UserRole::RT
             && $letter->status === LetterStatus::DRAFT;
     }
@@ -48,7 +49,8 @@ class VillageLetterPolicy
 
     public function review(User $user, VillageLetter $letter): bool
     {
-        return $this->view($user, $letter)
+        return ! $letter->isGenericSubmission()
+            && $this->view($user, $letter)
             && $user->role === UserRole::RW
             && $letter->status === LetterStatus::SUBMITTED
             && in_array($letter->required_approval_level, [
@@ -59,22 +61,26 @@ class VillageLetterPolicy
 
     public function approve(User $user, VillageLetter $letter): bool
     {
-        return $letter->required_approval_level === LetterApprovalLevel::KELURAHAN
+        return ! $letter->isGenericSubmission()
+            && $letter->required_approval_level === LetterApprovalLevel::KELURAHAN
             && $this->villageMutator($user)
             && $letter->status === LetterStatus::RW_REVIEWED;
     }
 
     public function reject(User $user, VillageLetter $letter): bool
     {
-        return $this->review($user, $letter)
+        return ! $letter->isGenericSubmission()
+            && ($this->review($user, $letter)
             || ($letter->required_approval_level === LetterApprovalLevel::KELURAHAN
                 && $this->villageMutator($user)
-                && $letter->status === LetterStatus::RW_REVIEWED);
+                && $letter->status === LetterStatus::RW_REVIEWED));
     }
 
     public function issue(User $user, VillageLetter $letter): bool
     {
-        if (! $this->view($user, $letter) || $letter->status !== LetterStatus::APPROVED) {
+        if ($letter->isGenericSubmission()
+            || ! $this->view($user, $letter)
+            || $letter->status !== LetterStatus::APPROVED) {
             return false;
         }
 
@@ -87,7 +93,9 @@ class VillageLetterPolicy
 
     public function downloadPdf(User $user, VillageLetter $letter): bool
     {
-        return $this->view($user, $letter) && $letter->status === LetterStatus::ISSUED;
+        return ! $letter->isGenericSubmission()
+            && $this->view($user, $letter)
+            && $letter->status === LetterStatus::ISSUED;
     }
 
     private function villageMutator(User $user): bool

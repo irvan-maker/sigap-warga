@@ -22,6 +22,9 @@ class VillageLetterWorkflow
     ): VillageLetter {
         return DB::transaction(function () use ($letter, $requestedStatus, $actor, $note): VillageLetter {
             $locked = VillageLetter::query()->with('rt')->lockForUpdate()->findOrFail($letter->id);
+            if ($locked->isGenericSubmission()) {
+                throw new DomainException('Workflow pengajuan surat generik belum dijalankan pada Phase 3.');
+            }
             $from = $locked->status;
             $this->assertActorMayTransition($locked, $requestedStatus, $actor);
 

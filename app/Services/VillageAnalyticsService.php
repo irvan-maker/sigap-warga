@@ -183,7 +183,7 @@ class VillageAnalyticsService
             ->groupBy('rt_id')->get()->keyBy('rt_id');
         $growth = $monthly->filter(fn ($row) => (int) $row->previous_count > 0)->map(fn ($row) => (int) round((((int) $row->current_count - (int) $row->previous_count) / (int) $row->previous_count) * 100))->sortDesc();
         $growthRt = $rts->firstWhere('id', $growth->keys()->first());
-        $topLetter = VillageLetter::query()->whereIn('rt_id', $rtIds)->where('created_at', '>=', $currentStart)->selectRaw('letter_type, COUNT(*) as aggregate')->groupBy('letter_type')->orderByDesc('aggregate')->first();
+        $topLetter = VillageLetter::query()->whereIn('rt_id', $rtIds)->where('created_at', '>=', $currentStart)->whereNotNull('letter_type')->selectRaw('letter_type, COUNT(*) as aggregate')->groupBy('letter_type')->orderByDesc('aggregate')->first();
         $topRt = $rts->sortByDesc(fn (Rt $rt) => (int) $reportsByRt->get($rt->id, 0))->first();
 
         return array_values(array_filter([

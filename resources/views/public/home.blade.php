@@ -66,6 +66,7 @@
                 </div>
                 <div class="row g-4">
                     @foreach ([
+                        ['bi-file-earmark-plus', 'Ajukan Surat', 'Pilih layanan surat, lengkapi formulir dinamis, dan kirim pengajuan tanpa membuat akun.', route('public.letter-submissions.index'), 'Buka Persuratan'],
                         ['bi-qr-code-scan', 'Buat Laporan Cepat', 'Scan QR resmi yang terpasang di wilayah RT Anda, periksa identitas wilayah, lalu lanjutkan ke WhatsApp.', '#cara-kerja', 'Pelajari alurnya'],
                         ['bi-search', 'Lacak Laporan', 'Masukkan nomor laporan dan nomor HP/WhatsApp untuk melihat perkembangan penanganan.', route('tracking.index'), 'Buka pelacakan'],
                         ['bi-file-earmark-check', 'Lacak Surat', 'Cek status pengajuan surat dan unduh dokumen yang sudah diterbitkan.', route('letter-tracking.index'), 'Lacak surat'],
