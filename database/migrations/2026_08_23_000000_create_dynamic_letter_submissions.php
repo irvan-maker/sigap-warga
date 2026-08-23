@@ -77,7 +77,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('letter_requirement_submission_id')
                 ->unique('letter_requirement_evidences_submission_unique')
-                ->constrained('letter_requirement_submissions')
+                ->constrained('letter_requirement_submissions', 'id', 'lre_requirement_submission_fk')
                 ->cascadeOnDelete();
             $table->string('disk', 40);
             $table->string('path');
