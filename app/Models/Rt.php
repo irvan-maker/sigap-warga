@@ -7,13 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['rw_id', 'code', 'name', 'whatsapp_number', 'is_active'])]
+#[Fillable(['rw_id', 'code', 'name', 'whatsapp_number', 'report_notification_enabled', 'is_active'])]
 class Rt extends Model
 {
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'report_notification_enabled' => 'boolean',
         ];
     }
 
@@ -52,5 +53,22 @@ class Rt extends Model
     public function reports(): HasMany
     {
         return $this->hasMany(Report::class);
+    }
+
+    public function serviceEntryPoints(): HasMany
+    {
+        return $this->hasMany(ServiceEntryPoint::class);
+    }
+
+    public function activeServiceEntryPoints(): HasMany
+    {
+        return $this->serviceEntryPoints()
+            ->where('is_active', true)
+            ->whereNull('revoked_at');
+    }
+
+    public function isAvailableForService(): bool
+    {
+        return $this->exists && $this->is_active && $this->rw?->is_active === true;
     }
 }

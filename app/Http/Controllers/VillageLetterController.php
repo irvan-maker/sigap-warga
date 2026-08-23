@@ -27,7 +27,7 @@ class VillageLetterController extends Controller
     public function index(Request $request): View
     {
         Gate::authorize('viewAny', VillageLetter::class);
-        $query = VillageLetter::query()->with(['citizen:id,name,nik', 'rt:id,rw_id,code,name', 'rt.rw:id,code,name']);
+        $query = VillageLetter::query()->with(['citizen:id,name,nik', 'rt:id,rw_id,code,name', 'rt.rw:id,code,name', 'submission:id,village_letter_id,letter_type_name']);
         $this->scope($query, $request);
         $search = trim((string) $request->query('search'));
         $query->when($search, fn (Builder $q) => $q->where(fn (Builder $q) => $q->where('letter_number', 'like', "%{$search}%")->orWhereHas('citizen', fn (Builder $c) => $c->where('name', 'like', "%{$search}%")->orWhere('nik', 'like', "%{$search}%"))))->when(LetterType::tryFrom((string) $request->query('type')), fn (Builder $q, LetterType $v) => $q->where('letter_type', $v))->when(LetterStatus::tryFrom((string) $request->query('status')), fn (Builder $q, LetterStatus $v) => $q->where('status', $v))->when($request->filled('rt_id'), fn (Builder $q) => $q->where('rt_id', (int) $request->query('rt_id')))->when($request->filled('rw_id'), fn (Builder $q) => $q->whereHas('rt', fn (Builder $rt) => $rt->where('rw_id', (int) $request->query('rw_id'))))->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('created_at', '>=', $request->query('date_from')))->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('created_at', '<=', $request->query('date_to')));
@@ -48,7 +48,8 @@ class VillageLetterController extends Controller
         $data = $this->validateData($request);
         $citizen = Citizen::query()->whereKey($data['citizen_id'])->where('rt_id', $request->user()->rt_id)->firstOrFail();
         $letter = DB::transaction(function () use ($data, $request, $citizen) {
-            $letter = VillageLetter::query()->create([...$data, 'rt_id' => $citizen->rt_id, 'submitted_by' => $request->user()->id, 'status' => LetterStatus::DRAFT]);
+            $letterType = LetterType::from($data['letter_type']);
+            $letter = VillageLetter::query()->create([...$data, 'required_approval_level' => $letterType->requiredApprovalLevel(), 'rt_id' => $citizen->rt_id, 'submitted_by' => $request->user()->id, 'status' => LetterStatus::DRAFT]);
             $letter->histories()->create(['user_id' => $request->user()->id, 'old_status' => null, 'new_status' => LetterStatus::DRAFT]);
 
             return $letter;
@@ -60,7 +61,7 @@ class VillageLetterController extends Controller
     public function show(Request $request, VillageLetter $letter): View
     {
         Gate::authorize('view', $letter);
-        $letter->load(['citizen.rt.rw', 'citizen.familyCard.headCitizen', 'rt.rw', 'submitter', 'reviewer', 'approver', 'histories' => fn ($q) => $q->with('user:id,name')->oldest()]);
+        $letter->load(['citizen.rt.rw', 'citizen.familyCard.headCitizen', 'rt.rw', 'submitter', 'reviewer', 'approver', 'submission.fieldValues', 'submission.requirements', 'histories' => fn ($q) => $q->with('user:id,name')->oldest()]);
 
         return view('letters.show', ['letter' => $letter, 'routePrefix' => $this->prefix($request)]);
     }
@@ -77,7 +78,8 @@ class VillageLetterController extends Controller
         Gate::authorize('update', $letter);
         $data = $this->validateData($request);
         abort_unless(Citizen::query()->whereKey($data['citizen_id'])->where('rt_id', $request->user()->rt_id)->exists(), 403);
-        $letter->update($data);
+        $letterType = LetterType::from($data['letter_type']);
+        $letter->update([...$data, 'required_approval_level' => $letterType->requiredApprovalLevel()]);
 
         return redirect()->route('rt.letters.show', $letter)->with('status', 'Draft surat berhasil diperbarui.');
     }

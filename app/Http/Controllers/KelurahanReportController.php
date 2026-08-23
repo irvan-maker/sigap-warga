@@ -4,17 +4,25 @@ namespace App\Http\Controllers;
 
 use App\Enums\ReportStatus;
 use App\Enums\UserRole;
+use App\Http\Requests\AcknowledgeReportRequest;
+use App\Http\Requests\UpdateHandledReportStatusRequest;
 use App\Models\Citizen;
 use App\Models\FamilyCard;
+use App\Models\PosyanduVisit;
 use App\Models\Report;
 use App\Models\ReportHistory;
 use App\Models\Rt;
 use App\Models\Rw;
 use App\Models\VillageLetter;
+use App\Services\ReportStatusService;
+use App\Services\ReportWorkflowService;
 use App\Services\VillageAnalyticsService;
+use DomainException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class KelurahanReportController extends Controller
@@ -62,6 +70,17 @@ class KelurahanReportController extends Controller
                 'histories',
                 fn (Builder $query): Builder => $query->where('created_at', '>', $staleThreshold),
             )
+            ->count();
+        $overdueResponseReports = Report::query()
+            ->whereNull('acknowledged_at')
+            ->whereNotNull('response_due_at')
+            ->where('response_due_at', '<', $today)
+            ->whereNotIn('status', [ReportStatus::COMPLETED, ReportStatus::REJECTED])
+            ->count();
+        $overdueResolutionReports = Report::query()
+            ->whereNotNull('resolution_due_at')
+            ->where('resolution_due_at', '<', $today)
+            ->whereNotIn('status', [ReportStatus::COMPLETED, ReportStatus::REJECTED])
             ->count();
         $activeRwsWithoutActiveRts = Rw::query()
             ->where('is_active', true)
@@ -157,14 +176,21 @@ class KelurahanReportController extends Controller
             'attentionSummary' => [
                 'new' => (int) $counts->get(ReportStatus::NEW->value, 0),
                 'stale_processing' => $staleProcessingReports,
+                'overdue_response' => $overdueResponseReports,
+                'overdue_resolution' => $overdueResolutionReports,
                 'rws_without_active_rts' => $activeRwsWithoutActiveRts,
                 'rts_without_active_officers' => $activeRtsWithoutActiveOfficers,
             ],
             'regionSummary' => $regionSummary,
+            'posyanduMonthlyVisitCount' => config('modules.posyandu.enabled') === true
+                ? PosyanduVisit::query()
+                    ->whereBetween('visited_at', [now()->startOfMonth(), now()->endOfMonth()])
+                    ->count()
+                : 0,
         ]);
     }
 
-    public function show(Report $report): View
+    public function show(Report $report, ReportStatusService $statusService): View
     {
         Gate::authorize('viewForKelurahan', $report);
 
@@ -173,7 +199,16 @@ class KelurahanReportController extends Controller
             'rt:id,rw_id,code,name',
             'rt.rw:id,code,name',
             'attachments',
+            'entryRt:id,rw_id,code,name',
+            'incidentRt:id,rw_id,code,name',
+            'currentRt:id,rw_id,code,name',
+            'currentRw:id,code,name',
+            'dispositions.forwardedBy:id,name',
+            'dispositions.acknowledgedBy:id,name',
         ]);
+
+        $canManage = Gate::allows('manage', $report);
+        $canAcknowledge = Gate::allows('acknowledge', $report);
 
         return view('kelurahan.reports.show', [
             'report' => $report,
@@ -181,6 +216,48 @@ class KelurahanReportController extends Controller
                 ->oldest('created_at')
                 ->oldest('id')
                 ->get(),
+            'allowedTransitions' => $canManage
+                ? $statusService->allowedTransitions($report->status)
+                : [],
+            'canAcknowledge' => $canAcknowledge,
         ]);
+    }
+
+    public function acknowledge(
+        AcknowledgeReportRequest $request,
+        Report $report,
+        ReportWorkflowService $workflow,
+    ): RedirectResponse {
+        try {
+            $workflow->acknowledge($report, $request->user());
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['workflow' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('kelurahan.reports.show', $report)
+            ->with('status', 'Disposisi laporan telah diterima kelurahan.');
+    }
+
+    public function updateStatus(
+        UpdateHandledReportStatusRequest $request,
+        Report $report,
+        ReportStatusService $statusService,
+    ): RedirectResponse {
+        $validated = $request->validated();
+
+        try {
+            $statusService->transition(
+                $report,
+                ReportStatus::from($validated['status']),
+                $request->user(),
+                $validated['note'] ?? null,
+                $validated['public_note'] ?? null,
+            );
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['status' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('kelurahan.reports.show', $report)
+            ->with('status', 'Status laporan berhasil diperbarui.');
     }
 }

@@ -5,81 +5,68 @@
 @section('content')
     @php
         $admin = auth()->user();
+        $navigation = [
+            ['label' => 'Dashboard', 'url' => route('dashboard'), 'icon' => 'bi-grid-1x2', 'active' => true],
+            ['label' => 'Laporan', 'url' => route('admin.reports.index'), 'icon' => 'bi-inbox'],
+            ['label' => 'Petugas', 'url' => route('admin.users.index'), 'icon' => 'bi-people'],
+            ['label' => 'QR Wilayah', 'url' => route('admin.service-entry-points.index'), 'icon' => 'bi-qr-code'],
+            ['label' => 'WhatsApp', 'url' => route('admin.whatsapp-integration.index'), 'icon' => 'bi-whatsapp'],
+            ['label' => 'Master Surat', 'url' => route('kelurahan.letter-types.index'), 'icon' => 'bi-sliders'],
+        ];
+        $sectionNavigation = [
+            ['group' => 'Cakupan layanan', 'label' => 'Statistik Utama', 'target' => 'coverage-heading', 'icon' => 'bi-bar-chart'],
+            ['group' => 'Progres penanganan', 'label' => 'Status Laporan', 'target' => 'status-heading', 'icon' => 'bi-list-check'],
+            ['group' => 'Operasional', 'label' => 'Aksi Cepat Administrator', 'target' => 'admin-actions-heading', 'icon' => 'bi-lightning-charge'],
+            ['group' => 'Lintas wilayah', 'label' => 'Laporan Terbaru', 'target' => 'laporan-terbaru', 'icon' => 'bi-file-earmark-text'],
+            ['group' => 'Analitik laporan', 'label' => 'Tren dan Distribusi', 'target' => 'analytics-heading', 'icon' => 'bi-graph-up-arrow'],
+            ['group' => 'Sebaran layanan', 'label' => 'Ringkasan Laporan per RT', 'target' => 'ringkasan-wilayah', 'icon' => 'bi-geo-alt'],
+            ['group' => 'Kinerja wilayah', 'label' => 'Ranking RT', 'target' => 'ranking-title', 'icon' => 'bi-trophy'],
+        ];
     @endphp
 
-    <div class="admin-dashboard min-vh-100">
-        <nav class="navbar bg-white border-bottom sticky-top" aria-label="Navigasi admin">
-            <div class="container py-1">
-                <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-primary" href="{{ route('dashboard') }}">
-                    <span class="admin-brand-mark d-inline-flex align-items-center justify-content-center rounded-3 text-white" aria-hidden="true">SW</span>
-                    <span>SIGAP WARGA</span>
-                </a>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="d-none d-sm-block text-end lh-sm">
-                        <span class="small fw-semibold d-block">{{ $admin->name }}</span>
-                        <span class="text-secondary small">Administrator</span>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="btn btn-outline-danger btn-sm px-3">Keluar</button>
-                    </form>
-                </div>
-            </div>
-        </nav>
+    <x-dashboard.role-dashboard-styles />
 
-        <main class="container py-4 py-lg-5">
-            <header class="admin-hero position-relative overflow-hidden rounded-4 p-4 p-lg-5 mb-4 text-white shadow-sm">
-                <div class="position-relative d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-4">
-                    <div>
-                        <span class="badge rounded-pill bg-white bg-opacity-10 border border-white border-opacity-25 px-3 py-2 mb-3">Pusat Kendali</span>
-                        <p class="text-white-50 mb-1">Selamat datang,</p>
-                        <h1 class="display-6 fw-bold mb-3">{{ $admin->name }}</h1>
-                        <p class="admin-text-muted mb-0">Pantau layanan warga, cakupan wilayah, dan progres penanganan laporan SIGAP WARGA.</p>
-                    </div>
-                    <div class="admin-hero-meta rounded-4 p-3 p-lg-4">
-                        <div class="small text-white-50 text-uppercase fw-semibold mb-1">Ringkasan sistem</div>
-                        <div class="h5 fw-bold mb-2">Dashboard Administrator</div>
-                        <div class="admin-text-muted small">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</div>
-                    </div>
-                </div>
-            </header>
+    <div class="dashboard-workspace admin-dashboard">
+        <x-dashboard.topbar :home-url="route('dashboard')" role-label="Super Admin" context="Pusat kendali sistem" :links="$navigation" />
 
-            <section class="mb-4" aria-labelledby="coverage-heading">
-                <div class="mb-3">
-                    <p class="admin-eyebrow mb-1">Cakupan layanan</p>
-                    <h2 id="coverage-heading" class="h4 fw-bold mb-0">Statistik Utama</h2>
-                </div>
-                <div class="row g-3">
-                    @foreach ([
-                        ['label' => 'Total Warga', 'value' => $totalCitizens, 'hint' => 'Warga terdaftar', 'initial' => 'W', 'color' => 'primary'],
-                        ['label' => 'RW Aktif', 'value' => $totalActiveRws, 'hint' => 'Wilayah RW aktif', 'initial' => 'RW', 'color' => 'success'],
-                        ['label' => 'RT Aktif', 'value' => $totalActiveRts, 'hint' => 'Wilayah RT aktif', 'initial' => 'RT', 'color' => 'warning'],
-                        ['label' => 'Total Laporan', 'value' => $totalReports, 'hint' => 'Semua laporan warga', 'initial' => 'L', 'color' => 'info'],
-                    ] as $metric)
-                        <div class="col-sm-6 col-xl-3">
-                            <div class="card admin-metric-card h-100 border-0 shadow-sm">
-                                <div class="card-body p-4 d-flex justify-content-between align-items-start gap-3">
-                                    <div>
-                                        <div class="text-secondary small text-uppercase fw-semibold">{{ $metric['label'] }}</div>
-                                        <div class="display-6 fw-bold mt-2 mb-1">{{ number_format($metric['value']) }}</div>
-                                        <div class="text-secondary small">{{ $metric['hint'] }}</div>
-                                    </div>
-                                    <span class="admin-metric-icon bg-{{ $metric['color'] }}-subtle text-{{ $metric['color'] }}" aria-hidden="true">{{ $metric['initial'] }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
+        <div class="role-dashboard-shell">
+            <x-dashboard.section-sidebar
+                :items="$sectionNavigation"
+                theme="blue"
+                title="Dashboard Sections"
+                footer-label="Periode Data"
+                :footer-value="now()->locale('id')->isoFormat('D MMMM Y')"
+            />
+
+        <main id="main-content" class="role-dashboard-content dashboard-main">
+            <x-dashboard.hero badge="Pusat Kendali" title="Selamat datang, {{ $admin->name }}" description="Pantau kesiapan layanan, cakupan wilayah, dan progres laporan dari satu ruang kerja.">
+                <x-slot:meta><small class="d-block mb-1">Ringkasan sistem</small><strong class="d-block">Dashboard Administrator</strong><span class="small text-white-50">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</span></x-slot:meta>
+                <x-slot:actions><a class="btn btn-light" href="{{ route('admin.whatsapp-integration.index') }}"><i class="bi bi-whatsapp me-2" aria-hidden="true"></i>Cek Integrasi WhatsApp</a></x-slot:actions>
+            </x-dashboard.hero>
+
+            <section class="module-strip" aria-label="Status modul sistem">
+                <div class="module-strip-copy"><span class="module-strip-icon"><i class="bi bi-boxes" aria-hidden="true"></i></span><div><strong class="d-block">Tahap Uji Lokal</strong><small class="text-secondary">Laporan cepat aktif; modul lain tetap sebagai prototype.</small></div></div>
+                <div class="module-pills">
+                    <span class="module-pill module-pill-active">Laporan Cepat · PILOT</span>
+                    <span class="module-pill module-pill-prototype">Sensus · PROTOTYPE</span>
+                    <span class="module-pill module-pill-prototype">Posyandu · PROTOTYPE</span>
+                    <span class="module-pill module-pill-prototype">Persuratan · PROTOTYPE</span>
+                    <span class="module-pill module-pill-disabled">Darurat · NONAKTIF</span>
                 </div>
             </section>
 
-            <section class="mb-4" aria-labelledby="status-heading">
-                <div class="d-flex justify-content-between align-items-end mb-3">
-                    <div>
-                        <p class="admin-eyebrow mb-1">Progres penanganan</p>
-                        <h2 id="status-heading" class="h4 fw-bold mb-0">Status Laporan</h2>
-                    </div>
-                    <span class="text-secondary small d-none d-sm-inline">{{ number_format($totalReports) }} laporan tercatat</span>
+            <section class="dashboard-section" aria-labelledby="coverage-heading">
+                <x-dashboard.section-heading eyebrow="Cakupan layanan" title="Statistik Utama" description="Gambaran singkat data wilayah dan aktivitas laporan." heading-id="coverage-heading" />
+                <div class="row g-3">
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="Total Warga" :value="number_format($totalCitizens)" helper="Warga terdaftar" icon="bi-people" tone="primary" /></div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="RW Aktif" :value="number_format($totalActiveRws)" helper="Wilayah RW aktif" icon="bi-diagram-3" tone="success" /></div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="RT Aktif" :value="number_format($totalActiveRts)" helper="Wilayah RT aktif" icon="bi-geo-alt" tone="warning" /></div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.metric label="Total Laporan" :value="number_format($totalReports)" helper="Semua laporan warga" icon="bi-inbox" tone="info" :href="route('admin.reports.index')" /></div>
                 </div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="status-heading">
+                <x-dashboard.section-heading eyebrow="Progres penanganan" title="Status Laporan" description="Komposisi status dari {{ number_format($totalReports) }} laporan tercatat." heading-id="status-heading" />
                 <div class="row g-3">
                     @foreach (\App\Enums\ReportStatus::cases() as $status)
                         @php
@@ -87,7 +74,7 @@
                             $percentage = $totalReports > 0 ? ($statusTotal / $totalReports) * 100 : 0;
                         @endphp
                         <div class="col-sm-6 col-xl-3">
-                            <div class="card admin-status-card h-100 border-0 shadow-sm">
+                            <div class="card dashboard-panel-modern h-100">
                                 <div class="card-body p-4">
                                     <div class="d-flex justify-content-between align-items-start gap-2">
                                         <div>
@@ -107,31 +94,13 @@
                 </div>
             </section>
 
-            <section class="mb-4" aria-labelledby="admin-actions-heading">
-                <div class="mb-3">
-                    <p class="admin-eyebrow mb-1">Operasional</p>
-                    <h2 id="admin-actions-heading" class="h4 fw-bold mb-0">Aksi Cepat Administrator</h2>
-                </div>
+            <section class="dashboard-section" aria-labelledby="admin-actions-heading">
+                <x-dashboard.section-heading eyebrow="Operasional" title="Aksi Cepat Administrator" description="Jalur langsung menuju pekerjaan yang paling sering digunakan." heading-id="admin-actions-heading" />
                 <div class="row g-3">
-                    <div class="col-sm-6 col-xl-3">
-                        <a class="card admin-panel admin-quick-action h-100 border-0 shadow-sm text-decoration-none" href="{{ route('admin.reports.index') }}">
-                            <span class="card-body p-4 d-flex align-items-center gap-3">
-                                <span class="admin-action-icon bg-primary-subtle text-primary" aria-hidden="true">01</span>
-                                <span>
-                                    <strong class="d-block text-body">Kelola Laporan</strong>
-                                    <small class="text-secondary">Cari dan tinjau seluruh laporan</small>
-                                </span>
-                            </span>
-                        </a>
-                    </div>
-                    <div class="col-sm-6 col-xl-3">
-                        <a class="card admin-panel admin-quick-action h-100 border-0 shadow-sm text-decoration-none" href="{{ route('admin.users.index') }}">
-                            <span class="card-body p-4 d-flex align-items-center gap-3">
-                                <span class="admin-action-icon bg-success-subtle text-success" aria-hidden="true">02</span>
-                                <span><strong class="d-block text-body">Kelola Akun Petugas</strong><small class="text-secondary">Atur akun dan hak akses</small></span>
-                            </span>
-                        </a>
-                    </div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.action-card :href="route('admin.reports.index')" title="Kelola Laporan" description="Cari dan tinjau seluruh laporan" icon="bi-inbox" /></div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.action-card :href="route('admin.users.index')" title="Kelola Akun Petugas" description="Atur akun dan hak akses" icon="bi-people" tone="success" /></div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.action-card :href="route('admin.service-entry-points.index')" title="Atur QR Wilayah" description="Kelola satu QR resmi untuk setiap RT" icon="bi-qr-code" tone="warning" /></div>
+                    <div class="col-sm-6 col-xl-3"><x-dashboard.action-card :href="route('admin.whatsapp-integration.index')" title="Integrasi WhatsApp" description="Periksa kesiapan Meta dan webhook" icon="bi-whatsapp" tone="success" /></div>
                 </div>
             </section>
 
@@ -314,6 +283,7 @@
             </div>
             @include('analytics.village')
         </main>
+        </div>
     </div>
 @endsection
 
@@ -365,7 +335,7 @@
                     labels: @json($reportStatusChart['labels']),
                     datasets: [{
                         data: @json($reportStatusChart['data']),
-                        backgroundColor: ['#0d6efd', '#ffc107', '#198754', '#dc3545'],
+                        backgroundColor: ['#0d6efd', '#ffc107', '#0dcaf0', '#198754', '#dc3545'],
                         borderColor: '#ffffff',
                         borderWidth: 3,
                     }],

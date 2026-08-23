@@ -17,7 +17,7 @@
 
         <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4">
             <dl class="row mb-0">
-                <dt class="col-sm-4">Warga</dt><dd class="col-sm-8">{{ $report->citizen->name }}</dd>
+                <dt class="col-sm-4">Warga</dt><dd class="col-sm-8">{{ $report->citizen?->name ?? 'Pelapor umum' }}</dd>
                 <dt class="col-sm-4">RT</dt><dd class="col-sm-8">{{ $report->rt->code }} — {{ $report->rt->name }}</dd>
                 <dt class="col-sm-4">Judul</dt><dd class="col-sm-8">{{ $report->title }}</dd>
                 <dt class="col-sm-4">Deskripsi</dt><dd class="col-sm-8">{{ $report->description }}</dd>
@@ -27,43 +27,45 @@
 
         @include('reports.partials.attachments', ['attachments' => $report->attachments])
 
-        @if ($allowedTransitions !== [])
-            <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4">
-                <h2 class="h4">Ubah Status</h2>
-                <form method="POST" action="{{ route('rt.reports.status.update', $report) }}">
+        @include('reports.partials.workflow-summary')
+
+        @if($canAcknowledge)
+            <section class="card border-0 shadow-sm mb-4"><div class="card-body p-4">
+                <h2 class="h4">Terima Disposisi</h2>
+                <p class="text-secondary">Konfirmasi bahwa RT ini telah menerima tanggung jawab penanganan.</p>
+                <form method="POST" action="{{ route('rt.reports.acknowledge', $report) }}">
                     @csrf
-                    @method('PATCH')
-                    <div class="mb-3">
-                        <label for="status" class="form-label">Status baru</label>
-                        <select id="status" name="status" class="form-select @error('status') is-invalid @enderror" required>
-                            <option value="">Pilih status</option>
-                            @foreach ($allowedTransitions as $status)
-                                <option value="{{ $status->value }}" @selected(old('status') === $status->value)>{{ $status->value }}</option>
-                            @endforeach
-                        </select>
-                        @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="mb-3">
-                        <label for="note" class="form-label">Catatan (opsional)</label>
-                        <textarea id="note" name="note" rows="3" class="form-control @error('note') is-invalid @enderror">{{ old('note') }}</textarea>
-                        @error('note')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <button class="btn btn-primary" type="submit">Simpan Status</button>
+                    <button class="btn btn-primary" type="submit">Terima dan Mulai Proses</button>
                 </form>
-            </div></div>
+            </div></section>
         @endif
 
-        <div class="card border-0 shadow-sm"><div class="card-body p-4">
-            <h2 class="h4">Riwayat Status</h2>
-            <ol class="list-group list-group-numbered">
-                @foreach ($histories as $history)
-                    <li class="list-group-item">
-                        <strong>{{ $history->new_status->value }}</strong>
-                        <span class="text-secondary small ms-2">{{ $history->created_at->format('d-m-Y H:i') }}</span>
-                        @if ($history->note)<p class="mb-0 mt-2">{{ $history->note }}</p>@endif
-                    </li>
-                @endforeach
-            </ol>
-        </div></div>
+        @if($canForward)
+            <section class="card border-0 shadow-sm mb-4"><div class="card-body p-4">
+                <h2 class="h4">Teruskan kepada RW</h2>
+                <p class="text-secondary">Gunakan jika penanganan berada di luar kewenangan RT.</p>
+                <form method="POST" action="{{ route('rt.reports.forward', $report) }}">
+                    @csrf
+                    <input type="hidden" name="target_level" value="RW">
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Alasan disposisi internal</label>
+                        <textarea id="reason" name="reason" rows="3" class="form-control @error('reason') is-invalid @enderror" required>{{ old('reason') }}</textarea>
+                        <div class="form-text">Hanya dilihat petugas. Gunakan untuk konteks koordinasi internal.</div>
+                        @error('reason')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="mb-3">
+                        <label for="forward_public_note" class="form-label">Pembaruan untuk warga</label>
+                        <textarea id="forward_public_note" name="public_note" rows="3" class="form-control @error('public_note') is-invalid @enderror" required>{{ old('public_note', 'Laporan telah diverifikasi RT dan diteruskan kepada RW untuk koordinasi penanganan lanjutan.') }}</textarea>
+                        <div class="form-text">Akan tampil pada halaman lacak laporan. Jangan masukkan informasi internal atau sensitif.</div>
+                        @error('public_note')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <button class="btn btn-outline-primary" type="submit">Teruskan ke RW</button>
+                </form>
+            </div></section>
+        @endif
+
+        @include('reports.partials.status-form', ['statusRoute' => route('rt.reports.status.update', $report)])
+
+        @include('reports.partials.status-history')
     </main>
 @endsection

@@ -1,3 +1,37 @@
 @extends('layouts.app')
-@section('title',$letter->exists?'Edit Draft Surat':'Buat Pengajuan Surat')
-@section('content')<main class="container py-4"><nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ route('rt.dashboard') }}">Dashboard</a></li><li class="breadcrumb-item"><a href="{{ route('rt.letters.index') }}">Surat</a></li><li class="breadcrumb-item active">{{ $letter->exists?'Edit':'Buat' }}</li></ol></nav><h1 class="h3 mb-3">{{ $letter->exists?'Edit Draft Surat':'Buat Pengajuan Surat' }}</h1>@if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif<form method="POST" action="{{ $letter->exists?route('rt.letters.update',$letter):route('rt.letters.store') }}" class="card card-body shadow-sm">@csrf @if($letter->exists)@method('PUT')@endif<div class="row g-3"><div class="col-md-6"><label class="form-label">Warga<select name="citizen_id" class="form-select" required><option value="">Pilih warga RT</option>@foreach($citizens as $citizen)<option value="{{ $citizen->id }}" @selected(old('citizen_id',$letter->citizen_id)==$citizen->id)>{{ $citizen->name }} - {{ $citizen->nik?:'tanpa NIK' }}</option>@endforeach</select></label><div class="form-text">NIK, alamat, dan KK dibaca langsung dari Master Data Warga.</div></div><div class="col-md-6"><label class="form-label">Jenis Surat<select name="letter_type" class="form-select" required>@foreach(\App\Enums\LetterType::cases() as $type)<option value="{{ $type->value }}" @selected(old('letter_type',$letter->letter_type?->value)===$type->value)>{{ $type->label() }}</option>@endforeach</select></label></div><div class="col-12"><label class="form-label">Tujuan<textarea name="purpose" rows="4" class="form-control" required>{{ old('purpose',$letter->purpose) }}</textarea></label></div><div class="col-12"><label class="form-label">Catatan<textarea name="notes" rows="3" class="form-control">{{ old('notes',$letter->notes) }}</textarea></label></div></div><div class="mt-3"><button class="btn btn-primary">Simpan Draft</button> <a href="{{ route('rt.letters.index') }}" class="btn btn-outline-secondary">Batal</a></div></form></main>@endsection
+@section('title', $letter->exists ? 'Edit Draft Surat' : 'Buat Pengajuan Surat')
+@section('content')
+<main class="container py-4">
+    <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ route('rt.dashboard') }}">Dashboard</a></li><li class="breadcrumb-item"><a href="{{ route('rt.letters.index') }}">Surat</a></li><li class="breadcrumb-item active">{{ $letter->exists ? 'Edit' : 'Buat' }}</li></ol></nav>
+    <h1 class="h3 mb-3">{{ $letter->exists ? 'Edit Draft Surat' : 'Buat Pengajuan Surat' }}</h1>
+    @if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
+    <form method="POST" action="{{ $letter->exists ? route('rt.letters.update', $letter) : route('rt.letters.store') }}" class="card card-body shadow-sm">
+        @csrf
+        @if($letter->exists)@method('PUT')@endif
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Warga
+                    <select name="citizen_id" class="form-select" required>
+                        <option value="">Pilih warga RT</option>
+                        @foreach($citizens as $citizen)<option value="{{ $citizen->id }}" @selected(old('citizen_id', $letter->citizen_id) == $citizen->id)>{{ $citizen->name }} - {{ $citizen->nik ?: 'tanpa NIK' }}</option>@endforeach
+                    </select>
+                </label>
+                <div class="form-text">NIK, alamat, dan KK dibaca langsung dari Master Data Warga.</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Jenis Surat
+                    <select name="letter_type" class="form-select" required>
+                        @foreach(\App\Enums\LetterType::cases() as $type)
+                            <option value="{{ $type->value }}" @selected(old('letter_type', $letter->letter_type?->value) === $type->value)>{{ $type->label() }} · {{ $type->requiredApprovalLevel()->label() }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <div class="form-text">Level persetujuan berasal dari template dan tidak dapat dilewati pengguna.</div>
+            </div>
+            <div class="col-12"><label class="form-label">Tujuan<textarea name="purpose" rows="4" class="form-control" required>{{ old('purpose', $letter->purpose) }}</textarea></label></div>
+            <div class="col-12"><label class="form-label">Catatan<textarea name="notes" rows="3" class="form-control">{{ old('notes', $letter->notes) }}</textarea></label></div>
+        </div>
+        <div class="mt-3"><button class="btn btn-primary">Simpan Draft</button> <a href="{{ route('rt.letters.index') }}" class="btn btn-outline-secondary">Batal</a></div>
+    </form>
+</main>
+@endsection

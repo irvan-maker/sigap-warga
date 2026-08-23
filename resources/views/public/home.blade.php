@@ -1,63 +1,158 @@
 @extends('layouts.app')
 
-@section('title', config('village.name').' - Portal Pelayanan Publik')
+@section('title', config('village.name').' - Portal Resmi SIGAP WARGA')
 
 @section('content')
-<header class="public-header bg-white border-bottom sticky-top">
-    <nav class="navbar navbar-expand-lg" aria-label="Navigasi utama">
-        <div class="container">
-            <a class="navbar-brand fw-bold text-primary" href="{{ route('public.home') }}"><i class="bi bi-buildings me-2" aria-hidden="true"></i>{{ config('village.name') }}</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav" aria-controls="publicNav" aria-expanded="false" aria-label="Buka navigasi"><span class="navbar-toggler-icon"></span></button>
-            <div id="publicNav" class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
-                    <li class="nav-item"><a class="nav-link" href="#layanan">Layanan</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#statistik">Statistik</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#profil">Profil Desa</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#kontak">Kontak</a></li>
-                    <li class="nav-item">@auth<a class="btn btn-primary" href="{{ route('dashboard') }}">Masuk Dashboard</a>@else<a class="btn btn-outline-primary" href="{{ route('login') }}">Login Petugas</a>@endauth</li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-</header>
-
-<main id="main-content">
-    <section class="public-hero text-white py-5">
-        <div class="container py-lg-5">
-            <div class="row align-items-center g-5">
-                <div class="col-lg-7">
-                    <p class="text-uppercase fw-semibold small letter-spacing">Portal resmi pelayanan desa</p>
-                    <h1 class="display-4 fw-bold">Pelayanan publik yang mudah, jelas, dan transparan</h1>
-                    <p class="lead text-white-75">Akses informasi dan pantau layanan {{ config('village.name') }} tanpa perlu membuat akun.</p>
-                    <div class="d-flex flex-wrap gap-2"><a class="btn btn-light btn-lg" href="#layanan">Lihat Layanan</a><a class="btn btn-outline-light btn-lg" href="{{ route('tracking.index') }}">Lacak Laporan</a></div>
+<div class="citizen-portal">
+    <header class="citizen-header sticky-top">
+        <nav class="navbar navbar-expand-lg" aria-label="Navigasi portal warga">
+            <div class="container py-2">
+                <a class="navbar-brand citizen-brand" href="{{ route('public.home') }}">
+                    <span class="citizen-brand-mark" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
+                    <span class="citizen-brand-copy"><strong>SIGAP WARGA</strong><small>{{ config('village.name') }}</small></span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#citizenNavigation" aria-controls="citizenNavigation" aria-expanded="false" aria-label="Buka navigasi">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div id="citizenNavigation" class="collapse navbar-collapse">
+                    <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                        <li class="nav-item"><a class="nav-link" href="#layanan">Layanan</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#cara-kerja">Cara kerja</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#statistik">Transparansi</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#kontak">Kontak resmi</a></li>
+                        <li class="nav-item ms-lg-2">
+                            @auth
+                                <a class="btn btn-primary" href="{{ route('dashboard') }}"><i class="bi bi-grid me-1" aria-hidden="true"></i>Masuk Dashboard</a>
+                            @else
+                                <a class="btn btn-outline-primary" href="{{ route('login') }}">Login Petugas</a>
+                            @endauth
+                        </li>
+                    </ul>
                 </div>
-                <div class="col-lg-5"><div class="hero-info rounded-4 p-4"><i class="bi bi-geo-alt fs-2" aria-hidden="true"></i><h2 class="h4 mt-3">{{ config('village.name') }}</h2><p class="mb-0">{{ collect([config('village.district'), config('village.regency'), config('village.province')])->filter()->join(', ') }}</p></div></div>
             </div>
-        </div>
-    </section>
+        </nav>
+    </header>
 
-    <section id="layanan" class="container py-5" aria-labelledby="layanan-title">
-        <p class="section-eyebrow mb-2">Layanan utama</p><h2 id="layanan-title" class="section-title mb-4">Apa yang dapat kami bantu?</h2>
-        <div class="row g-4">
-            @foreach ([
-                ['bi-megaphone', 'Buat Laporan', 'Sampaikan laporan melalui petugas RT atau kantor desa.', '#kontak'],
-                ['bi-search', 'Lacak Laporan', 'Pantau laporan dengan nomor tiket dan nomor HP.', route('tracking.index')],
-                ['bi-file-earmark-check', 'Lacak Surat', 'Cek status pengajuan dan unduh surat yang terbit.', route('letter-tracking.index')],
-                ['bi-info-circle', 'Informasi Pelayanan', 'Lihat jam pelayanan dan kanal kontak resmi.', '#kontak'],
-            ] as [$icon, $title, $description, $url])
-                <div class="col-sm-6 col-xl-3"><a class="service-card card h-100 text-decoration-none" href="{{ $url }}"><div class="card-body p-4"><span class="icon-box mb-3"><i class="bi {{ $icon }}" aria-hidden="true"></i></span><h3 class="h5 text-body">{{ $title }}</h3><p class="text-secondary mb-0">{{ $description }}</p></div></a></div>
-            @endforeach
-        </div>
-    </section>
+    <main id="main-content">
+        <section class="citizen-hero">
+            <div class="container">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-7">
+                        <span class="citizen-hero-kicker"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Portal layanan resmi {{ config('village.name') }}</span>
+                        <h1>Lapor lebih mudah, penanganan tetap mengikuti wilayah.</h1>
+                        <p class="lead mt-4">Gunakan QR resmi di lingkungan RT untuk memulai laporan cepat melalui WhatsApp. Setiap laporan tercatat dan dapat dilacak tanpa membuat akun.</p>
+                        <div class="d-flex flex-wrap gap-2 mt-4">
+                            <a class="btn btn-light btn-lg" href="{{ route('tracking.index') }}"><i class="bi bi-search me-2" aria-hidden="true"></i>Lacak Laporan</a>
+                            <a class="btn btn-outline-light btn-lg" href="#cara-kerja">Lihat Cara Kerja</a>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <aside class="citizen-trust-card" aria-label="Jaminan keamanan layanan">
+                            <div class="citizen-trust-item"><span class="citizen-trust-icon"><i class="bi bi-qr-code-scan" aria-hidden="true"></i></span><div><strong>1 RT, 1 QR resmi</strong><small class="d-block text-white-50 mt-1">Portal menampilkan wilayah sebelum warga diarahkan ke WhatsApp.</small></div></div>
+                            <div class="citizen-trust-item"><span class="citizen-trust-icon"><i class="bi bi-cash-coin" aria-hidden="true"></i></span><div><strong>Tidak dipungut biaya</strong><small class="d-block text-white-50 mt-1">Petugas tidak pernah meminta OTP, PIN, kata sandi, atau transfer uang.</small></div></div>
+                            <div class="citizen-trust-item"><span class="citizen-trust-icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span><div><strong>Hierarki tetap terjaga</strong><small class="d-block text-white-50 mt-1">RT menangani lebih dulu, lalu meneruskan ke RW atau kelurahan bila diperlukan.</small></div></div>
+                        </aside>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-    <section id="statistik" class="bg-white py-5" aria-labelledby="stats-title"><div class="container"><p class="section-eyebrow mb-2">Transparansi pelayanan</p><h2 id="stats-title" class="section-title mb-4">Statistik publik</h2>
-        <div class="row g-3 mb-4">@foreach ([['Total laporan',$statistics['total_reports']],['Laporan selesai',$statistics['completed_reports']],['Sedang diproses',$statistics['processing_reports']],['Surat diterbitkan',$statistics['issued_letters']],['Penyelesaian laporan',$statistics['completion_percentage'].'%']] as [$label,$value])<div class="col-6 col-lg"><div class="card h-100"><div class="card-body"><div class="h3 fw-bold text-primary">{{ $value }}</div><div class="text-secondary small">{{ $label }}</div></div></div></div>@endforeach</div>
-        <h3 class="h5">Tren layanan enam bulan terakhir</h3><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Bulan</th><th>Laporan</th><th>Pengajuan surat</th></tr></thead><tbody>@foreach($trend as $month)<tr><th scope="row">{{ $month['label'] }}</th><td>{{ $month['reports'] }}</td><td>{{ $month['letters'] }}</td></tr>@endforeach</tbody></table></div>
-    </div></section>
+        <section id="layanan" class="citizen-section" aria-labelledby="services-heading">
+            <div class="container">
+                <p class="section-eyebrow mb-2">Layanan warga</p>
+                <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+                    <div><h2 id="services-heading" class="section-title mb-2">Pilih kebutuhan Anda</h2><p class="text-secondary mb-0">Akses sederhana dengan petunjuk yang jelas di setiap tahap.</p></div>
+                    <span class="badge rounded-pill text-bg-light border text-secondary px-3 py-2">Laporan cepat menjadi fokus uji lokal</span>
+                </div>
+                <div class="row g-4">
+                    @foreach ([
+                        ['bi-file-earmark-plus', 'Ajukan Surat', 'Pilih layanan surat, lengkapi formulir dinamis, dan kirim pengajuan tanpa membuat akun.', route('public.letter-submissions.index'), 'Buka Persuratan'],
+                        ['bi-qr-code-scan', 'Buat Laporan Cepat', 'Scan QR resmi yang terpasang di wilayah RT Anda, periksa identitas wilayah, lalu lanjutkan ke WhatsApp.', '#cara-kerja', 'Pelajari alurnya'],
+                        ['bi-search', 'Lacak Laporan', 'Masukkan nomor laporan dan nomor HP/WhatsApp untuk melihat perkembangan penanganan.', route('tracking.index'), 'Buka pelacakan'],
+                        ['bi-file-earmark-check', 'Lacak Surat', 'Cek status pengajuan surat dan unduh dokumen yang sudah diterbitkan.', route('letter-tracking.index'), 'Lacak surat'],
+                        ['bi-headset', 'Kontak Resmi', 'Pastikan informasi layanan, alamat kantor, dan nomor kontak berasal dari portal ini.', '#kontak', 'Lihat kontak'],
+                    ] as [$icon, $title, $description, $url, $label])
+                        <div class="col-sm-6 col-xl-3">
+                            <a class="citizen-service-card" href="{{ $url }}">
+                                <span class="citizen-service-icon"><i class="bi {{ $icon }}" aria-hidden="true"></i></span>
+                                <h3 class="h5">{{ $title }}</h3>
+                                <small>{{ $description }}</small>
+                                <span class="service-link">{{ $label }} <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></span>
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
 
-    <section id="profil" class="container py-5"><div class="row g-5 align-items-center"><div class="col-lg-7"><p class="section-eyebrow mb-2">Profil desa</p><h2 class="section-title">Melayani warga dengan sepenuh hati</h2><p class="lead text-secondary">{{ config('village.description') }}</p></div><div class="col-lg-5"><div class="card"><div class="card-body p-4"><h3 class="h5">Wilayah administrasi</h3><p class="mb-0">{{ collect([config('village.district'), config('village.regency'), config('village.province')])->filter()->join(', ') }}</p></div></div></div></div></section>
+        <section id="cara-kerja" class="citizen-section citizen-section-soft" aria-labelledby="workflow-heading">
+            <div class="container">
+                <div class="row g-5 align-items-start">
+                    <div class="col-lg-5">
+                        <p class="section-eyebrow mb-2">Alur laporan cepat</p>
+                        <h2 id="workflow-heading" class="section-title">Tiga langkah yang mudah diverifikasi</h2>
+                        <p class="text-secondary">Jangan memindai QR yang tertutup stiker, rusak, atau mengarah ke domain selain domain resmi SIGAP WARGA.</p>
+                        <div class="alert alert-success border-0 mt-4 mb-0"><i class="bi bi-shield-check me-2" aria-hidden="true"></i><strong>Domain resmi:</strong> {{ parse_url(config('app.url'), PHP_URL_HOST) ?: config('app.url') }}</div>
+                    </div>
+                    <div class="col-lg-7">
+                        <div class="d-grid gap-3">
+                            @foreach ([
+                                ['1', 'Scan QR wilayah', 'Gunakan QR resmi yang dipasang pengurus RT. Setiap RT memiliki satu pintu masuk yang berbeda.'],
+                                ['2', 'Periksa identitas portal', 'Pastikan domain, nama kelurahan, RT, dan RW sesuai sebelum menekan tombol menuju WhatsApp.'],
+                                ['3', 'Tulis laporan dengan bahasa biasa', 'Sampaikan kejadian, lokasi, dan kondisi. Sistem akan mencatat laporan ke wilayah yang benar.'],
+                            ] as [$number, $title, $description])
+                                <div class="setup-step pb-3">
+                                    <span class="setup-step-number">{{ $number }}</span>
+                                    <div class="setup-step-body"><h3>{{ $title }}</h3><p class="mb-0">{{ $description }}</p></div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-    <section id="kontak" class="public-contact py-5"><div class="container"><h2 class="section-title mb-4">Kontak dan jam pelayanan</h2><div class="row g-4"><div class="col-md-6"><h3 class="h6"><i class="bi bi-clock me-2" aria-hidden="true"></i>Jam pelayanan</h3><p>{{ config('village.service_hours') ?: 'Informasi belum tersedia.' }}</p><h3 class="h6"><i class="bi bi-geo-alt me-2" aria-hidden="true"></i>Alamat kantor</h3><p>{{ config('village.office_address') ?: 'Silakan hubungi kantor desa untuk informasi alamat.' }}</p></div><div class="col-md-6"><h3 class="h6"><i class="bi bi-telephone me-2" aria-hidden="true"></i>Telepon</h3><p>{{ config('village.contact_phone') ?: 'Belum tersedia' }}</p><h3 class="h6"><i class="bi bi-envelope me-2" aria-hidden="true"></i>Email</h3><p>{{ config('village.email') ?: 'Belum tersedia' }}</p></div></div></div></section>
-</main>
-<footer class="bg-dark text-white py-4"><div class="container d-flex flex-wrap justify-content-between gap-2"><span>© {{ now()->year }} {{ config('village.name') }}</span><span>Portal SIGAP WARGA</span></div></footer>
+        <section id="statistik" class="citizen-section" aria-labelledby="statistics-heading">
+            <div class="container">
+                <p class="section-eyebrow mb-2">Transparansi pelayanan</p>
+                <h2 id="statistics-heading" class="section-title mb-4">Ringkasan layanan publik</h2>
+                <div class="row g-3">
+                    @foreach ([
+                        ['Total laporan', $statistics['total_reports']],
+                        ['Laporan selesai', $statistics['completed_reports']],
+                        ['Sedang diproses', $statistics['processing_reports']],
+                        ['Surat diterbitkan', $statistics['issued_letters']],
+                        ['Penyelesaian', $statistics['completion_percentage'].'%'],
+                    ] as [$label, $value])
+                        <div class="col-6 col-lg"><div class="citizen-stat"><strong>{{ $value }}</strong><span class="small text-secondary">{{ $label }}</span></div></div>
+                    @endforeach
+                </div>
+                <div class="card dashboard-panel-modern mt-4">
+                    <div class="card-header px-4 py-3"><h3 class="h6 fw-bold mb-0">Aktivitas enam bulan terakhir</h3></div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0"><thead><tr><th>Bulan</th><th>Laporan</th><th>Pengajuan surat</th></tr></thead><tbody>@foreach($trend as $month)<tr><th scope="row">{{ $month['label'] }}</th><td>{{ $month['reports'] }}</td><td>{{ $month['letters'] }}</td></tr>@endforeach</tbody></table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="kontak" class="citizen-section citizen-section-soft" aria-labelledby="contact-heading">
+            <div class="container"><div class="row g-5">
+                <div class="col-lg-5"><p class="section-eyebrow mb-2">Bantuan resmi</p><h2 id="contact-heading" class="section-title">Kontak dan pelayanan</h2><p class="text-secondary">Gunakan informasi berikut untuk memverifikasi komunikasi yang mengatasnamakan SIGAP WARGA.</p></div>
+                <div class="col-lg-7"><div class="row g-3">
+                    @foreach ([
+                        ['bi-clock', 'Jam pelayanan', config('village.service_hours') ?: 'Informasi belum tersedia.'],
+                        ['bi-geo-alt', 'Alamat kantor', config('village.office_address') ?: 'Silakan hubungi kantor kelurahan.'],
+                        ['bi-telephone', 'Telepon', config('village.contact_phone') ?: 'Belum tersedia'],
+                        ['bi-envelope', 'Email', config('village.email') ?: 'Belum tersedia'],
+                    ] as [$icon, $label, $value])
+                        <div class="col-md-6"><div class="citizen-stat"><i class="bi {{ $icon }} text-primary me-2" aria-hidden="true"></i><strong class="d-inline fs-6">{{ $label }}</strong><p class="small text-secondary mt-2 mb-0">{{ $value }}</p></div></div>
+                    @endforeach
+                </div></div>
+            </div></div>
+        </section>
+    </main>
+
+    <footer class="bg-dark text-white py-4"><div class="container d-flex flex-wrap justify-content-between gap-2"><span>© {{ now()->year }} {{ config('village.name') }}</span><span class="text-white-50">Portal resmi SIGAP WARGA</span></div></footer>
+</div>
 @endsection

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\LetterApprovalLevel;
 use App\Enums\LetterStatus;
 use App\Enums\LetterType;
 use App\Enums\UserRole;
@@ -94,7 +95,7 @@ class VillageLetterAdministrationTest extends TestCase
             $flow->transition($letter, LetterStatus::ISSUED, $secretary);
             $letters[] = $letter->fresh();
         } $this->assertNotSame($letters[0]->letter_number, $letters[1]->letter_number);
-        $this->assertMatchesRegularExpression('/^001\/SP-UM\/CS\/[IVX]+\/\d{4}$/', $letters[0]->letter_number);
+        $this->assertMatchesRegularExpression('/^001\/SP-RT\/CS\/[IVX]+\/\d{4}$/', $letters[0]->letter_number);
         $this->assertDatabaseCount('letter_number_sequences', 1);
     }
 
@@ -131,6 +132,53 @@ class VillageLetterAdministrationTest extends TestCase
         $this->actingAs($rtUser)->get(route('rt.dashboard'))->assertSee('Pengajuan Surat');
         $this->actingAs($this->rwUser($rt->rw))->get(route('rw.dashboard'))->assertSee('Verifikasi Surat');
         $this->actingAs($this->officer(VillagePosition::VILLAGE_SECRETARY))->get(route('kelurahan.dashboard'))->assertSee('Administrasi Surat');
+    }
+
+    public function test_template_approval_level_selects_rt_rw_or_kelurahan_workflow(): void
+    {
+        [$rtUser, $rt] = $this->regions();
+        $rwUser = $this->rwUser($rt->rw);
+        $secretary = $this->officer(VillagePosition::VILLAGE_SECRETARY);
+
+        $rtCitizen = Citizen::factory()->for($rt)->create();
+        $this->actingAs($rtUser)->post(route('rt.letters.store'), [
+            ...$this->payload($rtCitizen),
+            'letter_type' => LetterType::GENERAL_INTRODUCTION->value,
+        ]);
+        $rtLetter = VillageLetter::query()->where('citizen_id', $rtCitizen->id)->sole();
+        $this->assertSame(LetterApprovalLevel::RT, $rtLetter->required_approval_level);
+        $this->actingAs($rtUser)->patch(route('rt.letters.submit', $rtLetter))->assertSessionHasNoErrors();
+        $this->assertSame(LetterStatus::APPROVED, $rtLetter->fresh()->status);
+        $this->actingAs($rtUser)->patch(route('rt.letters.issue', $rtLetter))->assertSessionHasNoErrors();
+        $this->assertSame(LetterStatus::ISSUED, $rtLetter->fresh()->status);
+
+        $rwCitizen = Citizen::factory()->for($rt)->create();
+        $this->actingAs($rtUser)->post(route('rt.letters.store'), [
+            ...$this->payload($rwCitizen),
+            'letter_type' => LetterType::RW_INTRODUCTION->value,
+        ]);
+        $rwLetter = VillageLetter::query()->where('citizen_id', $rwCitizen->id)->sole();
+        $this->assertSame(LetterApprovalLevel::RW, $rwLetter->required_approval_level);
+        $this->actingAs($rtUser)->patch(route('rt.letters.submit', $rwLetter));
+        $this->assertSame(LetterStatus::SUBMITTED, $rwLetter->fresh()->status);
+        $this->actingAs($rwUser)->patch(route('rw.letters.review', $rwLetter))->assertSessionHasNoErrors();
+        $this->assertSame(LetterStatus::APPROVED, $rwLetter->fresh()->status);
+        $this->actingAs($rwUser)->patch(route('rw.letters.issue', $rwLetter))->assertSessionHasNoErrors();
+        $this->assertSame(LetterStatus::ISSUED, $rwLetter->fresh()->status);
+
+        $villageCitizen = Citizen::factory()->for($rt)->create();
+        $this->actingAs($rtUser)->post(route('rt.letters.store'), [
+            ...$this->payload($villageCitizen),
+            'letter_type' => LetterType::KTP_INTRODUCTION->value,
+        ]);
+        $villageLetter = VillageLetter::query()->where('citizen_id', $villageCitizen->id)->sole();
+        $this->assertSame(LetterApprovalLevel::KELURAHAN, $villageLetter->required_approval_level);
+        $this->actingAs($rtUser)->patch(route('rt.letters.submit', $villageLetter));
+        $this->actingAs($rwUser)->patch(route('rw.letters.review', $villageLetter));
+        $this->actingAs($secretary)->patch(route('kelurahan.letters.approve', $villageLetter))->assertSessionHasNoErrors();
+        $this->actingAs($secretary)->patch(route('kelurahan.letters.issue', $villageLetter))->assertSessionHasNoErrors();
+        $this->assertSame(LetterStatus::ISSUED, $villageLetter->fresh()->status);
+        $this->assertNotNull($villageLetter->fresh()->approved_by_user_id);
     }
 
     private function payload(Citizen $c): array

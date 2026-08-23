@@ -7,6 +7,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainContent = document.querySelector('main');
     if (mainContent && !document.getElementById('main-content')) mainContent.id = 'main-content';
 
+    document.querySelectorAll('[data-copy-target]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const targetId = button.dataset.copyTarget;
+            const target = targetId ? document.getElementById(targetId) : null;
+            const status = document.querySelector('[data-copy-status]');
+            const value = target?.textContent?.trim();
+
+            if (!value) return;
+
+            try {
+                await navigator.clipboard.writeText(value);
+                if (status) status.textContent = 'Berhasil disalin.';
+            } catch {
+                if (status) status.textContent = 'Gagal menyalin. Pilih dan salin alamat secara manual.';
+            }
+        });
+    });
+
     document.querySelectorAll('tr[data-row-url]').forEach((row) => {
         if (!row.hasAttribute('tabindex')) row.tabIndex = 0;
         if (!row.hasAttribute('role')) row.setAttribute('role', 'link');

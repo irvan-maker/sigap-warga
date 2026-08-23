@@ -1,0 +1,1286 @@
+PEDOMAN PENGEMBANGAN SISTEM LAPORAN CEPAT WARGA BERBASIS WEB DAN WHATSAPP
+
+ADDENDUM PILOT SIGAP WARGA - 13 AGUSTUS 2026
+
+Bagian addendum ini adalah aturan operasional yang berlaku untuk pilot dan menggantikan
+bagian lama yang bertentangan. Isi setelah addendum tetap menjadi bahan desain TARGET,
+bukan pernyataan bahwa seluruh fitur sudah berjalan.
+
+A. AS-IS YANG SUDAH TERSEDIA
+1. Nama sistem resmi pada pilot adalah SIGAP WARGA.
+2. Fokus operasional hanya Laporan Cepat. Sensus, Posyandu, dan Persuratan adalah
+   PROTOTYPE. Darurat adalah SAFETY PROTOTYPE dan bukan layanan dispatch.
+3. Empat dashboard tersedia: Warga/portal publik, RT, RW, dan Kelurahan/Super Admin.
+4. Alur disposisi RT -> RW -> RT dalam RW yang sama atau Kelurahan sudah tersedia.
+5. Webhook WhatsApp memverifikasi HMAC raw body, memproses pesan melalui queue
+   terenkripsi, menjaga idempotensi message ID, dan mengirim balasan melalui job retry.
+6. Pelacakan publik hanya menampilkan public_note dan lampiran yang ditandai publik.
+   Catatan petugas dan lampiran internal tidak boleh tampil kepada warga.
+7. SLA pilot dibuat saat laporan lahir: prioritas normal 2 jam untuk respons dan 3 hari
+   untuk penyelesaian; prioritas tinggi 15 menit dan 4 jam. Nilai dapat dikonfigurasi.
+
+B. ATURAN PILOT YANG MENGIKAT
+1. Satu RT hanya boleh mempunyai satu QR aktif. Aturan ditegakkan oleh layanan dan
+   unique constraint database; QR lama dicabut, bukan dihapus.
+2. QR membuka portal HTTPS resmi lebih dahulu. Portal menampilkan RT/RW, informasi
+   anti-penipuan, informasi privasi, tombol WhatsApp, dan pelacakan laporan.
+3. Pesan warga tidak memuat token teknis [SW:...]. Referensi RT/RW yang dapat dibaca
+   manusia adalah petunjuk pintu masuk, bukan bukti kriptografis bahwa QR dipindai.
+4. Nomor WhatsApp harus cocok dengan warga aktif. Sistem tidak membuat warga otomatis.
+5. Bila QR berbeda dari domisili, laporan warga yang dikenal tetap diterima oleh RT
+   domisili sebagai pintu penanganan awal dan dapat diteruskan mengikuti hierarki.
+   Warga diminta menyebutkan lokasi kejadian secara lengkap.
+6. COMPLETED dan REJECTED wajib memiliki pembaruan publik untuk warga. Catatan internal
+   disimpan terpisah.
+7. Laporan darurat hanya memberi arahan keselamatan dan kontak resmi. Sistem dilarang
+   mengklaim ambulans, pemadam, atau petugas telah dikirim.
+8. Queue worker dan scheduler wajib berjalan selama webhook publik aktif.
+
+C. TARGET TAHAP BERIKUTNYA
+Fitur 17 status, media WhatsApp, live location, notifikasi multi-kanal, dispatch darurat,
+analitik lanjutan, Posyandu operasional, Sensus resmi, serta persuratan resmi tetap TARGET
+dan tidak boleh dipromosikan sebagai fitur produksi sebelum UAT, kebijakan privasi,
+kewenangan instansi, dan SOP-nya disetujui.
+
+Dokumen operasional terinci: docs/PILOT 1 RW 3 RT.md dan docs/deployment/.
+
+1. Pendahuluan
+1.1 Latar belakang
+Pelaporan permasalahan lingkungan pada tingkat RT, RW, dan kelurahan sering dilakukan melalui pesan WhatsApp pribadi atau grup warga. Cara tersebut relatif mudah digunakan, tetapi memiliki beberapa keterbatasan, antara lain:
+1.	Pesan laporan dapat tertumpuk atau terlewat.
+2.	RT harus mencatat ulang laporan secara manual.
+3.	Riwayat penanganan tidak terdokumentasi secara terstruktur.
+4.	Warga tidak mengetahui perkembangan laporannya.
+5.	RW dan kelurahan kesulitan memantau laporan yang belum diselesaikan.
+6.	Tidak tersedia laporan statistik untuk evaluasi pelayanan.
+7.	Tidak terdapat batas waktu dan mekanisme eskalasi yang jelas.
+Oleh karena itu, diperlukan sistem yang mengintegrasikan WhatsApp sebagai kanal komunikasi warga dengan website sebagai pusat pengelolaan laporan.
+Konsep sistem ini dapat mengadaptasi prinsip no wrong door policy pada SP4N-LAPOR!, yaitu setiap laporan masyarakat harus diterima dan diarahkan kepada pihak yang memiliki kewenangan untuk menanganinya, bukan ditolak hanya karena salah memilih tujuan laporan.
+1.2 Nama sistem
+Nama sementara yang dapat digunakan:
+WargaHub — Lapor Cepat, Ditangani Tepat
+Alternatif nama:
+•	LaporWarga
+•	SIGAP Warga
+•	Respons Warga
+•	SIAGA Kelurahan
+•	Layanan Cepat Aduan Warga
+1.3 Tujuan sistem
+Sistem dikembangkan untuk:
+1.	Mempermudah warga menyampaikan laporan.
+2.	Mengubah pesan WhatsApp warga menjadi tiket laporan.
+3.	Mempercepat proses verifikasi dan penerusan laporan.
+4.	Menghubungkan warga, RT, RW, dan kelurahan dalam satu sistem.
+5.	Memberikan notifikasi otomatis kepada petugas terkait.
+6.	Memungkinkan warga memantau perkembangan laporan.
+7.	Menyediakan dokumentasi dan riwayat penanganan.
+8.	Menyediakan data evaluasi pelayanan masyarakat.
+1.4 Ruang lingkup
+Sistem mencakup:
+•	Pelaporan melalui WhatsApp.
+•	QR Code atau barcode laporan.
+•	Penerimaan pesan melalui webhook.
+•	Dashboard pengelolaan laporan.
+•	Verifikasi laporan oleh RT.
+•	Penerusan laporan kepada RW.
+•	Eskalasi laporan kepada kelurahan.
+•	Disposisi kepada petugas.
+•	Notifikasi WhatsApp.
+•	Dokumentasi tindak lanjut.
+•	Rekapitulasi dan statistik laporan.
+2. Konsep Dasar Sistem
+2.1 Gambaran umum
+Warga tidak harus masuk ke website atau membuat akun. Warga cukup memindai QR Code yang ditempatkan di lingkungan RT, kantor RW, balai warga, atau kantor kelurahan.
+Setelah QR Code dipindai, WhatsApp warga akan terbuka dengan nomor layanan dan format pesan yang sudah disiapkan.
+Alur sederhananya:
+Warga memindai QR Code
+        ↓
+WhatsApp layanan terbuka
+        ↓
+Warga mengirim laporan
+        ↓
+Pesan diterima WhatsApp Business Platform
+        ↓
+WhatsApp mengirim data ke webhook website
+        ↓
+Website membuat tiket laporan
+        ↓
+RT menerima notifikasi
+        ↓
+RT memverifikasi laporan
+        ↓
+Laporan ditangani atau diteruskan ke RW
+        ↓
+RW menangani atau meneruskan ke kelurahan
+        ↓
+Kelurahan memberikan disposisi
+        ↓
+Status diperbarui
+        ↓
+Warga menerima pemberitahuan
+WhatsApp Business Platform mendukung pengiriman dan penerimaan pesan melalui Cloud API. Untuk menerima pesan secara otomatis, Meta mengirimkan permintaan HTTP berisi data JSON ke alamat webhook yang didaftarkan oleh pengelola sistem.
+2.2 Pengertian webhook
+Webhook adalah alamat khusus pada server website yang digunakan untuk menerima informasi secara otomatis dari sistem lain.
+Contoh alamat webhook:
+https://laporwarga.id/api/webhook/whatsapp
+Ketika warga mengirim pesan WhatsApp, Meta mengirimkan data pesan tersebut ke alamat webhook.
+Contoh data yang diterima:
+{
+  "pengirim": "628123456789",
+  "jenis_pesan": "text",
+  "isi_pesan": "Lampu jalan di RT 03 mati",
+  "waktu": "2026-08-02T18:30:00+07:00",
+  "message_id": "wamid.xxxxx"
+}
+Webhook kemudian memerintahkan backend untuk:
+1.	Memeriksa nomor pengirim.
+2.	Mengambil isi pesan.
+3.	Menentukan wilayah RT.
+4.	Membuat tiket laporan.
+5.	Menyimpan laporan ke database.
+6.	Memberikan notifikasi kepada RT.
+7.	Mengirim balasan kepada warga.
+Webhook WhatsApp juga dapat mengirimkan informasi tentang pesan masuk dan status pesan yang dikirim oleh sistem, misalnya terkirim, diterima, dibaca, atau gagal.
+3. Pengguna dan Hak Akses
+3.1 Warga
+Warga menggunakan WhatsApp untuk:
+•	Mengirim laporan.
+•	Mengirim foto atau video.
+•	Mengirim lokasi.
+•	Melengkapi laporan.
+•	Memeriksa status.
+•	Memberikan konfirmasi penyelesaian.
+•	Menilai pelayanan.
+Warga tidak diberikan akses ke dashboard internal.
+3.2 Ketua RT
+Ketua RT memiliki akses untuk:
+•	Melihat laporan dari wilayah RT-nya.
+•	Memeriksa identitas pelapor.
+•	Memverifikasi laporan.
+•	Menghubungi warga.
+•	Menangani laporan tingkat RT.
+•	Mengembalikan laporan yang tidak lengkap.
+•	Meneruskan laporan kepada RW.
+•	Memperbarui status.
+•	Mengunggah bukti penanganan.
+RT tidak dapat melihat laporan dari RT lain, kecuali diberi kewenangan khusus.
+3.3 Ketua RW
+Ketua RW memiliki akses untuk:
+•	Melihat seluruh laporan dari RT di wilayahnya.
+•	Melihat laporan yang terlambat ditangani.
+•	Mengembalikan laporan kepada RT.
+•	Menangani laporan lintas RT.
+•	Meneruskan laporan kepada kelurahan.
+•	Memantau kinerja setiap RT.
+•	Mengunggah hasil tindak lanjut.
+3.4 Petugas kelurahan
+Petugas kelurahan dapat:
+•	Melihat laporan seluruh RW.
+•	Memverifikasi laporan yang diteruskan.
+•	Menentukan tingkat prioritas.
+•	Memberikan disposisi.
+•	Menugaskan petugas lapangan.
+•	Meneruskan ke instansi lain.
+•	Mengubah status penanganan.
+•	Mengunggah dokumen atau bukti.
+•	Membuat laporan pelayanan.
+3.5 Lurah
+Lurah memiliki akses untuk:
+•	Melihat laporan prioritas.
+•	Menerima notifikasi laporan eskalasi.
+•	Memberikan persetujuan disposisi.
+•	Memantau kinerja RT, RW, dan petugas.
+•	Melihat laporan yang melewati batas waktu.
+•	Melihat statistik pelayanan.
+•	Mengambil keputusan atas laporan strategis.
+Lurah tidak harus menangani seluruh laporan secara langsung. Dashboard lurah lebih diarahkan untuk pengawasan dan pengambilan keputusan.
+3.6 Administrator
+Administrator bertugas:
+•	Membuat akun pengguna.
+•	Mengelola data RT dan RW.
+•	Mengelola nomor WhatsApp layanan.
+•	Mengelola kategori laporan.
+•	Mengatur batas waktu pelayanan.
+•	Mengelola template pesan.
+•	Mengatur hak akses.
+•	Mengelola QR Code.
+•	Memantau integrasi webhook.
+•	Melihat log sistem.
+•	Melakukan pencadangan data.
+4. Alur Pelaporan Warga
+4.1 Tahap pertama: memindai QR Code
+QR Code dapat ditempatkan pada:
+•	Pos keamanan.
+•	Rumah ketua RT.
+•	Kantor RW.
+•	Papan informasi.
+•	Balai warga.
+•	Kantor kelurahan.
+•	Grup WhatsApp warga.
+•	Media sosial kelurahan.
+•	Surat pelayanan masyarakat.
+Setiap QR Code sebaiknya memiliki kode wilayah.
+Contoh:
+https://wa.me/628123456789?text=LAPOR%20RT03%20RW06
+Ketika dipindai, WhatsApp terbuka dengan pesan:
+LAPOR RT03 RW06
+Kode tersebut membantu sistem menentukan asal wilayah laporan.
+4.2 Tahap kedua: persetujuan penggunaan data
+Sebelum menerima laporan, sistem mengirimkan pemberitahuan:
+Selamat datang di Layanan Laporan Cepat Warga.
+
+Pesan, nomor WhatsApp, lokasi, dan lampiran yang Anda kirim akan digunakan untuk memproses laporan pelayanan masyarakat.
+
+Ketik SETUJU untuk melanjutkan atau BATAL untuk menghentikan.
+Warga mengetik:
+SETUJU
+Persetujuan ini penting karena sistem akan memproses nomor telepon, alamat, lokasi, foto, dan informasi warga.
+UU Nomor 27 Tahun 2022 mengatur bahwa pengendali data wajib menerapkan langkah teknis dan operasional untuk melindungi data pribadi yang diproses. Data juga perlu dihapus atau dihentikan pemrosesannya ketika tidak lagi diperlukan, tujuan telah tercapai, atau terdapat dasar penghapusan lainnya.
+4.3 Tahap ketiga: pengisian laporan
+Sistem mengirimkan menu:
+Silakan pilih jenis layanan:
+
+1. Pengaduan
+2. Aspirasi
+3. Permintaan informasi
+4. Keadaan darurat
+5. Cek status laporan
+Apabila warga memilih pengaduan, sistem meminta kategori:
+Pilih kategori laporan:
+
+1. Jalan dan infrastruktur
+2. Sampah dan kebersihan
+3. Saluran air dan banjir
+4. Lampu penerangan
+5. Keamanan dan ketertiban
+6. Bantuan sosial
+7. Administrasi warga
+8. Fasilitas umum
+9. Lainnya
+Kemudian sistem meminta kronologi:
+Jelaskan masalah yang ingin dilaporkan.
+
+Tuliskan:
+- Apa yang terjadi
+- Lokasi kejadian
+- Sejak kapan terjadi
+- Dampak yang ditimbulkan
+4.4 Tahap keempat: lampiran
+Sistem meminta bukti:
+Silakan kirim foto atau video kondisi yang dilaporkan.
+
+Ketik LEWATI apabila tidak memiliki lampiran.
+Lampiran dapat berupa:
+•	Foto.
+•	Video singkat.
+•	Dokumen.
+•	Rekaman suara.
+•	Lokasi WhatsApp.
+Foto yang menampilkan orang atau memungkinkan seseorang diidentifikasi harus diperlakukan sebagai data pribadi dan tidak boleh disebarluaskan secara bebas.
+4.5 Tahap kelima: konfirmasi
+Sistem menampilkan ringkasan:
+KONFIRMASI LAPORAN
+
+Wilayah: RT 03/RW 06
+Kategori: Lampu penerangan
+Lokasi: Jalan Melati Blok B
+Keterangan: Lampu jalan mati sejak tiga hari lalu.
+Lampiran: 1 foto
+
+Ketik KIRIM untuk mengirim laporan.
+Ketik UBAH untuk memperbaiki laporan.
+Ketik BATAL untuk membatalkan.
+4.6 Tahap keenam: pembuatan tiket
+Setelah laporan dikirim, sistem membuat nomor tiket:
+LPR-2026-0802-0001
+Format nomor dapat terdiri dari:
+LPR – Tahun – Tanggal – Nomor urut
+Balasan kepada warga:
+Laporan Anda telah diterima.
+
+Nomor laporan:
+LPR-2026-0802-0001
+
+Kategori:
+Lampu penerangan
+
+Status:
+Menunggu verifikasi RT 03
+
+Simpan nomor laporan untuk memantau perkembangan.
+5. Alur Penanganan oleh RT
+5.1 Notifikasi laporan baru
+RT menerima pesan:
+LAPORAN WARGA BARU
+
+Nomor: LPR-2026-0802-0001
+Kategori: Lampu penerangan
+Wilayah: RT 03/RW 06
+Lokasi: Jalan Melati Blok B
+Waktu: 2 Agustus 2026, 18.35 WIB
+
+Silakan buka dashboard:
+[tautan laporan]
+5.2 Proses verifikasi
+RT memeriksa:
+•	Apakah lokasi berada dalam wilayah RT.
+•	Apakah uraian laporan jelas.
+•	Apakah lampiran sesuai.
+•	Apakah laporan duplikat.
+•	Apakah laporan mengandung informasi palsu.
+•	Apakah laporan merupakan keadaan darurat.
+•	Apakah laporan dapat ditangani oleh RT.
+Hasil verifikasi:
+Diterima
+Perlu dilengkapi
+Ditolak
+Duplikat
+Salah wilayah
+Darurat
+5.3 Laporan perlu dilengkapi
+Apabila informasi belum lengkap:
+Laporan LPR-2026-0802-0001 perlu dilengkapi.
+
+Mohon kirimkan:
+- Titik lokasi yang lebih jelas
+- Foto kondisi terbaru
+
+Balas pesan ini paling lambat 2 hari.
+5.4 Laporan ditangani RT
+Contoh laporan yang dapat ditangani RT:
+•	Perselisihan ringan antarwarga.
+•	Sampah lingkungan kecil.
+•	Jadwal kerja bakti.
+•	Pendataan warga.
+•	Permintaan surat pengantar.
+•	Gangguan lingkungan sederhana.
+•	Koordinasi keamanan lokal.
+Status diubah menjadi:
+Sedang ditangani RT
+5.5 Laporan diteruskan ke RW
+Laporan diteruskan apabila:
+•	Melibatkan lebih dari satu RT.
+•	Membutuhkan koordinasi tingkat RW.
+•	Tidak dapat diselesaikan RT.
+•	Membutuhkan anggaran lebih besar.
+•	Membutuhkan keputusan struktural.
+•	Melewati kewenangan RT.
+RT harus menambahkan catatan:
+Telah dilakukan pemeriksaan lokasi pada 2 Agustus 2026.
+
+Lampu jalan merupakan fasilitas lingkungan RW dan membutuhkan koordinasi teknis lebih lanjut.
+
+Laporan diteruskan kepada RW 06.
+6. Alur Penanganan oleh RW
+6.1 Pemeriksaan laporan
+RW memeriksa:
+•	Kelengkapan verifikasi RT.
+•	Bukti lapangan.
+•	Kewenangan penanganan.
+•	Dampak terhadap wilayah lain.
+•	Kebutuhan anggaran.
+•	Kebutuhan koordinasi dengan kelurahan.
+6.2 Laporan ditangani RW
+RW dapat menangani:
+•	Fasilitas bersama antar-RT.
+•	Keamanan lingkungan RW.
+•	Kebersihan lintas RT.
+•	Kegiatan sosial.
+•	Perbaikan lingkungan ringan.
+•	Koordinasi antar-RT.
+6.3 Laporan dikembalikan kepada RT
+Laporan dapat dikembalikan jika:
+•	Bukti tidak lengkap.
+•	Belum ada pemeriksaan lokasi.
+•	Tidak terdapat catatan verifikasi.
+•	Permasalahan masih dalam kewenangan RT.
+•	Data pelapor tidak dapat diverifikasi.
+RW wajib menuliskan alasan pengembalian.
+6.4 Laporan diteruskan ke kelurahan
+Laporan diteruskan apabila:
+•	Membutuhkan kewenangan pemerintah.
+•	Membutuhkan anggaran pemerintah.
+•	Terkait fasilitas publik.
+•	Terkait administrasi pemerintahan.
+•	Terkait bantuan sosial.
+•	Terkait ketertiban umum.
+•	Membutuhkan koordinasi dengan dinas.
+•	Tidak dapat diselesaikan oleh RW.
+7. Alur Penanganan Kelurahan
+7.1 Penerimaan laporan
+Petugas kelurahan menerima notifikasi:
+LAPORAN DITERUSKAN KE KELURAHAN
+
+Nomor: LPR-2026-0802-0001
+Kategori: Lampu penerangan
+Asal: RT 03/RW 06
+Prioritas: Sedang
+Diteruskan oleh: Ketua RW 06
+Waktu: 2 Agustus 2026, 20.15 WIB
+
+Silakan buka dashboard untuk memberikan disposisi.
+7.2 Verifikasi kelurahan
+Petugas memeriksa:
+•	Kewenangan kelurahan.
+•	Kelengkapan data.
+•	Kategori laporan.
+•	Prioritas.
+•	Instansi tujuan.
+•	Risiko dan dampak.
+•	Riwayat penanganan sebelumnya.
+7.3 Disposisi
+Kelurahan dapat memberikan disposisi kepada:
+•	Sekretaris kelurahan.
+•	Kepala seksi pemerintahan.
+•	Kepala seksi pelayanan.
+•	Kepala seksi kesejahteraan sosial.
+•	Petugas lapangan.
+•	Satlinmas.
+•	Kecamatan.
+•	Dinas teknis terkait.
+Contoh disposisi:
+Lakukan pemeriksaan lokasi dan koordinasikan dengan petugas penerangan jalan.
+
+Batas pemeriksaan: 3 Agustus 2026.
+Batas tindak lanjut: 5 Agustus 2026.
+7.4 Notifikasi kepada lurah
+Tidak semua laporan harus langsung dikirim kepada lurah.
+Notifikasi kepada lurah diberikan untuk:
+•	Laporan darurat.
+•	Laporan prioritas tinggi.
+•	Laporan yang menyangkut keselamatan.
+•	Laporan lintas RW.
+•	Laporan yang belum selesai melewati batas waktu.
+•	Laporan yang berpotensi menimbulkan konflik.
+•	Laporan yang membutuhkan keputusan lurah.
+•	Laporan yang menarik perhatian publik.
+7.5 Penerusan ke instansi lain
+Apabila laporan bukan kewenangan kelurahan, laporan dapat diteruskan ke:
+•	Kecamatan.
+•	Dinas lingkungan hidup.
+•	Dinas pekerjaan umum.
+•	Dinas sosial.
+•	Dinas perhubungan.
+•	PLN atau penyedia layanan terkait.
+•	Kepolisian.
+•	Pemadam kebakaran.
+•	BPBD.
+•	Puskesmas.
+Prinsipnya, warga tidak diminta mengulangi laporan dari awal. Sistem harus meneruskan data yang sudah tersedia kepada pihak yang sesuai.
+8. Status Laporan
+Status utama yang disarankan:
+Kode	Status	Keterangan
+01	Laporan diterima	Pesan telah masuk ke sistem
+02	Menunggu verifikasi RT	Belum diperiksa RT
+03	Perlu dilengkapi	Data belum lengkap
+04	Diverifikasi RT	Laporan dinyatakan valid
+05	Diproses RT	Sedang ditangani RT
+06	Diteruskan ke RW	Menunggu pemeriksaan RW
+07	Diproses RW	Sedang ditangani RW
+08	Diteruskan ke kelurahan	Menunggu verifikasi kelurahan
+09	Didisposisikan	Sudah ditugaskan kepada petugas
+10	Sedang ditangani	Tindakan sedang berlangsung
+11	Menunggu pihak eksternal	Menunggu dinas atau instansi lain
+12	Menunggu konfirmasi warga	Penanganan diklaim selesai
+13	Selesai	Penanganan sudah selesai
+14	Ditolak	Tidak memenuhi ketentuan
+15	Duplikat	Sama dengan laporan lain
+16	Dibatalkan	Dibatalkan oleh pelapor
+17	Diarsipkan	Proses administrasi ditutup
+Setiap perubahan status wajib disimpan dalam riwayat.
+Contoh:
+02-08-2026 18.35 — Laporan diterima
+02-08-2026 18.42 — Notifikasi dikirim kepada RT
+02-08-2026 19.05 — Laporan diverifikasi RT
+02-08-2026 19.45 — Diteruskan kepada RW
+02-08-2026 20.15 — Diteruskan kepada kelurahan
+03-08-2026 08.10 — Disposisi diberikan kepada petugas
+03-08-2026 13.30 — Pemeriksaan lokasi dilakukan
+04-08-2026 10.20 — Perbaikan selesai
+04-08-2026 10.25 — Menunggu konfirmasi warga
+9. Kategori dan Prioritas Laporan
+9.1 Kategori
+Kategori yang dapat digunakan:
+1.	Infrastruktur jalan.
+2.	Drainase dan banjir.
+3.	Sampah dan kebersihan.
+4.	Penerangan jalan.
+5.	Keamanan lingkungan.
+6.	Ketertiban umum.
+7.	Fasilitas umum.
+8.	Bantuan sosial.
+9.	Kesehatan masyarakat.
+10.	Administrasi kependudukan.
+11.	Pelayanan RT/RW.
+12.	Pelayanan kelurahan.
+13.	Kebakaran.
+14.	Pohon tumbang.
+15.	Konflik sosial.
+16.	Hewan liar.
+17.	Aspirasi warga.
+18.	Permintaan informasi.
+19.	Lainnya.
+9.2 Tingkat prioritas
+Prioritas rendah
+Contoh:
+•	Permintaan informasi.
+•	Usulan kegiatan.
+•	Administrasi nonmendesak.
+•	Kerusakan kecil.
+Target respons awal:
+Maksimal 1 hari kerja
+Prioritas sedang
+Contoh:
+•	Lampu jalan mati.
+•	Sampah menumpuk.
+•	Drainase tersumbat.
+•	Fasilitas umum rusak.
+Target respons awal:
+Maksimal 6 jam kerja
+Prioritas tinggi
+Contoh:
+•	Jalan rusak membahayakan.
+•	Banjir mulai mengganggu rumah.
+•	Konflik warga.
+•	Pohon berisiko tumbang.
+•	Saluran air rusak berat.
+Target respons awal:
+Maksimal 2 jam
+Prioritas darurat
+Contoh:
+•	Kebakaran.
+•	Banjir besar.
+•	Kekerasan.
+•	Kejahatan sedang berlangsung.
+•	Kecelakaan.
+•	Gangguan keselamatan jiwa.
+•	Bencana.
+Sistem harus memberikan peringatan:
+Untuk keadaan yang mengancam keselamatan jiwa, segera hubungi layanan darurat yang berwenang. Sistem laporan warga tidak menggantikan layanan darurat.
+Laporan darurat dikirim secara bersamaan kepada RT, RW, kelurahan, dan petugas terkait.
+10. Aturan Eskalasi Otomatis
+Eskalasi berarti sistem meneruskan atau memberi peringatan apabila laporan tidak segera ditangani.
+Contoh aturan:
+Kondisi	Tindakan sistem
+Laporan belum dibuka RT selama 1 jam	Kirim pengingat ke RT
+Belum diverifikasi RT selama 3 jam	Kirim notifikasi ke RT dan RW
+Tidak ditindaklanjuti RT selama 1 hari	Eskalasi ke RW
+RW belum merespons selama 1 hari	Kirim notifikasi ulang
+Laporan kelurahan melewati SLA	Notifikasi petugas dan lurah
+Laporan prioritas tinggi belum dibuka 30 menit	Notifikasi RT, RW, dan kelurahan
+Laporan darurat masuk	Notifikasi serentak
+Laporan selesai tetapi belum dikonfirmasi	Kirim pengingat kepada warga
+Tidak ada respons warga selama 3 hari	Tutup administratif dengan catatan
+SLA adalah batas waktu pelayanan yang ditentukan berdasarkan kategori dan tingkat prioritas.
+11. Pedoman Notifikasi WhatsApp
+11.1 Jenis notifikasi
+Notifikasi dikirim ketika:
+•	Laporan diterima.
+•	Laporan perlu dilengkapi.
+•	Laporan diverifikasi.
+•	Laporan diteruskan.
+•	Petugas ditugaskan.
+•	Penanganan dimulai.
+•	Penanganan tertunda.
+•	Status berubah.
+•	Laporan selesai.
+•	Laporan ditolak.
+•	Warga diminta memberikan konfirmasi.
+•	Laporan melewati batas waktu.
+11.2 Template pesan
+WhatsApp Business Platform menggunakan template pesan untuk sejumlah pengiriman pesan yang dilakukan di luar jendela layanan pelanggan. Template merupakan aset WhatsApp Business Account dan harus mengikuti ketentuan serta kategori yang ditentukan Meta.
+Contoh template laporan diterima:
+Halo {{1}},
+
+Laporan Anda telah diterima.
+
+Nomor laporan: {{2}}
+Kategori: {{3}}
+Status: {{4}}
+
+Terima kasih telah membantu menjaga lingkungan.
+Contoh template perubahan status:
+Pembaruan laporan {{1}}:
+
+Status sebelumnya: {{2}}
+Status terbaru: {{3}}
+Catatan petugas: {{4}}
+Contoh template laporan selesai:
+Laporan {{1}} telah ditangani.
+
+Tindakan:
+{{2}}
+
+Apakah laporan sudah terselesaikan?
+
+Balas:
+1. Sudah selesai
+2. Belum selesai
+11.3 Larangan isi notifikasi
+Notifikasi tidak boleh:
+•	Menampilkan NIK lengkap.
+•	Menampilkan alamat pribadi secara berlebihan.
+•	Memuat data sensitif yang tidak diperlukan.
+•	Mengirim foto korban tanpa perlindungan.
+•	Memuat kata-kata menyudutkan pelapor.
+•	Membagikan nomor warga kepada pihak yang tidak berkepentingan.
+•	Mengirim informasi internal kepada grup umum.
+12. Struktur Dashboard Website
+12.1 Dashboard RT
+Informasi yang ditampilkan:
+•	Laporan baru.
+•	Menunggu verifikasi.
+•	Sedang ditangani.
+•	Diteruskan ke RW.
+•	Selesai.
+•	Terlambat.
+•	Grafik kategori laporan.
+•	Daftar laporan terbaru.
+12.2 Dashboard RW
+Informasi yang ditampilkan:
+•	Jumlah laporan per RT.
+•	Laporan belum diselesaikan.
+•	Laporan diteruskan ke RW.
+•	Laporan diteruskan ke kelurahan.
+•	Persentase penyelesaian.
+•	Waktu respons rata-rata.
+•	RT dengan laporan terbanyak.
+•	Daftar laporan terlambat.
+12.3 Dashboard kelurahan
+Informasi yang ditampilkan:
+•	Total laporan.
+•	Laporan berdasarkan kategori.
+•	Laporan berdasarkan RW.
+•	Laporan berdasarkan status.
+•	Laporan berdasarkan prioritas.
+•	Laporan melewati SLA.
+•	Laporan yang membutuhkan disposisi.
+•	Kinerja petugas.
+•	Rata-rata waktu penyelesaian.
+•	Tren laporan bulanan.
+12.4 Detail laporan
+Halaman detail minimal menampilkan:
+•	Nomor tiket.
+•	Identitas pelapor terbatas.
+•	Nomor WhatsApp.
+•	Wilayah.
+•	Kategori.
+•	Prioritas.
+•	Lokasi.
+•	Kronologi.
+•	Foto atau video.
+•	Status.
+•	Penanggung jawab.
+•	Riwayat tindakan.
+•	Riwayat penerusan.
+•	Catatan internal.
+•	Batas penyelesaian.
+•	Tombol pembaruan status.
+13. Rancangan Database
+13.1 Tabel pengguna
+users
+- id
+- name
+- phone
+- email
+- password
+- role_id
+- rt_id
+- rw_id
+- kelurahan_id
+- is_active
+- last_login
+- created_at
+- updated_at
+13.2 Tabel peran
+roles
+- id
+- name
+- description
+Contoh peran:
+admin
+rt
+rw
+petugas_kelurahan
+lurah
+petugas_lapangan
+13.3 Tabel warga
+citizens
+- id
+- name
+- phone
+- address
+- rt_id
+- rw_id
+- consent_status
+- consent_date
+- verification_status
+- created_at
+- updated_at
+NIK sebaiknya tidak diwajibkan pada versi awal, kecuali benar-benar diperlukan untuk layanan tertentu.
+13.4 Tabel laporan
+reports
+- id
+- ticket_number
+- citizen_id
+- category_id
+- rt_id
+- rw_id
+- kelurahan_id
+- title
+- description
+- location_text
+- latitude
+- longitude
+- priority
+- current_status_id
+- current_handler_id
+- source
+- reported_at
+- response_deadline
+- resolution_deadline
+- completed_at
+- created_at
+- updated_at
+13.5 Tabel lampiran
+report_attachments
+- id
+- report_id
+- file_name
+- file_type
+- file_path
+- file_size
+- uploaded_by
+- created_at
+13.6 Tabel riwayat status
+report_histories
+- id
+- report_id
+- previous_status_id
+- new_status_id
+- action
+- notes
+- action_by
+- created_at
+13.7 Tabel disposisi
+dispositions
+- id
+- report_id
+- from_user_id
+- to_user_id
+- instruction
+- deadline
+- status
+- created_at
+- completed_at
+13.8 Tabel pesan WhatsApp
+whatsapp_messages
+- id
+- report_id
+- whatsapp_message_id
+- sender_phone
+- recipient_phone
+- direction
+- message_type
+- message_body
+- delivery_status
+- received_at
+- sent_at
+13.9 Tabel notifikasi
+notifications
+- id
+- report_id
+- recipient_user_id
+- recipient_phone
+- notification_type
+- message
+- status
+- sent_at
+- delivered_at
+- read_at
+13.10 Tabel log webhook
+webhook_logs
+- id
+- event_type
+- payload
+- processing_status
+- error_message
+- received_at
+- processed_at
+14. Arsitektur Teknis
+14.1 Komponen sistem
+QR Code
+   ↓
+WhatsApp warga
+   ↓
+WhatsApp Business Cloud API
+   ↓
+Webhook endpoint
+   ↓
+Backend aplikasi
+   ↓
+Database
+   ↓
+Dashboard web
+   ↓
+Mesin notifikasi
+   ↓
+WhatsApp RT, RW, petugas, lurah, dan warga
+14.2 Teknologi yang disarankan
+Untuk proyek kampus atau prototipe:
+Frontend       : HTML, CSS, Bootstrap
+Backend        : Laravel
+Database       : MySQL
+WhatsApp       : WhatsApp Business Cloud API
+Web server     : Nginx atau Apache
+Authentication : Laravel Breeze
+Queue          : Laravel Queue
+Scheduler      : Laravel Scheduler
+Storage        : Local storage atau object storage
+QR Code        : Simple QR Code
+Peta           : OpenStreetMap atau Google Maps
+14.3 Mengapa menggunakan antrean atau queue
+Pesan WhatsApp sebaiknya tidak seluruhnya diproses langsung pada saat webhook diterima.
+Proses yang berat dapat dimasukkan ke antrean:
+•	Mengunduh foto.
+•	Menyimpan video.
+•	Mengirim notifikasi ke banyak penerima.
+•	Membuat thumbnail.
+•	Menjalankan klasifikasi laporan.
+•	Mengirim laporan berkala.
+Webhook cukup:
+1.	Menerima data.
+2.	Memvalidasi sumber.
+3.	Menyimpan event.
+4.	Mengembalikan respons sukses.
+5.	Memproses laporan melalui queue.
+Hal ini mengurangi risiko webhook dianggap gagal karena proses terlalu lama.
+15. Tahapan Konfigurasi Webhook
+15.1 Membuat endpoint
+Backend menyediakan dua metode:
+GET  /webhooks/whatsapp
+POST /webhooks/whatsapp
+GET digunakan untuk verifikasi webhook.
+POST digunakan untuk menerima event.
+15.2 Verifikasi webhook
+Saat webhook didaftarkan, Meta mengirim parameter hub.mode, hub.verify_token, dan hub.challenge. Sistem hanya mengembalikan challenge ketika mode bernilai subscribe dan verify token cocok secara constant-time dengan WHATSAPP_WEBHOOK_VERIFY_TOKEN. Parameter ganda, token kosong, mode lain, atau challenge kosong ditolak dengan HTTP 403.
+Callback yang dimasukkan di Meta harus memakai HTTPS dan sama persis dengan https://<domain-resmi>/webhooks/whatsapp. APP_URL hanya berisi origin domain, tidak boleh ditambah /kelurahan/dashboard.
+15.3 Menerima pesan
+POST webhook wajib memverifikasi X-Hub-Signature-256 terhadap raw request body menggunakan WHATSAPP_APP_SECRET sebelum JSON dibaca. Signature hilang, salah format, atau tidak cocok ditolak dengan HTTP 403. JSON rusak ditolak dengan HTTP 400.
+Setelah signature valid, adapter hanya menerima object whatsapp_business_account, WABA ID yang sama dengan WHATSAPP_WABA_ID, Phone Number ID yang sama dengan WHATSAPP_PHONE_NUMBER_ID, field messages, dan pesan bertipe text. Status delivery dan tipe media belum diproses pada pilot.
+Raw payload, signature, access token, isi pesan, dan nomor telepon tidak boleh disimpan dalam tabel log webhook. Event yang sudah dinormalisasi dikirim ke queue whatsapp sebagai encrypted job. Webhook mengembalikan EVENT_RECEIVED setelah event berhasil dimasukkan ke antrean.
+15.4 Pemrosesan pesan
+Sistem membaca:
+•	ID pesan.
+•	Nomor pengirim.
+•	Isi pesan.
+•	Jenis pesan.
+•	Waktu pesan.
+Kemudian sistem memeriksa:
+Apakah pesan sudah pernah diproses?
+Apakah pengirim sudah memiliki sesi aktif?
+Apakah warga terdaftar dan aktif?
+Apakah konteks wilayah QR atau sesi 24 jam tersedia?
+Apakah isi memenuhi kategori laporan cepat yang didukung?
+Apakah laporan tetap berada pada wilayah domisili atau perlu koordinasi lokasi kejadian?
+15.5 Mencegah laporan ganda
+Gunakan pasangan source namespace dan WhatsApp message ID sebagai identitas unik. Namespace mencakup environment dan Phone Number ID agar identitas provider tidak bertabrakan. Apabila event yang sama dikirim ulang, sistem menggunakan receipt yang sudah ada dan tidak membuat laporan, riwayat, atau nomor tiket kedua.
+16. Alur Percakapan WhatsApp
+Sistem perlu menyimpan tahapan percakapan setiap warga.
+Contoh state:
+START
+WAITING_CONSENT
+WAITING_SERVICE_TYPE
+WAITING_CATEGORY
+WAITING_DESCRIPTION
+WAITING_LOCATION
+WAITING_ATTACHMENT
+WAITING_CONFIRMATION
+REPORT_SUBMITTED
+Contoh:
+Warga mengetik: LAPOR
+State: WAITING_CONSENT
+
+Warga mengetik: SETUJU
+State: WAITING_SERVICE_TYPE
+
+Warga mengetik: 1
+State: WAITING_CATEGORY
+
+Warga mengetik: 4
+State: WAITING_DESCRIPTION
+
+Warga mengirim kronologi
+State: WAITING_LOCATION
+State disimpan dalam tabel:
+conversation_sessions
+- id
+- citizen_id
+- phone
+- current_state
+- temporary_data
+- expires_at
+- created_at
+- updated_at
+Sesi dapat berakhir setelah tidak ada aktivitas, misalnya selama 30 menit.
+17. Keamanan Sistem
+17.1 Autentikasi
+Petugas harus masuk menggunakan:
+•	Email atau nomor telepon.
+•	Kata sandi.
+•	Kode OTP atau autentikasi dua langkah untuk akun penting.
+17.2 Hak akses berbasis peran
+Gunakan Role-Based Access Control.
+Contoh:
+RT hanya melihat wilayah RT-nya.
+RW melihat seluruh RT di bawah RW-nya.
+Kelurahan melihat seluruh RW.
+Lurah melihat laporan strategis dan statistik.
+Admin mengelola konfigurasi.
+17.3 Keamanan webhook
+Webhook harus:
+•	Menggunakan HTTPS.
+•	Memvalidasi permintaan.
+•	Menyimpan token pada environment variable.
+•	Tidak menampilkan token dalam kode publik.
+•	Membatasi ukuran request.
+•	Mencatat event.
+•	Mencegah pemrosesan duplikat.
+•	Menggunakan rate limiting.
+•	Menolak payload tidak valid.
+17.4 Perlindungan lampiran
+Lampiran tidak disimpan dalam folder publik terbuka.
+Gunakan:
+•	URL sementara.
+•	Pemeriksaan jenis file.
+•	Batas ukuran.
+•	Pemindaian file.
+•	Nama file acak.
+•	Hak akses berdasarkan pengguna.
+•	Penghapusan metadata sensitif apabila diperlukan.
+17.5 Audit trail
+Sistem wajib mencatat:
+•	Siapa melihat laporan.
+•	Siapa mengubah status.
+•	Siapa meneruskan laporan.
+•	Siapa mengunduh lampiran.
+•	Waktu tindakan.
+•	Catatan perubahan.
+Riwayat tidak boleh dapat dihapus oleh pengguna biasa.
+17.6 Pencadangan
+Lakukan:
+Backup database harian.
+Backup lampiran berkala.
+Backup disimpan terpisah.
+Uji pemulihan data.
+Batasi akses file backup.
+18. Perlindungan Data Pribadi
+18.1 Prinsip pengumpulan minimum
+Sistem hanya mengumpulkan data yang diperlukan.
+Data minimum:
+•	Nama.
+•	Nomor WhatsApp.
+•	Wilayah RT/RW.
+•	Isi laporan.
+•	Lokasi kejadian.
+•	Lampiran apabila diperlukan.
+Jangan langsung mengumpulkan:
+•	NIK.
+•	Kartu keluarga.
+•	Data kesehatan.
+•	Informasi keuangan.
+•	Dokumen identitas.
+Kecuali memang dibutuhkan untuk jenis layanan tertentu.
+18.2 Tujuan penggunaan data
+Data digunakan untuk:
+•	Memvalidasi laporan.
+•	Menghubungi pelapor.
+•	Menentukan wilayah.
+•	Menindaklanjuti laporan.
+•	Mengirim status.
+•	Membuat statistik tanpa membuka identitas warga.
+18.3 Pembatasan akses
+Nomor WhatsApp dan identitas warga hanya dapat dilihat oleh petugas yang berkepentingan.
+Dalam laporan statistik, gunakan data agregat:
+Jumlah laporan RT 03: 25
+Kategori sampah: 8
+Kategori jalan: 5
+Jangan tampilkan:
+Nama warga dan nomor telepon dalam laporan publik.
+18.4 Masa retensi
+Contoh kebijakan:
+Laporan aktif disimpan selama proses berlangsung.
+Laporan selesai disimpan selama periode administrasi.
+Lampiran sensitif dihapus setelah tidak diperlukan.
+Log teknis disimpan sesuai kebutuhan keamanan.
+Ketentuan retensi final perlu disesuaikan dengan kebijakan pemerintah dan kebutuhan administrasi.
+19. Prosedur Operasional Petugas
+19.1 Awal jam pelayanan
+Petugas:
+1.	Masuk ke dashboard.
+2.	Memeriksa laporan baru.
+3.	Memeriksa laporan prioritas tinggi.
+4.	Memeriksa laporan melewati SLA.
+5.	Memeriksa notifikasi kegagalan.
+6.	Menghubungi pihak yang perlu menindaklanjuti.
+19.2 Saat menerima laporan
+Petugas:
+1.	Membaca laporan.
+2.	Memeriksa wilayah.
+3.	Memeriksa bukti.
+4.	Menentukan validitas.
+5.	Menentukan prioritas.
+6.	Memberi respons awal.
+7.	Menentukan penanggung jawab.
+8.	Menetapkan batas waktu.
+19.3 Saat melakukan tindakan
+Petugas wajib mencatat:
+•	Tanggal tindakan.
+•	Jenis tindakan.
+•	Lokasi.
+•	Petugas yang hadir.
+•	Hasil pemeriksaan.
+•	Hambatan.
+•	Rencana tindak lanjut.
+•	Bukti foto.
+19.4 Saat menutup laporan
+Laporan hanya ditutup jika:
+•	Tindakan telah dilakukan.
+•	Bukti penanganan tersedia.
+•	Catatan penyelesaian tersedia.
+•	Warga telah diberi informasi.
+•	Warga melakukan konfirmasi atau masa konfirmasi berakhir.
+20. Penanganan Laporan Tidak Valid
+Laporan dapat ditolak apabila:
+•	Tidak berkaitan dengan pelayanan warga.
+•	Mengandung spam.
+•	Mengandung ancaman.
+•	Mengandung informasi palsu yang jelas.
+•	Tidak dapat diverifikasi.
+•	Tidak memiliki informasi minimum.
+•	Mengandung materi terlarang.
+•	Sama persis dengan laporan sebelumnya.
+•	Berada di luar wilayah dan tidak dapat diteruskan.
+Penolakan harus disertai alasan.
+Contoh:
+Laporan LPR-2026-0802-0008 belum dapat diproses karena lokasi kejadian tidak dapat ditemukan.
+
+Silakan kirimkan alamat atau titik lokasi yang lebih jelas.
+Hindari pesan:
+Laporan ditolak.
+tanpa penjelasan.
+21. Pengujian Sistem
+21.1 Pengujian fungsi
+Uji:
+•	QR Code membuka nomor yang benar.
+•	Pesan diterima webhook.
+•	Tiket terbentuk.
+•	Data tersimpan.
+•	RT menerima notifikasi.
+•	RT dapat meneruskan ke RW.
+•	RW dapat meneruskan ke kelurahan.
+•	Status berubah.
+•	Warga menerima balasan.
+•	Lampiran tersimpan.
+•	Laporan dapat dicari.
+•	Statistik muncul.
+21.2 Pengujian keamanan
+Uji:
+•	Pengguna RT tidak dapat melihat RT lain.
+•	URL lampiran tidak dapat dibuka sembarang orang.
+•	Token webhook tidak terlihat.
+•	Input berbahaya ditolak.
+•	File tidak diizinkan ditolak.
+•	Percobaan login dibatasi.
+•	Data sensitif tidak muncul di log umum.
+21.3 Pengujian beban
+Simulasikan:
+•	10 laporan bersamaan.
+•	50 pesan dalam beberapa menit.
+•	Banyak foto masuk.
+•	Notifikasi serentak.
+•	Webhook mengirim event ulang.
+21.4 User Acceptance Testing
+Libatkan:
+•	Beberapa warga.
+•	Ketua RT.
+•	Ketua RW.
+•	Petugas kelurahan.
+•	Lurah atau perwakilan pimpinan.
+•	Administrator.
+Minta mereka mencoba alur nyata dan mengisi lembar evaluasi.
+22. Tahapan Pengembangan
+Tahap 1 — Analisis kebutuhan
+Kegiatan:
+•	Wawancara warga.
+•	Wawancara RT.
+•	Wawancara RW.
+•	Wawancara kelurahan.
+•	Mengidentifikasi proses saat ini.
+•	Mengidentifikasi masalah.
+•	Menentukan kategori.
+•	Menentukan batas waktu.
+•	Menentukan hak akses.
+Hasil:
+Dokumen kebutuhan sistem
+Flowchart proses berjalan
+Flowchart proses usulan
+Daftar pengguna
+Daftar fitur
+Tahap 2 — Perancangan
+Kegiatan:
+•	Membuat use case diagram.
+•	Membuat activity diagram.
+•	Membuat sequence diagram.
+•	Membuat class diagram.
+•	Membuat ERD.
+•	Membuat rancangan halaman.
+•	Membuat prototype.
+Tahap 3 — Pengembangan MVP
+Fitur MVP:
+1.	Login petugas.
+2.	Data RT dan RW.
+3.	Form laporan.
+4.	Penerimaan webhook.
+5.	Pembuatan tiket.
+6.	Dashboard RT.
+7.	Dashboard RW.
+8.	Dashboard kelurahan.
+9.	Penerusan laporan.
+10.	Perubahan status.
+11.	Notifikasi dasar.
+12.	Riwayat laporan.
+Tahap 4 — Integrasi WhatsApp
+Kegiatan:
+•	Membuat Meta Developer App.
+•	Menyiapkan WhatsApp Business Account.
+•	Menyiapkan nomor layanan.
+•	Membuat access token.
+•	Mendaftarkan webhook.
+•	Berlangganan event pesan.
+•	Menguji pesan masuk.
+•	Menguji pesan keluar.
+•	Membuat template notifikasi.
+Tahap 5 — Pilot project
+Uji coba pada:
+1 RT
+1 RW
+Beberapa petugas kelurahan
+20–50 warga
+Periode uji coba:
+2–4 minggu
+Evaluasi:
+•	Kemudahan penggunaan.
+•	Kecepatan respons.
+•	Akurasi rute laporan.
+•	Jumlah laporan tidak lengkap.
+•	Kegagalan notifikasi.
+•	Keluhan petugas.
+•	Kepuasan warga.
+Tahap 6 — Implementasi penuh
+Setelah evaluasi:
+•	Perbaiki sistem.
+•	Tambahkan seluruh RT/RW.
+•	Cetak QR Code.
+•	Lakukan pelatihan.
+•	Sosialisasikan kepada warga.
+•	Tentukan petugas teknis.
+•	Tentukan prosedur pemeliharaan.
+23. Indikator Keberhasilan
+Indikator yang dapat digunakan:
+Indikator penggunaan
+•	Jumlah warga yang menggunakan layanan.
+•	Jumlah laporan masuk.
+•	Persentase laporan lengkap.
+•	Persentase laporan melalui QR Code.
+Indikator respons
+•	Waktu respons awal RT.
+•	Waktu verifikasi.
+•	Waktu penerusan ke RW.
+•	Waktu disposisi kelurahan.
+•	Waktu rata-rata penyelesaian.
+Indikator kualitas
+•	Persentase laporan selesai.
+•	Persentase laporan melewati SLA.
+•	Jumlah laporan berulang.
+•	Jumlah laporan salah wilayah.
+•	Tingkat kepuasan warga.
+Indikator teknis
+•	Persentase webhook berhasil.
+•	Persentase notifikasi terkirim.
+•	Jumlah kegagalan sistem.
+•	Durasi gangguan.
+•	Jumlah laporan duplikat.
+24. Batasan Versi Pertama
+Pada versi pertama, sistem tidak perlu langsung memiliki:
+•	Artificial intelligence kompleks.
+•	Aplikasi Android.
+•	Integrasi seluruh dinas.
+•	Analisis sentimen.
+•	Pengenalan objek dari foto.
+•	Verifikasi NIK otomatis.
+•	Peta GIS yang kompleks.
+•	Chatbot bahasa alami penuh.
+Fokus versi pertama:
+Laporan diterima
+Laporan tercatat
+Laporan diarahkan
+Petugas memperoleh notifikasi
+Status dapat dipantau
+Penyelesaian terdokumentasi
+25. Rekomendasi Alur Implementasi
+Alur terbaik yang disarankan adalah:
+Warga
+  ↓
+Scan QR Code
+  ↓
+WhatsApp layanan resmi
+  ↓
+Webhook
+  ↓
+Database website
+  ↓
+Dashboard RT
+  ↓
+Dashboard RW
+  ↓
+Dashboard kelurahan
+  ↓
+Disposisi petugas
+  ↓
+Pembaruan status
+  ↓
+Notifikasi WhatsApp warga
+Bukan:
+WhatsApp pribadi RT
+  ↓
+RT mengetik ulang ke website
+Penggunaan nomor WhatsApp layanan resmi lebih baik karena:
+•	Laporan tidak bergantung pada telepon pribadi RT.
+•	Pergantian ketua RT tidak menghilangkan riwayat.
+•	Pesan dapat diproses otomatis.
+•	Seluruh laporan masuk ke database.
+•	Status pengiriman dapat dilacak.
+•	Pengelolaan akses lebih terstruktur.
+26. Kesimpulan
+Sistem laporan cepat warga dikembangkan sebagai sistem pelayanan berjenjang yang menghubungkan warga, RT, RW, dan kelurahan.
+WhatsApp digunakan sebagai kanal yang mudah dijangkau warga, sedangkan website digunakan sebagai pusat:
+•	Penyimpanan laporan.
+•	Verifikasi.
+•	Penerusan.
+•	Disposisi.
+•	Pemantauan.
+•	Dokumentasi.
+•	Pelaporan statistik.
+Webhook berfungsi sebagai penghubung otomatis antara pesan WhatsApp dan backend website. Dengan webhook, pesan warga tidak perlu diketik ulang oleh RT karena data dapat langsung diterima, diproses, dan disimpan sebagai tiket laporan.
+Pengembangan sistem harus memperhatikan:
+•	Kemudahan warga.
+•	Kejelasan kewenangan.
+•	Kecepatan respons.
+•	Riwayat penanganan.
+•	Keamanan sistem.
+•	Pelindungan data pribadi.
+•	Mekanisme eskalasi.
+•	Keberlanjutan operasional.
+Judul pengembangan yang dapat digunakan:
+“Pengembangan Sistem Informasi Laporan Cepat Warga Berbasis Web Terintegrasi WhatsApp Cloud API dengan Mekanisme Disposisi Berjenjang RT–RW–Kelurahan.”

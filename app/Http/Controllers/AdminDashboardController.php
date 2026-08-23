@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ReportStatus;
 use App\Enums\UserRole;
 use App\Models\Citizen;
+use App\Models\PosyanduSite;
 use App\Models\Report;
 use App\Models\ReportHistory;
 use App\Models\Rt;
@@ -75,6 +76,7 @@ class AdminDashboardController extends Controller
                     'reports',
                     'reports as new_reports_count' => fn ($query) => $query->where('status', ReportStatus::NEW),
                     'reports as processing_reports_count' => fn ($query) => $query->where('status', ReportStatus::PROCESSING),
+                    'reports as forwarded_reports_count' => fn ($query) => $query->where('status', ReportStatus::FORWARDED),
                     'reports as completed_reports_count' => fn ($query) => $query->where('status', ReportStatus::COMPLETED),
                     'reports as rejected_reports_count' => fn ($query) => $query->where('status', ReportStatus::REJECTED),
                 ])
@@ -92,6 +94,9 @@ class AdminDashboardController extends Controller
                 ->latest('id')
                 ->limit(8)
                 ->get(),
+            'posyanduSiteCount' => config('modules.posyandu.enabled') === true
+                ? PosyanduSite::query()->where('is_active', true)->count()
+                : 0,
         ]);
     }
 

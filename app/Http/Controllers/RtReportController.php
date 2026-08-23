@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ReportHandlingLevel;
 use App\Enums\ReportStatus;
+use App\Http\Requests\AcknowledgeReportRequest;
+use App\Http\Requests\ForwardReportRequest;
 use App\Http\Requests\UpdateRtReportStatusRequest;
 use App\Models\Citizen;
 use App\Models\FamilyCard;
+use App\Models\PosyanduVisit;
 use App\Models\Report;
 use App\Models\VillageLetter;
 use App\Services\ReportStatusService;
+use App\Services\ReportWorkflowService;
 use App\Services\VillageAnalyticsService;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,14 +30,14 @@ class RtReportController extends Controller
         $rtId = $request->user()->rt_id;
 
         $counts = Report::query()
-            ->where('rt_id', $rtId)
+            ->visibleToRt($rtId)
             ->selectRaw('status, COUNT(*) as aggregate')
             ->groupBy('status')
             ->pluck('aggregate', 'status');
 
         $reports = Report::query()
             ->with(['citizen:id,name', 'rt:id,code,name'])
-            ->where('rt_id', $rtId)
+            ->visibleToRt($rtId)
             ->when(
                 ReportStatus::tryFrom((string) $request->query('status')),
                 fn (Builder $query, ReportStatus $status): Builder => $query->where('status', $status),
@@ -80,6 +85,14 @@ class RtReportController extends Controller
                     ->orWhere('nik', ''))
                 ->count(),
             'letterCounts' => VillageLetter::query()->where('rt_id', $rtId)->selectRaw('status, COUNT(*) aggregate')->groupBy('status')->pluck('aggregate', 'status'),
+            'hasPosyanduAssignment' => config('modules.posyandu.enabled') === true
+                && $request->user()->posyanduAssignments()->where('is_active', true)->exists(),
+            'posyanduMonthlyVisitCount' => config('modules.posyandu.enabled') === true
+                ? PosyanduVisit::query()
+                    ->whereHas('site', fn (Builder $site): Builder => $site->where('rt_id', $rtId))
+                    ->whereBetween('visited_at', [now()->startOfMonth(), now()->endOfMonth()])
+                    ->count()
+                : 0,
         ]);
     }
 
@@ -87,7 +100,22 @@ class RtReportController extends Controller
     {
         Gate::authorize('viewForRt', $report);
 
-        $report->load(['citizen:id,name', 'rt:id,code,name', 'attachments']);
+        $report->load([
+            'citizen:id,name',
+            'rt:id,rw_id,code,name',
+            'rt.rw:id,code,name',
+            'entryRt:id,rw_id,code,name',
+            'incidentRt:id,rw_id,code,name',
+            'currentRt:id,rw_id,code,name',
+            'currentRw:id,code,name',
+            'attachments',
+            'dispositions.forwardedBy:id,name',
+            'dispositions.acknowledgedBy:id,name',
+        ]);
+
+        $canManage = Gate::allows('manage', $report);
+        $canAcknowledge = Gate::allows('acknowledge', $report);
+        $canForward = Gate::allows('forward', $report);
 
         return view('rt.reports.show', [
             'report' => $report,
@@ -95,8 +123,53 @@ class RtReportController extends Controller
                 ->oldest('created_at')
                 ->oldest('id')
                 ->get(),
-            'allowedTransitions' => $statusService->allowedTransitions($report->status),
+            'allowedTransitions' => $canManage
+                ? $statusService->allowedTransitions($report->status)
+                : [],
+            'canAcknowledge' => $canAcknowledge,
+            'canForward' => $canForward,
         ]);
+    }
+
+    public function forward(
+        ForwardReportRequest $request,
+        Report $report,
+        ReportWorkflowService $workflow,
+    ): RedirectResponse {
+        $publicUpdate = $request->validate([
+            'public_note' => ['required', 'string', 'max:2000'],
+        ])['public_note'];
+
+        try {
+            $workflow->forward(
+                $report,
+                $request->user(),
+                ReportHandlingLevel::from($request->validated('target_level')),
+                $request->validated('reason'),
+                null,
+                $publicUpdate,
+            );
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['reason' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('rt.reports.show', $report)
+            ->with('status', 'Laporan berhasil diteruskan kepada RW.');
+    }
+
+    public function acknowledge(
+        AcknowledgeReportRequest $request,
+        Report $report,
+        ReportWorkflowService $workflow,
+    ): RedirectResponse {
+        try {
+            $workflow->acknowledge($report, $request->user());
+        } catch (DomainException $exception) {
+            throw ValidationException::withMessages(['workflow' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('rt.reports.show', $report)
+            ->with('status', 'Disposisi laporan telah diterima.');
     }
 
     public function updateStatus(
@@ -112,6 +185,7 @@ class RtReportController extends Controller
                 ReportStatus::from($validated['status']),
                 $request->user(),
                 $validated['note'] ?? null,
+                $validated['public_note'] ?? null,
             );
         } catch (DomainException $exception) {
             throw ValidationException::withMessages([

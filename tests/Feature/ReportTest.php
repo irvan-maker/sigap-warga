@@ -10,7 +10,6 @@ use App\Models\Rw;
 use App\Services\TicketNumberGenerator;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use LogicException;
 use Tests\TestCase;
 
 class ReportTest extends TestCase
@@ -83,16 +82,18 @@ class ReportTest extends TestCase
         $this->assertCount(10, $tickets->unique());
     }
 
-    public function test_citizen_and_report_rt_must_match(): void
+    public function test_report_rt_is_service_territory_and_may_differ_from_citizen_domicile(): void
     {
         $rw = $this->createRw();
         $citizenRt = $this->createRt($rw, '001');
         $reportRt = $this->createRt($rw, '002');
         $citizen = Citizen::factory()->for($citizenRt)->create();
 
-        $this->expectException(LogicException::class);
+        $report = $this->createReport($citizen, $reportRt);
 
-        $this->createReport($citizen, $reportRt);
+        $this->assertTrue($report->rt->is($reportRt));
+        $this->assertTrue($report->citizen->rt->is($citizenRt));
+        $this->assertSame($citizenRt->id, $citizen->fresh()->rt_id);
     }
 
     public function test_deleting_a_referenced_citizen_is_restricted(): void

@@ -1,467 +1,722 @@
 # SIGAP WARGA
 
-**Sistem Informasi dan Pelaporan Warga**
-
-SIGAP WARGA adalah sistem digital untuk membantu pengelolaan laporan warga, administrasi kependudukan, pelayanan surat, serta koordinasi antara RT, RW, dan Kelurahan/Desa.
-
-> Status saat ini: **Online / Staging / Pilot Development**
-
----
-
-## Teknologi
-
-- Laravel 13
-- PHP 8.3
-- MySQL / MariaDB
-- WhatsApp Cloud API — tahap integrasi
-- QR Code berbasis wilayah
-- Responsive Web Application
-
----
-
-# Arsitektur Inti SIGAP WARGA
-
-Prinsip utama sistem:
-
-- **Dashboard adalah pusat data dan tindakan resmi petugas.**
-- **WhatsApp adalah kanal pelaporan warga dan notifikasi.**
-- **QR Code adalah pintu masuk cepat bagi warga.**
-- Setiap laporan harus terhubung dengan wilayah RT/RW.
-- Perubahan status penting disimpan sebagai histori.
-- Notifikasi petugas dikirim kepada pihak yang memegang tindakan berikutnya.
-- Warga menerima notifikasi pada milestone penting laporan.
-- Super Admin memiliki visibility penuh terhadap sistem tanpa harus menerima seluruh notifikasi operasional.
-
----
-
-# Workflow Pelaporan Warga
-
-## 1. Scan QR Code
-
-QR Code dapat dibuat berdasarkan wilayah RT/RW.
-
-Contoh identitas:
+SIGAP WARGA adalah **platform orkestrasi pelayanan dan administrasi desa berbasis wilayah** dengan visi **“1 QR Menyelesaikan Semuanya”**. Sistem diarahkan menjadi universal service gateway yang menghubungkan:
 
 ```text
-RT 001 / RW 001
+Warga -> RT -> RW -> Desa/Kelurahan -> layanan terkait
 ```
 
-Alur:
+README ini adalah **single source of truth** untuk checkpoint engineering, batas keamanan, progres, blocker, roadmap, deployment, pilot, dan tugas berikutnya. Repository aktual tetap menjadi bukti utama; label visi atau rencana tidak berarti capability sudah executable.
+
+## Current Project Checkpoint
+
+| Item | Bukti aktual |
+|---|---|
+| Branch | `feature/whatsapp-integration` |
+| Release candidate | `13c1056` — hardening pilot, runtime queue, dokumentasi, dan builder artefak sudah berada di branch remote; worktree bersih |
+| Fase | **Pilot 1 RW / 3 RT**: laporan cepat menjadi modul utama; sensus, Posyandu, dan persuratan ditandai prototype |
+| Verified runtime | PHP `8.3.30`; Laravel Framework `13.23.0`; PHPUnit `12.5.33` (verifikasi manual maintainer) |
+| Manifest contract | PHP `^8.3`, Laravel `^13.8`, PHPUnit `^12.5.12`; Vite `^8.0.0` |
+| Database source | 26 migration files; terbaru `2026_08_13_050000_harden_quick_report_public_data.php` |
+| Applied migration lokal | Seluruh migration sampai hardening batch 17 sudah diterapkan; tetap wajib diverifikasi per environment sebelum deploy |
+| Current full regression baseline | `513 tests`, `2,333 assertions`, **PASS** — `php artisan test` pada 13 Agustus 2026 setelah hardening pilot |
+| Formatting | `vendor/bin/pint --dirty` selesai tanpa error setelah memperbaiki changed files |
+| External status | Meta credentials, public HTTPS callback, dan pengiriman nyata belum dapat dibuktikan dari repository |
+
+Checkpoint di atas harus diperbarui ketika milestone atau HEAD rujukan berubah. Status Meta, hosting, database production, dan layanan eksternal tidak dapat disimpulkan dari source code.
+
+## Visi dan Implementasi Saat Ini
+
+### Vision
+
+- Satu QR menjadi pintu masuk layanan warga berbasis wilayah.
+- WhatsApp menjadi kanal percakapan dan notifikasi warga.
+- Dashboard menjadi pusat tindakan resmi dan audit petugas.
+- Gateway memahami kebutuhan, menentukan wilayah layanan, lalu mengarahkan ke service yang tepat.
+- Layanan berkembang dari laporan menuju informasi, persuratan, aspirasi, dan handoff darurat yang aman.
+
+### Current implementation
+
+- Aplikasi web Laravel untuk master wilayah/warga/KK, laporan, persuratan, dashboard per peran, tracking publik, dan histori.
+- Domain pipeline untuk context, identity, intent, urgency, service territory, eligibility, capability, dan routing.
+- REPORT adalah vertical slice utama: kategori/prioritas, penanggung jawab aktif, disposisi dan acknowledgement RT → RW → RT/Kelurahan telah executable.
+- Super Admin dapat menerbitkan, mencetak, dan mencabut QR bertoken untuk tiap RT; hanya satu QR aktif diizinkan per RT dan token mentah tidak disimpan di basis data.
+- WhatsApp Cloud API memiliki GET verification, POST HMAC verification, parser text-only, pemrosesan inbound idempotent melalui queue terenkripsi, context percakapan privat 24 jam, serta outbound text job dengan retry.
+- Scan QR membuka portal verifikasi wilayah lalu WhatsApp dengan referensi RT/RW yang dapat dibaca warga; pesan tidak menampilkan token teknis dan pesan kedua diproses memakai context RT yang diverifikasi server.
+- Sensus tetap tersedia sebagai prototype. Posyandu memiliki prototype lokasi, penugasan khusus, jadwal, kunjungan, enkripsi catatan, dan audit akses tulis.
+- Persuratan prototype menyimpan level persetujuan per template: cukup RT, sampai RW, atau sampai Kelurahan; penerbit hanya dapat bertindak pada level yang dipersyaratkan.
+- Lampiran laporan manual disimpan pada private local disk dan hanya disajikan melalui signed route; pelacakan warga hanya memuat lampiran yang secara eksplisit ditandai publik.
+- EMERGENCY, INFORMATION, LETTER, dan ASPIRATION dapat dipahami/dirutekan pada pipeline inbound, tetapi belum dieksekusi oleh processor tersebut.
+- Emergency dispatch dan operator queue belum tersedia; sistem dilarang menjanjikan bantuan telah dikirim.
+
+## Citizen Interaction: Progressive Clarification
+
+Prinsip interaksi warga SIGAP WARGA adalah:
+
+> **ASK ONLY WHAT IS MISSING.**
+
+Sistem memakai identity dan context QR yang sudah diketahui, memahami pesan natural-language, lalu hanya meminta fakta yang masih kurang. Context dasar dua tahap (`MULAI` lalu deskripsi) sudah diimplementasikan; clarification multi-putaran untuk lokasi ambigu/konflik masih tahap berikutnya.
+
+### Hindari chatbot-form wajib
+
+Jangan memulai setiap interaksi dengan form generik seperti:
 
 ```text
-Warga
-  ↓
-Scan QR
-  ↓
-WhatsApp SIGAP WARGA terbuka
-  ↓
-Pesan awal sudah tersedia:
-MULAI LAPOR
-```
-
-QR wilayah dapat membawa identitas RT/RW sehingga sistem dapat menentukan tujuan laporan secara otomatis.
-
----
-
-## 2. Memulai Laporan
-
-Warga mengirim:
-
-```text
-MULAI LAPOR
-```
-
-Bot membalas:
-
-```text
-Selamat datang di SIGAP WARGA 👋
-
-Silakan kirim laporan dengan format:
-
 Nama:
 Alamat:
 Kategori:
 Keterangan:
-
-Tambahkan foto/lokasi jika ada.
 ```
 
-Warga kemudian mengirim satu pesan lengkap.
-
----
-
-## 3. Laporan Masuk Sistem
-
-Setelah laporan diterima:
+Known WhatsApp sender dapat di-resolve ke existing Citizen melalui `IdentityResolver`. Nama, domicile, dan master data lain yang sudah tersedia tidak perlu ditanyakan berulang. Namun:
 
 ```text
-WhatsApp
-   ↓
-Webhook
-   ↓
-Laravel
-   ↓
-Validasi & Parsing
-   ↓
-Database SIGAP WARGA
-   ↓
-Nomor laporan dibuat
+known phone != authenticated
+known phone != authorized
 ```
+
+Unknown sender tidak boleh menyebabkan Citizen dibuat otomatis. Protected information tetap memerlukan verification dan authorization yang sesuai.
+
+`Citizen.rt_id` adalah domicile/census territory, bukan lokasi kejadian. Jika service memerlukan lokasi peristiwa, gunakan istilah **“lokasi kejadian”**, bukan “alamat” yang ambigu. Domicile tidak boleh digunakan sebagai incident territory.
+
+### Target REPORT experience
+
+`MULAI LAPOR` adalah shortcut opsional, bukan satu-satunya command dan bukan syarat agar pesan dipahami.
+
+```text
+Warga:
+MULAI LAPOR
+
+SIGAP WARGA:
+Selamat datang di SIGAP WARGA 👋
+
+Silakan ceritakan kejadian atau masalah yang ingin Anda laporkan.
 
 Contoh:
-
-```text
-LPR-2026-0001
+“Lampu jalan di depan Pos RT 03 mati sejak tadi malam.”
 ```
 
-Warga menerima konfirmasi:
+Natural language tetap menjadi first-class input, misalnya:
 
 ```text
-✅ Laporan berhasil diterima.
-
-Nomor Laporan: LPR-2026-0001
-Status: Menunggu verifikasi RT
-
-Simpan nomor laporan untuk memantau perkembangan.
+jalan depan rumah rusak
+sampah menumpuk sudah tiga hari
+pohon tumbang menutup jalan
 ```
 
----
+Kategori tidak wajib ditanyakan di awal. Jika intent/kategori dapat dipahami secara aman dari pesan, pipeline dapat dilanjutkan. Jika pesan ambigu, barulah sistem meminta clarification yang spesifik.
 
-# Workflow RT
-
-Setelah laporan berhasil dibuat:
+Conceptual processing:
 
 ```text
-Laporan Baru
-   ↓
-Dashboard RT
-   +
-Notifikasi WhatsApp RT
+message
+  -> identity
+  -> existing context
+  -> intent / urgency
+  -> territory
+  -> eligibility
+  -> routing
+  -> ask only missing facts
 ```
 
-Contoh notifikasi:
+### Current implementation vs target UX
+
+| Current implementation | Target UX berikutnya |
+|---|---|
+| WhatsApp inbound text dan context percakapan 24 jam | Progressive clarification berdasarkan missing facts |
+| Existing Citizen identity resolution | Verifikasi/registrasi nomor warga oleh petugas |
+| Rule-based intent/urgency understanding | Operator clarification untuk konflik wilayah |
+| QR resmi → portal verifikasi → referensi wilayah terbaca → WhatsApp | WhatsApp location/media dengan retensi aman |
+| Outbound sambutan, tiket, prioritas, dan respons aman | Delivery receipt dan antrean retry operasional |
+| Service eligibility dan routing | Operator clarification untuk konflik/ambiguity |
+| REPORT execution ketika seluruh requirement terpenuhi | WhatsApp media dan location support |
+| Text-only; satu context percakapan aktif per nomor/source | Percakapan multi-step yang sepenuhnya auditable dan fail-safe |
+
+Jangan mengatakan “tambahkan foto/lokasi jika ada” sebagai current WhatsApp capability. Media dan location melalui WhatsApp masih **PLANNED**.
+
+### QR interaction yang diimplementasikan
 
 ```text
-🔔 Laporan Baru SIGAP WARGA
-
-LPR-2026-0001
-Kategori: Infrastruktur
-Wilayah: RT 001 / RW 001
-
-Silakan buka dashboard SIGAP WARGA
-untuk melakukan verifikasi.
+Scan QR
+  -> universal service gateway
+  -> validasi satu QR aktif untuk RT
+  -> portal verifikasi wilayah
+  -> pesan pembuka `MULAI LAPORAN SIGAP WARGA` + kode RT/RW terbaca
+  -> server mencocokkan referensi wilayah dengan QR aktif dan identitas warga
+  -> context percakapan privat 24 jam
+  -> citizen describes problem
 ```
 
-## RT Mulai Meninjau
-
-RT melakukan tindakan resmi melalui dashboard:
+QR-derived entry territory bukan incident territory:
 
 ```text
-BARU
-  ↓
-MULAI TINJAU
-  ↓
-DITINJAU RT
+QR entry territory != incident territory
+validly established incident territory > entry territory
 ```
 
-Perubahan tersebut disimpan ke histori laporan.
+Pada pilot, QR mengutamakan REPORT. Sensus, Posyandu, dan persuratan ditampilkan sebagai arah prototype, bukan janji layanan WhatsApp yang sudah operasional. Setiap service tetap memakai capability, eligibility, territory, authorization, dan oversight rules masing-masing.
 
-Warga menerima:
+### Interaction guardrails
+
+DO NOT:
+
+- repeatedly ask known master data;
+- use domicile as incident location;
+- auto-create Citizen from WhatsApp;
+- trust user-typed RT as authoritative territory;
+- force every service into an identical form;
+- claim unsupported WhatsApp media/location capability;
+- claim emergency dispatch without real operator/service acknowledgement.
+
+Untuk EMERGENCY, sistem tidak boleh mengatakan bantuan atau ambulans telah dikirim sebelum acknowledgement nyata dari operator/service yang berwenang tersedia.
+
+## Arsitektur Aktual
+
+### Context dan understanding
 
 ```text
-🔎 Laporan Anda sedang ditinjau oleh RT.
+EntryContext
+  -> ContextResolver
+       -> IdentityResolver (phone -> existing Citizen; tidak membuat Citizen)
+  -> ContextReadinessPolicy
+  -> ContextGuidanceService
+  -> ContextEngine
+
+message
+  -> RuleBasedIntentResolver
+  -> IntentUrgencyPolicy
+  -> ServiceTerritoryPolicy
+  -> ServiceUnderstandingOrchestrator
+  -> CitizenRequestInterpreter
+  -> RoutingReadinessDiagnoser
+  -> ServiceEligibilityPolicy
+       -> ServiceCapabilityPolicy
+       -> RuleBasedInformationAccessClassifier (untuk INFORMATION)
+  -> ServiceRouter
 ```
 
----
+Generic context readiness tidak menentukan sendiri apakah sebuah service boleh berjalan. `ServiceEligibilityPolicy` merekonsiliasi fakta context dengan requirement khusus service. Routing hanya memilih target; routing bukan bukti execution.
 
-# Eskalasi RT → RW
-
-Jika laporan membutuhkan kewenangan RW:
+### Trusted inbound dan WhatsApp
 
 ```text
-RT
-  ↓
-Teruskan ke RW
-  ↓
-MENUNGGU TINDAKAN RW
-  ↓
-Dashboard RW
-  +
-Notifikasi WhatsApp RW
+Meta HTTPS request
+  -> WhatsAppWebhookController
+       -> WhatsAppWebhookSignatureVerifier (raw body + X-Hub-Signature-256)
+       -> WhatsAppWebhookParser (verified payload, text-only)
+       -> TrustedInboundEvent (provider-neutral contract)
+  -> ProcessTrustedInboundEvent
+       -> ReceiveInboundRequestService
+       -> claim RECEIVED -> PROCESSING
+       -> CitizenRequestInterpreter
+       -> ServiceEligibilityPolicy
+       -> ServiceRouter
+       +-- REPORT eligible -> CreateCitizenReportService -> Report -> ReportHistory
+       +-- target lain     -> PENDING_ACTION (belum dieksekusi)
+       +-- tidak eligible  -> BLOCKED
+       `-- exception       -> FAILED (safe error code)
 ```
 
-RW menerima:
+Provider-specific WhatsApp adapter berhenti pada `TrustedInboundEvent`. Domain core tidak menerima raw Meta payload, signature, token, atau metadata arbitrer.
+
+### Protected information boundary
 
 ```text
-🔔 Laporan Diteruskan dari RT
-
-LPR-2026-0001
-Kategori: Infrastruktur
-Asal: RT 001 / RW 001
-
-Silakan buka dashboard SIGAP WARGA
-untuk menindaklanjuti.
+INFORMATION message
+  -> RuleBasedInformationAccessClassifier
+       +-- PUBLIC -> anonymous eligibility dapat diteruskan
+       `-- PROTECTED / UNKNOWN
+             -> identity diperlukan
+             -> ProtectedInformationAuthorizationContextFactory
+             -> AuthorizationVerificationContextFactory
+             -> belum ada policy ALLOW/DENY
+             -> belum ada protected data access
 ```
 
-Warga menerima:
+## 🔒 Locked Engineering Decisions
+
+“Locked” berarti keputusan memiliki implementation dan tests atau domain contract yang jelas. Breaking change harus melalui audit bukti, targeted tests, dan full regression; locked tidak berarti seluruh service sudah production-ready.
+
+| Keputusan terkunci | Bukti utama |
+|---|---|
+| `Citizen.rt_id` adalah wilayah domisili/sensus | `Citizen`, `IdentityResolver`, context/territory tests |
+| `Report.rt_id` adalah wilayah layanan/insiden | `Report::rt()`, `CreateReportRecordService`, report execution tests |
+| Domisili Citizen immutable | guard `Citizen::saving`; context dan report tests memastikan tidak bermutasi |
+| WhatsApp REPORT tidak auto-create Citizen | `IdentityResolver`, `ServiceEligibilityPolicy`, `CreateCitizenReportService` |
+| EMERGENCY bukan Report | `CitizenIntent`, `UrgencyLevel`, `IntentUrgencyPolicy`, execution tests |
+| REPORT hanya berurgency NORMAL/HIGH; EMERGENCY memakai EMERGENCY | `IntentUrgencyPolicy`, `CreateCitizenReportService` |
+| Wilayah identitas tidak boleh mengalahkan lokasi insiden pada emergency | `ServiceTerritoryPolicy` dan cross-territory tests |
+| Eligibility service terpisah dari generic context readiness | `ServiceEligibilityPolicy`, `RoutingReadinessDiagnoser` |
+| Informasi publik identity-optional | classifier, capability, eligibility tests |
+| Informasi protected dan unknown fail-closed | `RuleBasedInformationAccessClassifier`; unknown -> protected |
+| Known identity bukan authorized; verified bukan authorized | authorization/verification contexts secara eksplisit bukan keputusan izin |
+| Raw WhatsApp payload tidak dipercaya sebelum HMAC valid | controller memverifikasi raw body sebelum JSON parse/domain processing |
+| Idempotency provider memakai `(source, external_event_id)` | unique database constraint dan `ReceiveInboundRequestService` |
+| `correlation_id` internal berbeda dari ticket Report | UUID inbound vs `TicketNumberGenerator` |
+| Manual Report boleh tanpa `inbound_request_id` | nullable FK dan `CreateManualReportService` |
+| Satu inbound hanya boleh menghasilkan satu Report | unique `reports.inbound_request_id`, row locking, transaction, tests |
+| Provider retry tidak boleh membuat duplicate Report | durable short-circuit pada status existing dan database constraints |
+| Inbound lifecycle memiliki durable terminal states | `InboundRequestLifecyclePolicy` dan persisted timestamps/reasons |
+| WhatsApp adapter berhenti sebelum domain core | `WhatsAppWebhookParser` menghasilkan `TrustedInboundEvent` minimal |
+| Hierarki wilayah tidak dihapus | laporan memiliki handler aktif dan riwayat disposisi RT/RW/Kelurahan yang tidak menimpa wilayah asal |
+| Data Posyandu dipisahkan dari jabatan wilayah | catatan individu hanya dapat dibuka petugas dengan assignment Posyandu aktif; dashboard wilayah hanya menerima agregat |
+
+## Service Capability Matrix
+
+Legenda: 🔒 READY = executable dan boundary utama matang; 🟢 IMPLEMENTED = tersedia dalam aplikasi tetapi belum lengkap lintas kanal; 🟡 PARTIAL = contract/routing/foundation saja; 🟠 BLOCKED = dependency wajib belum ada; 🔴 SAFETY CRITICAL = tidak boleh dianggap operational; ⚪ PLANNED = belum ada implementasi relevan.
+
+| Service | Understanding | Routing | Execution | Identity | Territory | Oversight | Current status |
+|---|---|---|---|---|---|---|---|
+| REPORT | Rule-based REPORT, NORMAL/HIGH | `REPORT_SERVICE` | QR → WhatsApp text dapat membuat Report, ticket, category, priority, history, dan disposisi | Required, existing active Citizen | Trusted QR entry; konflik domicile fail-closed | RT/RW/Kelurahan | 🟢 IMPLEMENTED untuk pilot; external Meta E2E belum diverifikasi |
+| EMERGENCY | Detect + urgency validation | `EMERGENCY_SERVICE` | Tidak ada dispatch; inbound menjadi pending/blocked | Optional | Incident territory required | Operator required | 🔴 SAFETY CRITICAL |
+| LETTER | Intent/capability tersedia | `LETTER_SERVICE` | Web workflow ada; inbound tidak memanggilnya | Required | Required, identity territory | Approval RT/RW/Kelurahan sesuai jenis surat | 🟡 PROTOTYPE untuk universal gateway; 🟢 IMPLEMENTED di web |
+| INFORMATION | Public/protected classification | `INFORMATION_SERVICE` | Inbound hanya `PENDING_ACTION`; belum memberi jawaban | Optional untuk public; protected wajib identity + authorization | Optional untuk public | None/public; authorization untuk protected | 🟡 PARTIAL |
+| CENSUS | Web form dan master warga/KK | Web | Penyimpanan tersedia | Petugas RT | Dibatasi RT | RT | 🟡 PROTOTYPE |
+| POSYANDU | Form prototype | Web | Lokasi, assignment, jadwal, kunjungan terenkripsi, audit | Assignment khusus | Dibatasi lokasi/RT Posyandu | Kader/petugas kesehatan/koordinator | 🟡 PROTOTYPE |
+| ASPIRATION | Rule-based intent | `ASPIRATION_SERVICE` | Belum ada persistence/executor inbound | Required | Required | Verification | 🟡 PARTIAL |
+| PROTECTED INFORMATION | Classification + authorization/verification facts | Information target atau blocked | Belum ada ALLOW/DENY dan data access | Required | Bergantung subject/scope | Authorization required | 🟠 BLOCKED |
+
+REPORT adalah implementation paling lengkap dan telah memiliki trusted QR entry. Status production tetap menunggu bukti deployment HTTPS, konfigurasi Meta nyata, SOP petugas, backup, dan uji lapangan 1 RW/3 RT.
+
+## REPORT: Vertical Slice Pertama
+
+Alur executable:
 
 ```text
-📌 Laporan Anda telah diteruskan ke RW
-untuk tindak lanjut berikutnya.
+CitizenRequestInterpreter
+  -> ServiceEligibilityPolicy
+  -> ServiceRouter
+  -> CreateCitizenReportCommand
+  -> CreateCitizenReportService
+  -> CreateReportRecordService
+  -> Report
+  -> initial ReportHistory (NEW)
 ```
 
----
+- `CreateReportRecordService` dipakai ulang oleh citizen-channel execution dan manual report sehingga ticket generator serta initial history tetap konsisten.
+- Pembuatan citizen-channel report, inbound transition, Report, dan history berlangsung dalam transaction dengan row lock dan retry transaction.
+- Cross-territory report menyimpan `Report.rt_id` sebagai wilayah layanan/insiden tanpa mengubah `Citizen.rt_id`.
+- `Report.inbound_request_id` menyimpan trace inbound dan unique; manual report kompatibel karena field nullable.
+- Duplicate delivery mengembalikan durable result dari receipt lama dan tidak membuat Report kedua.
+- Manual report dapat membuat Citizen dari form petugas dalam batas RT yang divalidasi. Ini berbeda dari WhatsApp, yang wajib memakai Citizen existing.
+- Attachment tersedia pada manual web flow. WhatsApp parser saat ini mengabaikan media/status callback; citizen-channel report hanya mendukung text.
 
-# Eskalasi RW → Kelurahan/Desa
+## Emergency Safety Boundary
 
-Jika laporan membutuhkan kewenangan Kelurahan/Desa:
+**EMERGENCY != REPORT.** Sistem saat ini dapat mendeteksi emergency berbasis rule, memvalidasi urgency `EMERGENCY`, memilih wilayah layanan/insiden, merutekan ke `EMERGENCY_SERVICE`, lalu menyimpan inbound sebagai `PENDING_ACTION` jika routable atau `BLOCKED` bila requirement belum terpenuhi.
+
+Sistem saat ini **belum**:
+
+- dispatch ambulans atau unit bantuan;
+- menghubungi operator emergency;
+- mengirim acknowledgement bahwa bantuan sedang datang;
+- mengelola SLA, escalation, atau retry operator;
+- memverifikasi live location.
+
+> DILARANG menampilkan klaim “bantuan dikirim”, “petugas menuju lokasi”, atau padanan lain sebelum ada acknowledgement nyata dari operator/service yang berwenang.
+
+## Information Security Boundary
+
+### PUBLIC
+
+Contoh yang diklasifikasikan public: jam kantor, kontak publik, jadwal layanan, persyaratan layanan, prosedur, dan biaya resmi. Public dapat identity-optional dan territory-optional sesuai capability.
+
+### PROTECTED
+
+Contoh protected: NIK/data warga, KK/anggota keluarga, status laporan personal, status surat personal, data sensus, dan administrasi internal. Informasi ambigu atau tidak dikenali mengikuti aturan:
 
 ```text
-RW
-  ↓
-Teruskan ke Kelurahan
-  ↓
-MENUNGGU TINDAKAN KELURAHAN
-  ↓
-Dashboard Kelurahan
-  +
-Notifikasi WhatsApp Petugas Kelurahan
+UNKNOWN INFORMATION -> PROTECTED by default
 ```
 
-Petugas Kelurahan menerima:
+Prinsip wajib:
 
 ```text
-🔔 Laporan Diteruskan ke Kelurahan
-
-LPR-2026-0001
-Kategori: Infrastruktur
-Asal: RT 001 / RW 001
-
-Silakan buka dashboard SIGAP WARGA
-untuk melakukan tindak lanjut.
+KNOWN != VERIFIED
+VERIFIED != AUTHORIZED
+AUTHORIZED != DATA ACCESSED
 ```
 
-Warga menerima:
+Implementation saat ini baru mengklasifikasikan akses serta merakit authorization facts dan verification states. Belum ada policy executable yang menghasilkan keputusan ALLOW/DENY, dan factory tersebut tidak mengambil protected data.
+
+## Inbound Idempotency dan Lifecycle
+
+`inbound_requests` menyimpan metadata durable minimum, bukan isi pesan atau nomor pengirim:
+
+| Field | Semantik |
+|---|---|
+| `source` | Namespace provider/account; WhatsApp membentuk `WHATSAPP_SOURCE_NAMESPACE:phone_number_id` |
+| `external_event_id` | ID event provider (Meta message ID), case-sensitive |
+| `correlation_id` | UUID trace internal; bukan ticket warga |
+| `service_target` | Target hasil eligibility/routing bila diketahui |
+| `status` | State durable pemrosesan |
+| `processing_reason` | Alasan aman untuk blocked/pending |
+| `attempt_count` | Jumlah claim pemrosesan |
+| `last_error_code` | Kode error aman, bukan exception message/secret |
 
 ```text
-🏛️ Laporan Anda telah diteruskan
-ke pihak Kelurahan/Desa.
+(source, external_event_id) = provider idempotency identity
+correlation_id              = internal trace identity
+ticket_number               = citizen-facing Report identity
 ```
 
----
-
-# Penyelesaian Laporan
-
-Setelah penanganan selesai:
+Lifecycle aktual:
 
 ```text
-Petugas
-  ↓
-SELESAI
-  ↓
-Histori disimpan
-  ↓
-Notifikasi WhatsApp Warga
+RECEIVED -> PROCESSING -> SUCCEEDED
+                       -> BLOCKED
+                       -> PENDING_ACTION
+                       -> FAILED
 ```
 
-Warga menerima:
+Semua terminal state saat ini tidak memiliki transition keluar. Duplicate terhadap receipt yang sudah terminal mengembalikan outcome durable; duplicate ketika `PROCESSING` tidak mengambil alih pekerjaan. Retry FAILED dan recovery PROCESSING yang stale belum diimplementasikan.
+
+## WhatsApp Cloud API Integration
+
+### Code readiness
+
+- GET verification memeriksa `hub.mode=subscribe`, verify token dengan `hash_equals`, lalu mengembalikan challenge.
+- POST memverifikasi `X-Hub-Signature-256` sebagai HMAC-SHA256 atas **raw body** sebelum decode/parse.
+- Invalid/missing signature ditolak `403`; malformed signed JSON ditolak aman.
+- Parser hanya menerima inbound text message dan memakai Meta message ID sebagai external event ID.
+- Source di-scope oleh configured namespace + Meta `phone_number_id`, mencegah collision antarakun.
+- Referensi RT/RW yang dapat dibaca warga hanya di-resolve menjadi kandidat `entryRt` bila QR aktif tersedia untuk RT tersebut; penerbitan baru dibatasi satu QR aktif per RT dan identity/context policy tetap menolak konflik wilayah.
+- Marker handoff lama tetap dapat diproses sementara sebagai kompatibilitas untuk tautan yang sudah telanjur diterbitkan, tetapi gateway baru tidak lagi menaruh `[SW:...]` pada pesan warga.
+- Setelah pesan `MULAI`, context RT disimpan 24 jam menggunakan hash HMAC nomor pengirim; nomor telepon mentah tidak disimpan pada tabel conversation.
+- Pesan berikutnya dapat membuat report tanpa mengirim ulang referensi QR. Nomor yang tidak dikenal dan konflik wilayah tetap fail-closed.
+- Media dan delivery/status changes di-acknowledge tetapi diabaikan tanpa receipt.
+- CSRF exemption sempit hanya untuk `webhooks/whatsapp`.
+- Receipt tidak menyimpan raw payload, sender phone, message, signature, token, atau arbitrary provider metadata.
+- Outbound text client tersedia dan dapat mengirim sambutan, tiket, kategori/prioritas, atau respons aman. Fitur default nonaktif hingga credential dan pengiriman nyata diverifikasi.
+- Media ingest dan operator interaction belum tersedia.
+
+### MANUAL PROJECT CHECKPOINT — Meta environment
+
+Status berikut tidak dapat diverifikasi dari repository dan wajib diperbarui manual oleh maintainer:
+
+- [ ] Meta app created
+- [ ] Business portfolio siap
+- [ ] Test WABA tersedia
+- [ ] Test number tersedia
+- [ ] Test recipient terdaftar
+- [ ] Webhook server deployed
+- [ ] GET callback verification berhasil dari Meta
+- [ ] Signed POST end-to-end berhasil
+
+Jangan menandai item selesai hanya berdasarkan keberadaan code.
+
+## Deployment Architecture
+
+Target public pilot saat ini: `sigap.cloud.uym.ac.id`.
+
+Deployment pack P0:
+
+- [Evaluasi Sistem — Tahap Berikutnya](docs/EVALUASI%20SISTEM%20SIGAP%20WARGA%20-%20TAHAP%20BERIKUTNYA.md)
+- [Deployment Guide](docs/deployment/README.md)
+- [Environment Checklist](docs/deployment/ENVIRONMENT_CHECKLIST.md)
+- [Operations Runbook](docs/deployment/OPERATIONS_RUNBOOK.md)
+- [Panduan Pilot 1 RW / 3 RT](docs/PILOT%201%20RW%203%20RT.md)
+
+| P0 checkpoint | Status |
+|---|---|
+| Deployment documentation | 🟢 IMPLEMENTED |
+| Campus deployment | 🟠 BLOCKED — awaiting hosting cooperation |
+| WhatsApp REPORT E2E | 🟡 CODE READY — trusted QR tersedia; deployment HTTPS dan Meta nyata belum diverifikasi |
 
 ```text
-✅ Laporan Anda telah selesai ditangani.
-
-Terima kasih telah menggunakan SIGAP WARGA.
+GitHub
+  -> campus hosting (dependency administrator)
+  -> Laravel production (/public document root)
+  -> HTTPS
+  -> Meta callback
+  -> WhatsApp inbound
 ```
 
----
+Campus hosting dapat digunakan untuk pilot. Custom domain dapat diarahkan kemudian tanpa menulis ulang application core, selama HTTPS, document root, environment, dan callback URL dikonfigurasi benar.
 
-# Prinsip Notifikasi
+Current external blocker adalah akses/deployment pada hosting kampus. Deployment membutuhkan koordinasi administrator hosting; repository tidak membuktikan server sudah provisioned atau commit ini sudah deployed.
 
-## Warga
+### Production environment variables
 
-Warga menerima notifikasi pada milestone penting:
+Minimum WhatsApp variables yang telah diaudit di `.env.example`:
 
-- Laporan berhasil diterima
-- Sedang ditinjau RT
-- Diteruskan ke RW
-- Diteruskan ke Kelurahan/Desa
-- Sedang ditindaklanjuti
-- Selesai
-- Ditolak atau memerlukan perbaikan
+```dotenv
+WHATSAPP_WEBHOOK_VERIFY_TOKEN=
+WHATSAPP_APP_SECRET=
+WHATSAPP_SOURCE_NAMESPACE=meta-whatsapp
+WHATSAPP_PUBLIC_NUMBER=
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_ACCESS_TOKEN=
+WHATSAPP_GRAPH_VERSION=<versi-yang-didukung-Meta>
+WHATSAPP_OUTBOUND_ENABLED=false
+```
 
-## RT
+Production juga memerlukan konfigurasi Laravel/database/queue/session/mail/storage yang sesuai environment. Nama credential boleh didokumentasikan; nilainya tidak boleh masuk repository.
 
-RT menerima:
+> `.env`, access token, app secret, verify token, database credentials, private key, dan data pribadi: **NEVER COMMIT**.
 
-- Laporan baru di wilayahnya
-- Laporan yang membutuhkan tindakan RT
+## Testing Baseline
 
-## RW
+Baseline yang telah diverifikasi manual oleh maintainer:
 
-RW menerima:
+| Baseline | Hasil | Cakupan dan batas klaim |
+|---|---|---|
+| Current full regression | `513 tests`, `2,333 assertions`, **PASS** | Dijalankan dengan `php artisan test` menggunakan PHP `8.3.30` pada 13 Agustus 2026 |
+| Local setup dan QR | `11 tests`, `81 assertions`, **PASS** | Mencakup setup tanpa overwrite, idempotency, validasi URL, akun wilayah, QR refresh, issue/revoke, dan gateway |
 
-- Laporan yang diteruskan RT
-- Laporan yang membutuhkan tindakan RW
+Baseline ini memverifikasi worktree implementasi pilot di atas base commit `f4daf2e`. Setelah perubahan direview/di-commit atau deployment berubah, full suite wajib dijalankan kembali dan hasilnya diatribusikan kepada commit yang benar-benar dideploy.
 
-## Kelurahan/Desa
+Test suite repository mencakup:
 
-Petugas Kelurahan menerima:
+- `IdentityResolver` dan phone normalization;
+- context resolver, readiness, guidance, dan engine;
+- rule-based intent dan intent/urgency matrix;
+- service territory, capability, eligibility, routing, dan end-to-end understanding;
+- public/protected information classification;
+- protected authorization context dan verification context;
+- REPORT execution, transaction rollback, cross-territory, ticket/history reuse;
+- inbound receipt uniqueness, privacy, correlation, lifecycle, dan duplicate behavior;
+- trusted inbound processing dan terminal-state behavior;
+- WhatsApp GET verification, raw-body HMAC, parser, privacy, CSRF scope, duplicate, public info, dan emergency safety;
+- QR issuance/revocation, satu QR aktif per RT, referensi wilayah terbaca tanpa token teknis, conversation context, reply, kategori/prioritas, dan hierarki disposisi;
+- prototipe Posyandu: assignment eksplisit, isolasi wilayah, enkripsi catatan, dan audit write;
+- existing web modules: authentication, region/master data, reports, attachments, dashboards, tracking, census, and letters.
 
-- Laporan yang diteruskan dari RW
-- Laporan yang membutuhkan tindakan Kelurahan
+Recommended regression:
 
-## Super Admin
+```powershell
+php vendor/phpunit/phpunit/phpunit
+vendor/bin/pint --dirty
+git diff --check
+```
 
-Super Admin:
+Gunakan Pint hanya pada changed PHP files atau scope yang disepakati. Jika project-wide Pint menemukan debt lama, catat sebagai pre-existing debt dan jangan menyatakan perubahan baru gagal tanpa isolasi diff. Catat hasil full regression baru beserta commit/HEAD yang diuji agar baseline deployment dapat diatribusikan secara tepat.
 
-- Memiliki visibility penuh
-- Dapat melihat seluruh laporan dan histori
-- Tidak harus menerima seluruh notifikasi operasional
-- Dapat menerima alert/escalation khusus
+## Current Blockers
 
-> **Prinsip utama: notifikasi dikirim kepada pihak yang memegang tindakan berikutnya.**
+| Blocker | Impact | Priority | Owner/dependency | Resolution |
+|---|---|---:|---|---|
+| Campus hosting access | Tidak dapat deploy/verify runtime publik | P0 | Administrator hosting kampus | Provision access, runtime, document root, DB, HTTPS |
+| Meta callback deployment | WhatsApp tidak dapat diuji E2E | P0 | Hosting + Meta maintainer | Deploy endpoint lalu verify GET/signed POST |
+| Production config/migration verification | Risiko deployment gagal atau schema tertinggal | P0 | DevOps/maintainer | Backup, configure env, inspect and run migrations |
+| Outbound WhatsApp real-world verification | Client tersedia tetapi delivery nyata belum dibuktikan | P0 | Meta maintainer + HTTPS deployment | Isi credential, aktifkan flag, uji sambutan/tiket dan status delivery |
+| Operator pending-action UI | Non-REPORT berhenti tanpa work queue | P1 | Product/operator workflow | Queue/dashboard dengan ownership dan audit |
+| Emergency operator handoff | Emergency tidak operasional | P1 safety | Institusi/operator layanan | SOP, verified handoff, ack, escalation |
+| Protected info authorization | Tidak boleh mengakses data protected | P2 security | Domain/security policy | Implement ALLOW/DENY + scoped data access + tests |
+| Backup/recovery | Risiko kehilangan data pilot | P0/P1 | Hosting administrator | Backup DB/files, restore drill, retention |
+| Monitoring/alerting | Failure dan stale processing tidak terlihat | P1 | Operations | Health, structured logs, alerts, dashboard |
+| FAILED retry | Receipt gagal terminal tanpa retry | P2 | Backend/operations | Safe retry policy, idempotent reprocessing |
+| Stale PROCESSING recovery | Event dapat menggantung | P2 | Backend/operations | Lease/timeout/reconciliation policy |
+| WhatsApp media report | Foto/lokasi WhatsApp diabaikan | P2 | Meta media API/storage | Secure media ingest and retention policy |
+| Konflik/cross-RT incident clarification | Laporan lintas wilayah bisa berhenti fail-closed | P1 | Product/operator workflow | Tambah klarifikasi lokasi dan operator review tanpa mengubah domicile |
+| Posyandu governance | Prototype belum boleh dianggap rekam medis operasional | P1 security | Puskesmas/kelurahan/DPO | Tetapkan dasar pemrosesan, consent/notice, retensi, koreksi, incident response, dan SOP akses |
 
----
+## Dependency-Driven Roadmap
 
-# Standar Akun Petugas
+Status roadmap adalah rencana; checkbox hanya dicentang berdasarkan evidence.
 
-## Super Admin
+### P0 — Deployment Readiness
 
-Super Admin menggunakan:
+- [x] Susun deployment pack dan server requirement
+- [ ] Dapatkan akses/koordinasi hosting kampus
+- [ ] Backup sebelum migration
+- [ ] Konfigurasi production `.env` tanpa commit secret
+- [ ] Deploy latest approved checkpoint
+- [ ] Install Composer dependencies dan build frontend
+- [ ] Verifikasi/run migrations pada target database
+- [ ] Validasi HTTPS dan `/up`
+- [ ] Verifikasi Meta GET callback
+- [ ] Uji valid signed POST dan reject invalid signature
+- [x] Implementasikan satu QR aktif per RT, portal validasi, dan pesan WhatsApp tanpa token teknis
+- [x] Implementasikan conversation context privat dan report creation setelah pesan pembuka
+- [ ] Uji QR → WhatsApp → webhook → reply → dashboard pada Meta/HTTPS nyata
 
-- Email aktif
-- Email yang dapat diverifikasi
-- Password pribadi
-- Mekanisme recovery melalui email
+### P1 — Pilot Readiness
 
-## RW
+- [x] Outbound acknowledgement dan ticket reply di code boundary (default nonaktif)
+- [ ] Verifikasi delivery outbound nyata dan failure monitoring
+- [x] Hierarki disposisi RT → RW → RT/Kelurahan dengan acknowledgement dan audit
+- [x] Prototype Posyandu dengan assignment khusus, enkripsi catatan, dan audit write
+- [ ] Public information response
+- [ ] Pending-action operator dashboard/queue
+- [ ] Emergency operator handoff dengan acknowledgement nyata
+- [ ] Monitoring dan alerting
+- [ ] Backup, restore drill, dan retention
+- [ ] Rate/abuse policy
+- [ ] SOP internal KKN pilot
 
-Format username:
+### P2 — Service Expansion
+
+- [ ] Integrasikan LETTER ke universal inbound pipeline
+- [ ] Implement ASPIRATION execution
+- [ ] WhatsApp media reports
+- [ ] Protected information ALLOW/DENY authorization
+- [ ] FAILED retry dan stale PROCESSING recovery
+- [ ] Perluas trusted QR territory setelah minimum secure territory path P0 tervalidasi
+
+### P3 — Production dan Scale
+
+- [ ] Custom domain
+- [ ] Institutional Meta ownership
+- [ ] Observability hardening
+- [ ] SLA analytics setelah workflow nyata tervalidasi
+- [ ] Multi-village tenancy/scaling setelah kebutuhan pilot terbukti
 
 ```text
-rwXXX.namapetugas
+CURRENT CHECKPOINT
+  -> Deployment Readiness Pack
+  -> Campus Deployment
+  -> Meta Callback
+  -> Trusted Service Territory
+  -> WhatsApp Report E2E
+  -> Outbound Ack
+  -> Operator Queue
+  -> Emergency Handoff
+  -> Internal KKN Pilot
+  -> Village Pilot
+  -> Production
 ```
 
-Contoh:
+## Exit Criteria
 
-```text
-rw001.riandmasiv
-```
+### Campus deployment DONE jika
 
-## RT
+- [ ] Approved commit deployed
+- [ ] Composer dependencies installed
+- [ ] Frontend build completed
+- [ ] Production environment configured tanpa secret di repo
+- [ ] Backup tersedia sebelum migration
+- [ ] Migrations verified/run
+- [ ] HTTPS valid dan `/up` sehat
+- [ ] GET webhook challenge berhasil
+- [ ] Valid signed POST diterima
+- [ ] Invalid signature ditolak
 
-Format username:
+### WhatsApp REPORT E2E DONE jika
 
-```text
-rtXXX.namapetugas.rwXXX
-```
+- [ ] Tester mengirim pesan WhatsApp text yang dikenali sebagai REPORT
+- [ ] Meta mengirim webhook ke deployment
+- [ ] `InboundRequest` persisted tepat sekali
+- [ ] Existing Citizen identity resolved; tidak ada auto-create
+- [ ] Trusted entry/incident territory diterima melalui boundary yang tervalidasi
+- [ ] Request eligible dan routed ke REPORT
+- [ ] `Report` dibuat tepat sekali
+- [ ] Ticket dan initial history dibuat
+- [ ] Inbound link/correlation dapat ditelusuri internal
+- [ ] Duplicate provider delivery tidak membuat duplicate
+- [ ] Cross-territory semantics tetap menjaga domicile
+- [ ] Warga menerima acknowledgement/ticket setelah outbound tersedia
 
-Contoh:
+### Internal KKN pilot DONE jika
 
-```text
-rt001.riandmasiv.rw001
-```
+- [ ] Hosting, HTTPS, backup, monitoring, dan recovery owner tersedia
+- [ ] REPORT E2E dan operator queue lolos rehearsal
+- [ ] Emergency wording dan handoff lolos safety review
+- [ ] Data/privacy access dibatasi sesuai role
+- [ ] SOP incident, support, dan rollback disetujui
+- [ ] Pilot scope, peserta, dan success metrics terdokumentasi
 
-Username menggunakan huruf kecil tanpa spasi.
+## Team Workflow
 
-Jika terjadi pergantian petugas, akun lama **dinonaktifkan dan tidak digunakan ulang** agar histori aktivitas tetap dapat diaudit.
+1. Sync branch sesuai convention tim dan periksa upstream.
+2. Buat feature branch jika diwajibkan convention tim; branch aktif saat ini memakai pola `feature/<scope>`.
+3. Jalankan `git status` dan baca **Current Next Task**.
+4. Implement hanya current scope; jangan campur unrelated changes.
+5. Jalankan targeted tests.
+6. Jalankan full regression.
+7. Jalankan Pint pada changed PHP files/scope.
+8. Jalankan `git diff --check`.
+9. Review domain, security, migrations, dan diff.
+10. Commit dengan pesan terfokus setelah review.
+11. Push tanpa force kecuali secara eksplisit diperlukan dan direview.
+12. Update checkpoint README ketika milestone berubah.
 
----
+## Git Safety Rules
 
-# Modul Persuratan
+DO NOT:
 
-Workflow persuratan **belum dianggap final**.
+- bekerja tanpa memeriksa `git status` dan branch;
+- force push kecuali eksplisit diperlukan dan direview;
+- reset `main` atau branch bersama secara sembarang;
+- commit `.env`, credential, token, key, atau data pribadi;
+- mencampur perubahan tidak terkait;
+- merge feature yang belum memenuhi exit criteria;
+- menimpa locked architecture tanpa audit dan regression;
+- menganggap working tree bersih tanpa verifikasi.
 
-Jenis surat perlu diklasifikasikan berdasarkan kewenangan:
+## Definition of Done
 
-- Surat yang dapat diterbitkan RT
-- Surat yang membutuhkan keterlibatan RW
-- Surat yang wajib diterbitkan Kelurahan/Desa
+Feature tidak DONE hanya karena code exists. Pilih kombinasi bukti yang sesuai risiko:
 
-Workflow final harus mengikuti hasil validasi proses administrasi dengan perangkat Desa/Kelurahan.
+- [ ] Domain contract benar dan backward impact dipahami
+- [ ] Implementation lengkap untuk scope
+- [ ] Targeted tests lulus
+- [ ] Full regression lulus
+- [ ] Style check pada scope lulus
+- [ ] `git diff --check` lulus
+- [ ] Migration diuji bila applicable
+- [ ] Security/privacy boundary direview
+- [ ] Documentation dan checkpoint diperbarui
+- [ ] Git checkpoint bersih setelah commit yang direview
 
-SIGAP WARGA tidak boleh memberikan kewenangan penerbitan surat kepada role yang secara administratif tidak berwenang.
+## Do Not Implement / Safety Guardrails
 
----
+DO NOT:
 
-# Deployment
+- auto-create Citizen dari WhatsApp;
+- mengubah census domicile karena lokasi layanan/insiden;
+- mengubah Emergency menjadi Report;
+- mengklaim emergency response sebelum acknowledgement operator/service;
+- mempercayai webhook sebelum raw-body HMAC validation;
+- menyimpan raw Meta payload secara tidak perlu;
+- mengekspos App Secret, access token, verify token, atau credential lain;
+- menganggap known identity sebagai authorization;
+- menganggap verified sebagai ALLOW;
+- menyimpulkan incident RT dari nomor telepon/account WhatsApp;
+- membuat duplicate Report saat provider retry;
+- melewati service eligibility;
+- memberi protected data sebelum executable authorization policy mengizinkan;
+- menambah AI/NLP complexity tanpa evidence pilot;
+- menambah abstraction hanya demi estetika arsitektur.
 
-Konfigurasi deployment saat ini:
+## 🎯 Current Next Task
 
-```text
-Framework    : Laravel 13
-PHP          : 8.3
-Database     : MySQL / MariaDB
-Document Root: /public
-Environment  : production
-APP_DEBUG    : false
-```
+### P0 — Uji Lapangan QR → WhatsApp pada 1 RW / 3 RT
 
-Domain utama yang direncanakan:
+**WHY**
 
-```text
-sigapwarga.com
-```
+Code checkpoint sudah memiliki jalur QR, handoff, conversation, REPORT, reply, serta disposisi wilayah. Nilai dan keselamatannya belum terbukti pada warga/petugas nyata. Fokus berikutnya bukan menambah modul besar, melainkan membuktikan alur utama pada satu RW dan tiga RT dengan data serta SOP pilot yang terkontrol.
 
-Selama proses staging/pilot, aplikasi dapat menggunakan domain sementara yang disediakan server hosting.
+**INPUT**
 
----
+- checkpoint implementasi pilot setelah code review dan commit;
+- akses/koordinasi administrator `sigap.cloud.uym.ac.id`;
+- tiga RT aktif, akun RT/RW/Kelurahan, dan nomor warga uji yang sudah terdaftar;
+- `.env.example`, migration source, webhook routes, Meta test/production assets, dan tiga QR cetak;
+- backup/restore ownership dan deployment operator.
 
-# Status Pengembangan
+**OUTPUT**
 
-SIGAP WARGA saat ini berada pada tahap:
+- deployed HTTPS build yang menunjuk ke commit tercatat;
+- evidence setiap QR membuka RT yang benar;
+- evidence pesan `MULAI`, laporan natural-language, reply tiket, dashboard RT, dan disposisi RT → RW → Kelurahan;
+- hasil pengujian kasus nomor tak dikenal, QR dicabut, duplicate webhook, konflik wilayah, serta indikasi darurat;
+- metrik pilot tanpa isi pesan sensitif: tingkat sukses, waktu acknowledgement, waktu selesai, eskalasi, dan failure rate;
+- temuan usability/SOP dan keputusan go/no-go tahap berikutnya.
 
-```text
-ONLINE
-  ↓
-STAGING
-  ↓
-PILOT DEVELOPMENT
-  ↓
-UJI COBA
-  ↓
-PRODUCTION
-```
+**DONE WHEN**
 
-Fitur dan workflow harus melalui pengujian sebelum digunakan secara penuh oleh masyarakat.
+- [ ] Campus deployment exit criteria terpenuhi
+- [ ] Tiga QR RT diuji dari kamera ponsel hingga tiket WhatsApp terbentuk
+- [ ] RT, RW, dan Kelurahan dapat menerima/menyelesaikan disposisi sesuai tanggung jawab aktif
+- [ ] Nomor tak dikenal, QR kadaluarsa/dicabut, konflik wilayah, dan duplicate delivery berhenti aman
+- [ ] Pesan darurat tidak mengklaim bantuan telah dikirim dan SOP manual tersedia
+- [ ] Tidak ada secret atau personal data di repository/log artifact
+- [ ] Full regression dijalankan kembali dan hasilnya diatribusikan pada commit/HEAD deployment
+- [ ] Deployment, migration, backup, dan rollback dapat diulang oleh maintainer
 
----
+**DO NOT START YET**
 
-# Core Workflow
-
-```text
-QR WILAYAH
-    ↓
-WHATSAPP WARGA
-    ↓
-WEBHOOK
-    ↓
-LARAVEL
-    ↓
-DATABASE
-    ↓
-DASHBOARD RT
-    ↓
-RT
-    ↓
-RW (jika diperlukan)
-    ↓
-KELURAHAN/DESA (jika diperlukan)
-    ↓
-PENYELESAIAN
-    ↓
-NOTIFIKASI WARGA
-```
-
-**Dashboard = pusat tindakan resmi.**
-
-**WhatsApp = kanal laporan dan notifikasi.**
-
-**QR Code = pintu masuk warga.**
-
----
-
-## Catatan Pengembangan
-
-Keputusan arsitektur pada dokumen ini menjadi acuan pengembangan SIGAP WARGA.
-
-Perubahan terhadap core workflow, sistem kewenangan, routing laporan, atau mekanisme notifikasi harus dipertimbangkan terhadap kebutuhan operasional RT, RW, Kelurahan/Desa, dan hasil validasi lapangan.
+- emergency dispatch automation sebelum ownership, mitra layanan, SLA, dan acknowledgement nyata jelas;
+- media ingest, protected data access, AI/NLP, atau multi-village scaling;
+- ekspansi di luar 1 RW/3 RT sebelum exit criteria pilot terpenuhi.

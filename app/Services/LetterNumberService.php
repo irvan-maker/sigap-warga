@@ -3,12 +3,17 @@
 namespace App\Services;
 
 use App\Models\VillageLetter;
+use DomainException;
 use Illuminate\Support\Facades\DB;
 
 class LetterNumberService
 {
     public function issue(VillageLetter $letter): string
     {
+        if ($letter->isGenericSubmission()) {
+            throw new DomainException('Penomoran surat generik belum tersedia pada Phase 3.');
+        }
+
         $year = (int) now()->format('Y');
         DB::table('letter_number_sequences')->insertOrIgnore(['year' => $year, 'last_number' => 0]);
         $sequence = DB::table('letter_number_sequences')->where('year', $year)->lockForUpdate()->first();

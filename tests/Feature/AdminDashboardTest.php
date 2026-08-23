@@ -108,7 +108,7 @@ class AdminDashboardTest extends TestCase
             ->assertViewHas('totalCitizens', 2)
             ->assertViewHas('totalActiveRws', 1)
             ->assertViewHas('totalActiveRts', 1)
-            ->assertViewHas('totalReports', 4)
+            ->assertViewHas('totalReports', count(ReportStatus::cases()))
             ->assertViewHas('totalsByStatus', function ($totals): bool {
                 foreach (ReportStatus::cases() as $status) {
                     if ($totals[$status->value] !== 1) {
@@ -177,8 +177,8 @@ class AdminDashboardTest extends TestCase
                     && $chart['labels']->count() === 6;
             })
             ->assertViewHas('reportStatusChart', function (array $chart): bool {
-                return $chart['labels']->all() === ['NEW', 'PROCESSING', 'COMPLETED', 'REJECTED']
-                    && $chart['data']->all() === [7, 0, 0, 0];
+                return $chart['labels']->all() === ['NEW', 'PROCESSING', 'FORWARDED', 'COMPLETED', 'REJECTED']
+                    && $chart['data']->all() === [7, 0, 0, 0, 0];
             });
     }
 

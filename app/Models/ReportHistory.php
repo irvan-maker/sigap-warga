@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['report_id', 'user_id', 'old_status', 'new_status', 'note'])]
+#[Fillable(['report_id', 'user_id', 'old_status', 'new_status', 'note', 'public_note'])]
 class ReportHistory extends Model
 {
     public const UPDATED_AT = null;

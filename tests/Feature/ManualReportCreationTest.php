@@ -48,6 +48,7 @@ class ManualReportCreationTest extends TestCase
         $response->assertRedirect(route('reports.show', $report));
         $this->assertSame(ReportStatus::NEW, $report->status);
         $this->assertNotNull($report->reported_at);
+        $this->assertNull($report->inbound_request_id);
     }
 
     public function test_new_citizen_is_created_when_phone_is_unknown(): void

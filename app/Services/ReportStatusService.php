@@ -22,6 +22,7 @@ class ReportStatusService
             ReportStatus::COMPLETED,
             ReportStatus::REJECTED,
         ],
+        ReportStatus::FORWARDED->value => [],
         ReportStatus::COMPLETED->value => [],
         ReportStatus::REJECTED->value => [],
     ];
@@ -39,13 +40,25 @@ class ReportStatusService
         ReportStatus $newStatus,
         ?User $actor = null,
         ?string $note = null,
+        ?string $publicNote = null,
     ): Report {
-        return DB::transaction(function () use ($report, $newStatus, $actor, $note): Report {
+        return DB::transaction(function () use ($report, $newStatus, $actor, $note, $publicNote): Report {
             $lockedReport = Report::query()
                 ->lockForUpdate()
                 ->findOrFail($report->getKey());
 
             $oldStatus = $lockedReport->status;
+            $publicNote = is_string($publicNote) ? trim($publicNote) : null;
+
+            if (in_array($newStatus, [ReportStatus::COMPLETED, ReportStatus::REJECTED], true)
+                && blank($publicNote)) {
+                throw new DomainException('Pembaruan untuk warga wajib diisi saat laporan diselesaikan atau tidak dapat ditindaklanjuti.');
+            }
+
+            $publicNote ??= match ($newStatus) {
+                ReportStatus::PROCESSING => 'Laporan telah diverifikasi petugas dan sedang ditindaklanjuti.',
+                default => null,
+            };
 
             if (! in_array($newStatus, $this->allowedTransitions($oldStatus), true)) {
                 throw new DomainException(
@@ -53,12 +66,20 @@ class ReportStatusService
                 );
             }
 
-            $lockedReport->update(['status' => $newStatus]);
+            $attributes = ['status' => $newStatus];
+
+            if ($newStatus === ReportStatus::PROCESSING && $actor !== null) {
+                $attributes['assigned_user_id'] = $actor->getKey();
+                $attributes['acknowledged_at'] = $lockedReport->acknowledged_at ?? now();
+            }
+
+            $lockedReport->update($attributes);
             $lockedReport->histories()->create([
                 'user_id' => $actor?->getKey(),
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
                 'note' => $note,
+                'public_note' => $publicNote,
             ]);
 
             return $lockedReport;

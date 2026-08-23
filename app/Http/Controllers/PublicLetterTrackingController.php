@@ -23,7 +23,7 @@ class PublicLetterTrackingController extends Controller
     {
         $data = $request->validated();
         $letter = $service->find($data['reference'], $data['phone_normalized']);
-        $downloadUrl = $letter?->status === LetterStatus::ISSUED
+        $downloadUrl = $letter?->status === LetterStatus::ISSUED && ! $letter->isGenericSubmission()
             ? URL::temporarySignedRoute('letter-tracking.download', now()->addMinutes(15), ['trackingCode' => $letter->public_tracking_code])
             : null;
 
@@ -33,7 +33,7 @@ class PublicLetterTrackingController extends Controller
     public function download(string $trackingCode): Response
     {
         $letter = VillageLetter::query()->where('public_tracking_code', $trackingCode)->firstOrFail();
-        abort_unless($letter->status === LetterStatus::ISSUED, 404);
+        abort_unless($letter->status === LetterStatus::ISSUED && ! $letter->isGenericSubmission(), 404);
         $letter->load(['citizen.rt.rw', 'citizen.familyCard.headCitizen', 'approver']);
         $options = new Options;
         $options->set('isRemoteEnabled', false);
