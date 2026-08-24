@@ -413,7 +413,7 @@ class DynamicLetterSubmissionTest extends TestCase
             app(VillageLetterWorkflow::class)->transition($letter, LetterStatus::RW_REVIEWED, $rwUser);
             $this->fail('Legacy workflow unexpectedly processed a generic submission.');
         } catch (DomainException $exception) {
-            $this->assertStringContainsString('Phase 3', $exception->getMessage());
+            $this->assertStringContainsString('belum tersedia untuk pengajuan surat dinamis', $exception->getMessage());
         }
     }
 
@@ -880,6 +880,74 @@ class DynamicLetterSubmissionTest extends TestCase
      * @param  array<int, array<string, mixed>>  $requirements
      * @return array{LetterTypeDefinition, LetterTypeVersion}
      */
+    public function test_generic_submission_can_be_approved_signed_issued_and_downloaded_as_pdf(): void
+    {
+        $this->citizen();
+
+        [$type, $version] = $this->publishedType(
+            'DOMISILI_DEMO',
+            'Surat Keterangan Domisili',
+            [
+                $this->field(
+                    'keperluan',
+                    'Keperluan',
+                    LetterFieldType::TEXT,
+                    10,
+                    required: true,
+                ),
+            ],
+        );
+
+        $letter = app(DynamicLetterSubmissionService::class)->submit(
+            $type,
+            $version->id,
+            '6281234567890',
+            ['keperluan' => 'Keperluan administrasi'],
+            [],
+        );
+
+        $secretary = $this->villageSecretary();
+
+        $head = User::factory()->create([
+            'role' => UserRole::KELURAHAN,
+            'position' => VillagePosition::VILLAGE_HEAD,
+            'rw_id' => null,
+            'rt_id' => null,
+        ]);
+
+        $this->actingAs($secretary)
+            ->patch(route('kelurahan.letters.approve', $letter))
+            ->assertRedirect();
+
+        $this->assertSame(
+            LetterStatus::APPROVED,
+            $letter->fresh()->status,
+        );
+
+        $this->actingAs($head)
+            ->patch(route('kelurahan.letters.sign', $letter))
+            ->assertRedirect();
+
+        $this->assertSame(
+            LetterStatus::SIGNED,
+            $letter->fresh()->status,
+        );
+
+        $this->actingAs($secretary)
+            ->patch(route('kelurahan.letters.issue', $letter))
+            ->assertRedirect();
+
+        $letter->refresh();
+
+        $this->assertSame(LetterStatus::ISSUED, $letter->status);
+        $this->assertNotNull($letter->letter_number);
+        $this->assertNotNull($letter->issued_at);
+
+        $this->actingAs($secretary)
+            ->get(route('kelurahan.letters.pdf', $letter))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
     private function publishedType(string $code, string $name, array $fields = [], array $requirements = []): array
     {
         $type = LetterTypeDefinition::query()->create([

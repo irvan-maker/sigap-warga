@@ -253,6 +253,7 @@ Route::middleware(['auth', 'role.kelurahan'])
             Route::get('/letters', [VillageLetterController::class, 'index'])->name('letters.index');
             Route::get('/letters/{letter}', [VillageLetterController::class, 'show'])->name('letters.show');
             Route::patch('/letters/{letter}/approve', [VillageLetterController::class, 'approve'])->name('letters.approve');
+            Route::patch('/letters/{letter}/sign', [VillageLetterController::class, 'sign'])->name('letters.sign');
             Route::patch('/letters/{letter}/reject', [VillageLetterController::class, 'reject'])->name('letters.reject');
             Route::patch('/letters/{letter}/issue', [VillageLetterController::class, 'issue'])->name('letters.issue');
             Route::get('/letters/{letter}/pdf', [VillageLetterController::class, 'pdf'])->name('letters.pdf');
