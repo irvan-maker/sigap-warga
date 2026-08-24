@@ -21,38 +21,83 @@ class VillageLetterWorkflow
         ?string $note = null,
     ): VillageLetter {
         return DB::transaction(function () use ($letter, $requestedStatus, $actor, $note): VillageLetter {
-            $locked = VillageLetter::query()->with('rt')->lockForUpdate()->findOrFail($letter->id);
+            $locked = VillageLetter::query()
+                ->with(['rt', 'submission'])
+                ->lockForUpdate()
+                ->findOrFail($letter->id);
+
             if ($locked->isGenericSubmission()) {
-                throw new DomainException('Workflow pengajuan surat generik belum dijalankan pada Phase 3.');
+                return $this->transitionGeneric(
+                    $locked,
+                    $requestedStatus,
+                    $actor,
+                    $note,
+                );
             }
+
             $from = $locked->status;
-            $this->assertActorMayTransition($locked, $requestedStatus, $actor);
+
+            $this->assertActorMayTransition(
+                $locked,
+                $requestedStatus,
+                $actor,
+            );
 
             $to = $this->effectiveStatus($locked, $requestedStatus);
+
             $allowed = match ($from) {
-                LetterStatus::DRAFT => [LetterStatus::SUBMITTED, LetterStatus::APPROVED],
-                LetterStatus::SUBMITTED => [LetterStatus::RW_REVIEWED, LetterStatus::APPROVED, LetterStatus::REJECTED],
-                LetterStatus::RW_REVIEWED => [LetterStatus::APPROVED, LetterStatus::REJECTED],
-                LetterStatus::APPROVED => [LetterStatus::ISSUED],
+                LetterStatus::DRAFT => [
+                    LetterStatus::SUBMITTED,
+                    LetterStatus::APPROVED,
+                ],
+
+                LetterStatus::SUBMITTED => [
+                    LetterStatus::RW_REVIEWED,
+                    LetterStatus::APPROVED,
+                    LetterStatus::REJECTED,
+                ],
+
+                LetterStatus::RW_REVIEWED => [
+                    LetterStatus::APPROVED,
+                    LetterStatus::REJECTED,
+                ],
+
+                LetterStatus::APPROVED => [
+                    LetterStatus::ISSUED,
+                ],
+
                 default => [],
             };
 
             if (! in_array($to, $allowed, true)) {
-                throw new DomainException("Transisi status {$from->value} ke {$to->value} tidak valid.");
+                throw new DomainException(
+                    "Transisi status {$from->value} ke {$to->value} tidak valid."
+                );
             }
 
             if ($to === LetterStatus::REJECTED && blank($note)) {
                 throw new DomainException('Alasan penolakan wajib diisi.');
             }
 
-            $data = ['status' => $to];
+            $data = [
+                'status' => $to,
+            ];
 
             if ($from === LetterStatus::DRAFT) {
                 $data['submitted_at'] = now();
             }
 
-            if ($actor->role === UserRole::RW
-                && in_array($to, [LetterStatus::RW_REVIEWED, LetterStatus::APPROVED], true)) {
+            if (
+                $actor->role === UserRole::RW
+                && in_array(
+                    $to,
+                    [
+                        LetterStatus::RW_REVIEWED,
+                        LetterStatus::APPROVED,
+                    ],
+                    true,
+                )
+            ) {
                 $data += [
                     'reviewed_at' => now(),
                     'reviewed_by_rw' => $actor->id,
@@ -78,6 +123,7 @@ class VillageLetterWorkflow
             }
 
             $locked->update($data);
+
             $locked->histories()->create([
                 'user_id' => $actor->id,
                 'old_status' => $from,
@@ -89,17 +135,153 @@ class VillageLetterWorkflow
         }, 3);
     }
 
-    private function effectiveStatus(VillageLetter $letter, LetterStatus $requested): LetterStatus
-    {
-        if ($letter->status === LetterStatus::DRAFT
+    private function transitionGeneric(
+        VillageLetter $letter,
+        LetterStatus $requestedStatus,
+        User $actor,
+        ?string $note = null,
+    ): VillageLetter {
+        if (! $actor->is_active) {
+            throw new DomainException('Petugas tidak aktif.');
+        }
+
+        $nextAction = $this->nextGenericWorkflowAction($letter);
+
+        /*
+         * VERIFY RT/RW tetap dipertahankan di engine.
+         * Untuk MVP KKN saat ini executor regional belum dibuka.
+         */
+        if ($nextAction === 'VERIFY') {
+            throw new DomainException(
+                'Surat ini masih memerlukan verifikasi RT/RW sesuai workflow yang dikonfigurasi.'
+            );
+        }
+
+        $requestedAction = match ($requestedStatus) {
+            LetterStatus::APPROVED => 'APPROVE',
+            LetterStatus::SIGNED => 'SIGN',
+            LetterStatus::ISSUED => 'ISSUE',
+
+            default => throw new DomainException(
+                'Transisi tersebut belum tersedia untuk pengajuan surat dinamis.'
+            ),
+        };
+
+        if ($nextAction !== $requestedAction) {
+            throw new DomainException(
+                'Urutan workflow pengajuan surat tidak sesuai.'
+            );
+        }
+
+        /*
+         * Jalur langsung Desa untuk MVP:
+         * APPROVE = Sekdes
+         * SIGN    = Kades
+         * ISSUE   = Sekdes
+         */
+        $authorized = match ($requestedAction) {
+            'APPROVE' => $actor->isVillageSecretary(),
+            'SIGN' => $actor->isVillageHead(),
+            'ISSUE' => $actor->isVillageSecretary(),
+            default => false,
+        };
+
+        if (! $authorized) {
+            throw new DomainException(
+                'Petugas tidak berwenang menjalankan langkah workflow ini.'
+            );
+        }
+
+        $from = $letter->status;
+
+        $data = [
+            'status' => $requestedStatus,
+        ];
+
+        if ($requestedStatus === LetterStatus::APPROVED) {
+            $data += [
+                'approved_at' => now(),
+                'approved_by_user_id' => $actor->id,
+                'approved_by_village' => $actor->id,
+            ];
+        }
+
+        if ($requestedStatus === LetterStatus::ISSUED) {
+            $data += [
+                'issued_at' => now(),
+                'letter_number' => $this->numbers->issue($letter),
+            ];
+        }
+
+        $letter->update($data);
+
+        $letter->histories()->create([
+            'user_id' => $actor->id,
+            'old_status' => $from,
+            'new_status' => $requestedStatus,
+            'note' => $note,
+        ]);
+
+        return $letter;
+    }
+
+    private function nextGenericWorkflowAction(
+        VillageLetter $letter,
+    ): ?string {
+        $workflow = collect(
+            $letter->submission?->configuration_snapshot['workflow'] ?? []
+        )
+            ->sortBy('sequence')
+            ->values();
+
+        if ($workflow->isEmpty()) {
+            throw new DomainException(
+                'Snapshot workflow pengajuan surat tidak tersedia.'
+            );
+        }
+
+        $currentAction = match ($letter->status) {
+            LetterStatus::SUBMITTED => 'SUBMIT',
+            LetterStatus::APPROVED => 'APPROVE',
+            LetterStatus::SIGNED => 'SIGN',
+            LetterStatus::ISSUED => 'ISSUE',
+
+            default => throw new DomainException(
+                'Status pengajuan tidak sesuai dengan workflow dinamis.'
+            ),
+        };
+
+        $index = $workflow->search(
+            fn (array $step): bool =>
+                ($step['action'] ?? null) === $currentAction
+        );
+
+        if ($index === false) {
+            throw new DomainException(
+                'Posisi workflow pengajuan tidak dapat ditentukan.'
+            );
+        }
+
+        return $workflow->get($index + 1)['action'] ?? null;
+    }
+
+    private function effectiveStatus(
+        VillageLetter $letter,
+        LetterStatus $requested,
+    ): LetterStatus {
+        if (
+            $letter->status === LetterStatus::DRAFT
             && $requested === LetterStatus::SUBMITTED
-            && $letter->required_approval_level === LetterApprovalLevel::RT) {
+            && $letter->required_approval_level === LetterApprovalLevel::RT
+        ) {
             return LetterStatus::APPROVED;
         }
 
-        if ($letter->status === LetterStatus::SUBMITTED
+        if (
+            $letter->status === LetterStatus::SUBMITTED
             && $requested === LetterStatus::RW_REVIEWED
-            && $letter->required_approval_level === LetterApprovalLevel::RW) {
+            && $letter->required_approval_level === LetterApprovalLevel::RW
+        ) {
             return LetterStatus::APPROVED;
         }
 
@@ -112,32 +294,67 @@ class VillageLetterWorkflow
         User $actor,
     ): void {
         $allowed = $actor->is_active && match ($letter->status) {
-            LetterStatus::DRAFT => $requested === LetterStatus::SUBMITTED
+            LetterStatus::DRAFT =>
+                $requested === LetterStatus::SUBMITTED
                 && $actor->role === UserRole::RT
                 && $actor->rt_id === $letter->rt_id,
-            LetterStatus::SUBMITTED => in_array($requested, [LetterStatus::RW_REVIEWED, LetterStatus::REJECTED], true)
+
+            LetterStatus::SUBMITTED =>
+                in_array(
+                    $requested,
+                    [
+                        LetterStatus::RW_REVIEWED,
+                        LetterStatus::REJECTED,
+                    ],
+                    true,
+                )
                 && $actor->role === UserRole::RW
                 && $actor->rw_id === $letter->rt->rw_id,
-            LetterStatus::RW_REVIEWED => in_array($requested, [LetterStatus::APPROVED, LetterStatus::REJECTED], true)
-                && ($actor->isSystemAdmin() || $actor->isVillageSecretary()),
-            LetterStatus::APPROVED => $requested === LetterStatus::ISSUED
+
+            LetterStatus::RW_REVIEWED =>
+                in_array(
+                    $requested,
+                    [
+                        LetterStatus::APPROVED,
+                        LetterStatus::REJECTED,
+                    ],
+                    true,
+                )
+                && (
+                    $actor->isSystemAdmin()
+                    || $actor->isVillageSecretary()
+                ),
+
+            LetterStatus::APPROVED =>
+                $requested === LetterStatus::ISSUED
                 && $this->isRequiredIssuer($letter, $actor),
+
             default => false,
         };
 
         if (! $allowed) {
-            throw new DomainException('Petugas tidak berwenang melakukan transisi surat ini.');
+            throw new DomainException(
+                'Petugas tidak berwenang melakukan transisi surat ini.'
+            );
         }
     }
 
-    private function isRequiredIssuer(VillageLetter $letter, User $actor): bool
-    {
+    private function isRequiredIssuer(
+        VillageLetter $letter,
+        User $actor,
+    ): bool {
         return match ($letter->required_approval_level) {
-            LetterApprovalLevel::RT => $actor->role === UserRole::RT
+            LetterApprovalLevel::RT =>
+                $actor->role === UserRole::RT
                 && $actor->rt_id === $letter->rt_id,
-            LetterApprovalLevel::RW => $actor->role === UserRole::RW
+
+            LetterApprovalLevel::RW =>
+                $actor->role === UserRole::RW
                 && $actor->rw_id === $letter->rt->rw_id,
-            LetterApprovalLevel::KELURAHAN => $actor->isSystemAdmin() || $actor->isVillageSecretary(),
+
+            LetterApprovalLevel::KELURAHAN =>
+                $actor->isSystemAdmin()
+                || $actor->isVillageSecretary(),
         };
     }
 }
