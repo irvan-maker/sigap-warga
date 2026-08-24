@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -11,7 +13,7 @@ final class WhatsAppIntegrationController extends Controller
 {
     public function __invoke(Request $request): View
     {
-        abort_unless($request->user()->isSystemAdmin(), 403);
+        abort_unless($request->user()->isSystemAdmin() && $request->user()->role === UserRole::ADMIN, 403);
 
         $checks = collect([
             ['key' => 'callback', 'label' => 'Route callback', 'ready' => Route::has('webhooks.whatsapp.verify') && Route::has('webhooks.whatsapp.receive'), 'help' => 'GET dan POST tersedia di aplikasi'],

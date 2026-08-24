@@ -15,7 +15,6 @@
             'reports' => request()->routeIs('kelurahan.reports.*', 'admin.reports.*', 'reports.*'),
             'officers' => request()->routeIs('admin.users.*'),
             'regions' => request()->routeIs('kelurahan.rws.*', 'kelurahan.rts.*'),
-            'whatsapp' => request()->routeIs('admin.whatsapp.*', 'whatsapp.*'),
             'citizens' => request()->routeIs('kelurahan.citizens.*'),
             'families' => request()->routeIs('kelurahan.family-cards.*'),
             'letters' => request()->routeIs('kelurahan.letters.*'),
@@ -39,10 +38,6 @@
 
         $settingsUrl = \Illuminate\Support\Facades\Route::has('profile.edit')
             ? route('profile.edit')
-            : '#';
-
-        $whatsappUrl = \Illuminate\Support\Facades\Route::has('admin.whatsapp.index')
-            ? route('admin.whatsapp.index')
             : '#';
 
         // Distribusi status memakai angka status yang sama dengan data dashboard.
@@ -1245,7 +1240,237 @@
                 padding: 16px;
             }
         }
-    </style>
+
+        /* SIGAP unified role hero */
+        .sigap-role-hero {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+            gap: 28px;
+            align-items: stretch;
+            padding: 30px;
+            border-radius: 28px;
+            background:
+                radial-gradient(circle at 92% 18%, rgba(184,255,95,.18), transparent 24%),
+                linear-gradient(135deg, #5c288c 0%, #4b1f75 100%);
+            color: #fff;
+            box-shadow: 0 18px 44px rgba(75,31,117,.18);
+        }
+
+        .sigap-role-hero::after {
+            content: "";
+            position: absolute;
+            right: -70px;
+            bottom: -100px;
+            width: 240px;
+            height: 240px;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .sigap-role-hero-main,
+        .sigap-role-attention {
+            position: relative;
+            z-index: 1;
+        }
+
+        .sigap-role-hero-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .sigap-role-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: .78rem;
+            font-weight: 800;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--sigap-lime, #b8ff5f);
+        }
+
+        .sigap-role-date {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid rgba(255,255,255,.20);
+            border-radius: 999px;
+            background: rgba(255,255,255,.10);
+            color: rgba(255,255,255,.92);
+            font-size: .82rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .sigap-role-hero h1 {
+            max-width: 760px;
+            margin: 0;
+            font-size: clamp(1.75rem, 3vw, 2.65rem);
+            line-height: 1.08;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .sigap-role-hero-main > p {
+            max-width: 760px;
+            margin: 14px 0 0;
+            color: rgba(255,255,255,.78);
+            font-size: .96rem;
+            line-height: 1.7;
+        }
+
+        .sigap-role-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            margin-top: 22px;
+            padding: 11px 16px;
+            border-radius: 12px;
+            background: var(--sigap-lime, #b8ff5f);
+            color: #34203f;
+            font-size: .86rem;
+            font-weight: 800;
+            text-decoration: none;
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+
+        .sigap-role-action:hover {
+            color: #34203f;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(184,255,95,.20);
+        }
+
+        .sigap-role-attention {
+            align-self: stretch;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: 20px;
+            background: rgba(35,14,54,.28);
+            backdrop-filter: blur(4px);
+        }
+
+        .sigap-role-attention h2 {
+            margin: 0 0 14px;
+            color: #fff;
+            font-size: .82rem;
+            font-weight: 800;
+            letter-spacing: .10em;
+            text-transform: uppercase;
+        }
+
+        .sigap-role-attention-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .sigap-role-attention-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 11px 12px;
+            border-radius: 14px;
+            background: rgba(255,255,255,.08);
+        }
+
+        .sigap-role-attention-label {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            min-width: 0;
+            color: rgba(255,255,255,.84);
+            font-size: .84rem;
+            font-weight: 600;
+        }
+
+        .sigap-role-attention-label i {
+            color: var(--sigap-lime, #b8ff5f);
+        }
+
+        .sigap-role-attention-value {
+            color: #fff;
+            font-size: 1.05rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 980px) {
+            .sigap-role-hero {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .sigap-role-hero {
+                padding: 22px;
+                border-radius: 22px;
+            }
+
+            .sigap-role-hero-top {
+                align-items: flex-start;
+                flex-direction: column;
+                margin-bottom: 16px;
+            }
+
+            .sigap-role-date {
+                white-space: normal;
+            }
+        }
+
+        /* SIGAP attention header: date belongs to operational context */
+        .sigap-role-attention {
+            align-self: start;
+            width: 100%;
+        }
+
+        .sigap-role-attention-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .sigap-role-attention-head h2 {
+            margin: 0;
+        }
+
+        .sigap-role-attention-head .sigap-role-date {
+            flex: 0 0 auto;
+            padding: 6px 10px;
+            background: rgba(255,255,255,.09);
+            border-color: rgba(255,255,255,.16);
+            font-size: .73rem;
+        }
+
+        .sigap-role-attention .sigap-role-date-control.sigap-date-pill {
+            margin: 0;
+            padding: 6px 10px;
+            background: rgba(255,255,255,.09);
+            border: 1px solid rgba(255,255,255,.16);
+            color: rgba(255,255,255,.92);
+            box-shadow: none;
+        }
+
+        .sigap-role-attention .sigap-role-date-control.sigap-date-pill label {
+            margin: 0;
+            color: inherit;
+        }
+
+        @media (max-width: 640px) {
+            .sigap-role-attention-head {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+</style>
 
     <div class="kelurahan-dashboard-ref">
         <aside class="sigap-sidebar" aria-label="Navigasi utama">
@@ -1280,10 +1505,10 @@
                     <i class="bi bi-person-badge" aria-hidden="true"></i><span>Petugas</span>
                 </a>
                 <a href="{{ route('kelurahan.rws.index') }}" class="sigap-nav-link {{ $sidebarActive['regions'] ? 'active' : '' }}" data-sidebar-key="regions">
-                    <i class="bi bi-qr-code" aria-hidden="true"></i><span>QR Wilayah</span>
+                    <i class="bi bi-diagram-3" aria-hidden="true"></i><span>Wilayah</span>
                 </a>
-                <a href="{{ $whatsappUrl }}" class="sigap-nav-link {{ $sidebarActive['whatsapp'] ? 'active' : '' }}" data-sidebar-key="whatsapp">
-                    <i class="bi bi-chat-left-text" aria-hidden="true"></i><span>WhatsApp</span>
+                <a href="{{ route('admin.service-entry-points.index') }}" class="sigap-nav-link {{ request()->routeIs('admin.service-entry-points.*') ? 'active' : '' }}" data-sidebar-key="qr-region">
+                    <i class="bi bi-qr-code" aria-hidden="true"></i><span>QR Wilayah</span>
                 </a>
             </nav>
 
@@ -1361,43 +1586,39 @@
             </header>
 
             <main id="main-content" class="sigap-content">
-                <div class="sigap-hero-grid">
-                    <section class="sigap-hero">
-                        <div class="sigap-hero-kicker"><i class="bi bi-grid"></i> Pusat Kendali</div>
+                <section class="sigap-role-hero">
+                    <div class="sigap-role-hero-main">
+                        <div class="sigap-role-hero-top">
+                            <div class="sigap-role-kicker"><i class="bi bi-grid"></i> Pusat Kendali Desa</div>
+                        </div>
+
                         <h1>Selamat datang, {{ $officer->name }}</h1>
                         <p>Pantau layanan warga, wilayah, laporan, dan persuratan Desa Curug Sangereng dari satu ruang kerja terpadu.</p>
-                        <a href="{{ $whatsappUrl }}" class="sigap-hero-action">
-                            <i class="bi bi-chat-left-text" aria-hidden="true"></i>
-                            <span>Cek Integrasi WhatsApp</span>
-                        </a>
-                    </section>
+                    </div>
 
-                    <aside class="sigap-summary-card" aria-label="Ringkasan sistem">
-                        <h2>Ringkasan Sistem</h2>
-                        <div class="sigap-summary-list">
-                            <div class="sigap-summary-item">
-                                <span class="sigap-summary-icon"><i class="bi bi-patch-check"></i></span>
-                                <div><strong>Status Server</strong><span>Online &amp; Stabil</span></div>
-                            </div>
-                            <div class="sigap-summary-item">
-                                <span class="sigap-summary-icon purple"><i class="bi bi-calendar3"></i></span>
-                                <div><strong>Tanggal Sistem</strong><span>{{ now()->timezone('Asia/Jakarta')->locale('id')->isoFormat('dddd, D MMMM Y') }}</span></div>
+                    <aside class="sigap-role-attention" aria-label="Perlu perhatian">
+                        <div class="sigap-role-attention-head">
+                            <h2>Perlu Perhatian</h2>
+                            <div class="sigap-role-date">
+                                <i class="bi bi-calendar3"></i>
+                                <span>{{ now()->timezone('Asia/Jakarta')->locale('id')->isoFormat('dddd, D MMMM Y') }}</span>
                             </div>
                         </div>
+                        <div class="sigap-role-attention-list">
+                            <a href="{{ route('kelurahan.reports.index') }}#laporan" class="sigap-role-attention-item text-decoration-none">
+                                <span class="sigap-role-attention-label"><i class="bi bi-bell"></i>Laporan Baru</span>
+                                <strong class="sigap-role-attention-value">{{ number_format($totalsByStatus[\App\Enums\ReportStatus::NEW->value] ?? 0) }}</strong>
+                            </a>
+                            <a href="{{ route('kelurahan.rws.index') }}" class="sigap-role-attention-item text-decoration-none">
+                                <span class="sigap-role-attention-label"><i class="bi bi-geo-alt"></i>RT Aktif</span>
+                                <strong class="sigap-role-attention-value">{{ number_format($todaySummary['active_rts']) }}</strong>
+                            </a>
+                            <a href="{{ route('kelurahan.rws.index') }}" class="sigap-role-attention-item text-decoration-none">
+                                <span class="sigap-role-attention-label"><i class="bi bi-houses"></i>RW Aktif</span>
+                                <strong class="sigap-role-attention-value">{{ number_format($todaySummary['active_rws']) }}</strong>
+                            </a>
+                        </div>
                     </aside>
-                </div>
-
-                <section class="sigap-module-strip" aria-label="Status modul sistem">
-                    <div class="sigap-module-copy">
-                        <strong>Tahap Uji Lokal</strong>
-                        <small>Laporan cepat dan Persuratan siap untuk uji operasional desa.</small>
-                    </div>
-                    <div class="sigap-module-pills">
-                        <span class="sigap-pill active">Laporan Cepat · PILOT</span>
-                        <span class="sigap-pill active">Persuratan · PILOT</span>
-                        <span class="sigap-pill">Sensus · PROTOTYPE</span>
-                        <span class="sigap-pill">Posyandu · PROTOTYPE</span>
-                    </div>
                 </section>
 
                 <section class="sigap-section" aria-labelledby="statistik-utama">
@@ -1475,14 +1696,9 @@
                             <span class="sigap-action-copy"><strong>Kelola Akun Petugas</strong><span>Atur akun dan hak akses</span></span>
                             <i class="bi bi-chevron-right sigap-action-arrow"></i>
                         </a>
-                        <a href="{{ route('kelurahan.rws.index') }}" class="sigap-action-card">
+                        <a href="{{ route('admin.service-entry-points.index') }}" class="sigap-action-card">
                             <span class="sigap-action-icon"><i class="bi bi-qr-code-scan"></i></span>
                             <span class="sigap-action-copy"><strong>Atur QR Wilayah</strong><span>Kelola satu QR resmi RT</span></span>
-                            <i class="bi bi-chevron-right sigap-action-arrow"></i>
-                        </a>
-                        <a href="{{ $whatsappUrl }}" class="sigap-action-card">
-                            <span class="sigap-action-icon"><i class="bi bi-chat-left"></i></span>
-                            <span class="sigap-action-copy"><strong>Integrasi WhatsApp</strong><span>Periksa kesiapan integrasi</span></span>
                             <i class="bi bi-chevron-right sigap-action-arrow"></i>
                         </a>
                     </div>

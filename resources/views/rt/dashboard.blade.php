@@ -546,7 +546,237 @@
         .sigap-section-eyebrow { color: var(--sigap-purple); font-size: 0.79rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
         .sigap-section-title { font-size: 1.32rem; font-weight: 800; margin-bottom: 4px; }
         .sigap-section-desc { color: var(--sigap-muted); font-size: 0.91rem; margin-bottom: 18px; }
-    </style>
+
+        /* SIGAP unified role hero */
+        .sigap-role-hero {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+            gap: 28px;
+            align-items: stretch;
+            padding: 30px;
+            border-radius: 28px;
+            background:
+                radial-gradient(circle at 92% 18%, rgba(184,255,95,.18), transparent 24%),
+                linear-gradient(135deg, #5c288c 0%, #4b1f75 100%);
+            color: #fff;
+            box-shadow: 0 18px 44px rgba(75,31,117,.18);
+        }
+
+        .sigap-role-hero::after {
+            content: "";
+            position: absolute;
+            right: -70px;
+            bottom: -100px;
+            width: 240px;
+            height: 240px;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .sigap-role-hero-main,
+        .sigap-role-attention {
+            position: relative;
+            z-index: 1;
+        }
+
+        .sigap-role-hero-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .sigap-role-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: .78rem;
+            font-weight: 800;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--sigap-lime, #b8ff5f);
+        }
+
+        .sigap-role-date {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid rgba(255,255,255,.20);
+            border-radius: 999px;
+            background: rgba(255,255,255,.10);
+            color: rgba(255,255,255,.92);
+            font-size: .82rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .sigap-role-hero h1 {
+            max-width: 760px;
+            margin: 0;
+            font-size: clamp(1.75rem, 3vw, 2.65rem);
+            line-height: 1.08;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .sigap-role-hero-main > p {
+            max-width: 760px;
+            margin: 14px 0 0;
+            color: rgba(255,255,255,.78);
+            font-size: .96rem;
+            line-height: 1.7;
+        }
+
+        .sigap-role-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            margin-top: 22px;
+            padding: 11px 16px;
+            border-radius: 12px;
+            background: var(--sigap-lime, #b8ff5f);
+            color: #34203f;
+            font-size: .86rem;
+            font-weight: 800;
+            text-decoration: none;
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+
+        .sigap-role-action:hover {
+            color: #34203f;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(184,255,95,.20);
+        }
+
+        .sigap-role-attention {
+            align-self: stretch;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: 20px;
+            background: rgba(35,14,54,.28);
+            backdrop-filter: blur(4px);
+        }
+
+        .sigap-role-attention h2 {
+            margin: 0 0 14px;
+            color: #fff;
+            font-size: .82rem;
+            font-weight: 800;
+            letter-spacing: .10em;
+            text-transform: uppercase;
+        }
+
+        .sigap-role-attention-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .sigap-role-attention-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 11px 12px;
+            border-radius: 14px;
+            background: rgba(255,255,255,.08);
+        }
+
+        .sigap-role-attention-label {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            min-width: 0;
+            color: rgba(255,255,255,.84);
+            font-size: .84rem;
+            font-weight: 600;
+        }
+
+        .sigap-role-attention-label i {
+            color: var(--sigap-lime, #b8ff5f);
+        }
+
+        .sigap-role-attention-value {
+            color: #fff;
+            font-size: 1.05rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 980px) {
+            .sigap-role-hero {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .sigap-role-hero {
+                padding: 22px;
+                border-radius: 22px;
+            }
+
+            .sigap-role-hero-top {
+                align-items: flex-start;
+                flex-direction: column;
+                margin-bottom: 16px;
+            }
+
+            .sigap-role-date {
+                white-space: normal;
+            }
+        }
+
+        /* SIGAP attention header: date belongs to operational context */
+        .sigap-role-attention {
+            align-self: start;
+            width: 100%;
+        }
+
+        .sigap-role-attention-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .sigap-role-attention-head h2 {
+            margin: 0;
+        }
+
+        .sigap-role-attention-head .sigap-role-date {
+            flex: 0 0 auto;
+            padding: 6px 10px;
+            background: rgba(255,255,255,.09);
+            border-color: rgba(255,255,255,.16);
+            font-size: .73rem;
+        }
+
+        .sigap-role-attention .sigap-role-date-control.sigap-date-pill {
+            margin: 0;
+            padding: 6px 10px;
+            background: rgba(255,255,255,.09);
+            border: 1px solid rgba(255,255,255,.16);
+            color: rgba(255,255,255,.92);
+            box-shadow: none;
+        }
+
+        .sigap-role-attention .sigap-role-date-control.sigap-date-pill label {
+            margin: 0;
+            color: inherit;
+        }
+
+        @media (max-width: 640px) {
+            .sigap-role-attention-head {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+</style>
 
     <div class="sigap-shell">
         <div id="sigap-sidebar-overlay" class="sigap-sidebar-overlay"></div>
@@ -723,13 +953,25 @@
             </header>
 
             <main id="main-content" class="sigap-content">
+                <section class="sigap-role-hero">
+                    <div class="sigap-role-hero-main">
+                        <div class="sigap-role-hero-top">
+                            <div class="sigap-role-kicker"><i class="bi bi-geo-fill"></i> Operasional RT</div>
+                        </div>
 
-                <div id="statistik-utama" class="sigap-page-header">
-                    <div>
-                        <h1 class="sigap-page-title">Statistik Utama</h1>
-                        <p class="sigap-page-subtitle mb-0">Ringkasan data dan aktivitas {{ $user->rt?->code ?? 'RT belum tersedia' }} · {{ $user->rw?->code ?? 'RW belum tersedia' }}.</p>
+                        <h1>RT {{ $user->rt?->code ?? '-' }} &middot; RW {{ $user->rw?->code ?? '-' }}</h1>
+                        <p>Pantau laporan warga, verifikasi tindak lanjut, persuratan, dan data lingkungan RT dari satu ruang kerja.</p>
+
+                        <a href="#daftar-laporan" class="sigap-role-action">
+                            <i class="bi bi-inbox"></i>
+                            <span>Lihat Laporan RT</span>
+                        </a>
                     </div>
-                    <form method="GET" action="{{ route('rt.dashboard') }}" class="sigap-date-pill" id="sigap-date-form">
+
+                    <aside class="sigap-role-attention" aria-label="Perlu perhatian">
+                        <div class="sigap-role-attention-head">
+                            <h2>Perlu Perhatian</h2>
+                            <form method="GET" action="{{ route('rt.dashboard') }}" class="sigap-date-pill sigap-role-date sigap-role-date-control" id="sigap-date-form">
                         @if (request()->filled('status'))
                             <input type="hidden" name="status" value="{{ request('status') }}">
                         @endif
@@ -750,6 +992,30 @@
                             onchange="this.closest('form').submit()"
                         >
                     </form>
+                        </div>
+                        <div class="sigap-role-attention-list">
+                            <a href="#daftar-laporan" class="sigap-role-attention-item text-decoration-none">
+                                <span class="sigap-role-attention-label"><i class="bi bi-bell"></i>Laporan Baru</span>
+                                <strong class="sigap-role-attention-value">{{ number_format($newReportCount) }}</strong>
+                            </a>
+                            <a href="{{ route('rt.letters.index') }}" class="sigap-role-attention-item text-decoration-none">
+                                <span class="sigap-role-attention-label"><i class="bi bi-envelope-check"></i>Surat Menunggu</span>
+                                <strong class="sigap-role-attention-value">{{ number_format($letterCounts['SUBMITTED'] ?? 0) }}</strong>
+                            </a>
+                            <a href="{{ route('rt.citizens.index') }}" class="sigap-role-attention-item text-decoration-none">
+                                <span class="sigap-role-attention-label"><i class="bi bi-people"></i>Warga Aktif</span>
+                                <strong class="sigap-role-attention-value">{{ number_format($activeCitizenCount) }}</strong>
+                            </a>
+                        </div>
+                    </aside>
+                </section>
+
+                <div id="statistik-utama" class="sigap-page-header">
+                    <div>
+                        <h1 class="sigap-page-title">Statistik Utama</h1>
+                        <p class="sigap-page-subtitle mb-0">Ringkasan data dan aktivitas {{ $user->rt?->code ?? 'RT belum tersedia' }} · {{ $user->rw?->code ?? 'RW belum tersedia' }}.</p>
+                    </div>
+
                 </div>
 
                 {{-- Stat cards --}}
