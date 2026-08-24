@@ -1577,7 +1577,7 @@
                                         <td>{{ $report->ticket_number }}</td>
                                         <td>{{ $report->rt->rw->code }}</td>
                                         <td>{{ $report->rt->code }}</td>
-                                        <td>{{ $report->citizen->name }}</td>
+                                        <td>{{ $report->citizen?->name ?? '-' }}</td>
                                         <td>{{ $report->title }}</td>
                                         <td><span class="badge text-bg-{{ $report->status->bootstrapColor() }}">{{ $report->status->label() }}</span></td>
                                         <td><a class="btn btn-outline-primary btn-sm" href="{{ route($reportDetailRoute, $report) }}" target="_blank" rel="noopener">Detail</a></td>
