@@ -7,6 +7,7 @@ use App\Services\WhatsAppWebhookParser;
 use App\Services\WhatsAppWebhookSignatureVerifier;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use JsonException;
 use Throwable;
 
@@ -55,6 +56,13 @@ final class WhatsAppWebhookController extends Controller
             return response('', 400);
         }
 
+
+        try {
+            $this->logDeliveryStatuses($payload);
+        } catch (Throwable $throwable) {
+            report($throwable);
+        }
+
         try {
             $result = $parser->parse($payload);
 
@@ -69,6 +77,84 @@ final class WhatsAppWebhookController extends Controller
 
         return response('EVENT_RECEIVED', 200)->header('Content-Type', 'text/plain');
     }
+
+    /**
+     * Record Meta delivery callbacks without storing full recipient numbers
+     * or any WhatsApp credentials. Inbound message parsing remains unchanged.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function logDeliveryStatuses(array $payload): void
+    {
+        foreach (($payload['entry'] ?? []) as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            foreach (($entry['changes'] ?? []) as $change) {
+                if (! is_array($change)
+                    || ($change['field'] ?? null) !== 'messages'
+                    || ! is_array($change['value'] ?? null)) {
+                    continue;
+                }
+
+                foreach (($change['value']['statuses'] ?? []) as $status) {
+                    if (! is_array($status)) {
+                        continue;
+                    }
+
+                    $recipient = $status['recipient_id'] ?? null;
+                    $digits = is_string($recipient)
+                        ? preg_replace('/\D+/', '', $recipient)
+                        : null;
+
+                    $maskedRecipient = is_string($digits) && $digits !== ''
+                        ? '***'.substr($digits, -4)
+                        : null;
+
+                    $messageId = $status['id'] ?? null;
+                    $messageReference = is_string($messageId) && $messageId !== ''
+                        ? substr(hash('sha256', $messageId), 0, 16)
+                        : null;
+
+                    $error = null;
+
+                    foreach (($status['errors'] ?? []) as $candidate) {
+                        if (is_array($candidate)) {
+                            $error = $candidate;
+                            break;
+                        }
+                    }
+
+                    $deliveryStatus = is_string($status['status'] ?? null)
+                        ? $status['status']
+                        : 'unknown';
+
+                    $context = [
+                        'status' => $deliveryStatus,
+                        'recipient' => $maskedRecipient,
+                        'message_ref' => $messageReference,
+                        'timestamp' => is_string($status['timestamp'] ?? null)
+                            ? $status['timestamp']
+                            : null,
+                        'error_code' => $error['code'] ?? null,
+                        'error_title' => $error['title'] ?? null,
+                        'error_message' => $error['message'] ?? null,
+                        'error_details' => is_array($error['error_data'] ?? null)
+                            ? ($error['error_data']['details'] ?? null)
+                            : null,
+                    ];
+
+                    if ($deliveryStatus === 'failed') {
+                        Log::warning('WhatsApp delivery failed', $context);
+                    } else {
+                        Log::info('WhatsApp delivery status', $context);
+                    }
+                }
+            }
+        }
+    }
+
 
     private function metaQuery(Request $request, string $name): ?string
     {
